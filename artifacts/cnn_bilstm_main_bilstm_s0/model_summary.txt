@@ -2,15 +2,15 @@ Model: "cnn_bilstm_bilstm"
 __________________________________________________________________________________________________
  Layer (type)                Output Shape                 Param #   Connected to                  
 ==================================================================================================
- flow_window (InputLayer)    [(None, 10, 71)]             0         []                            
+ flow_window (InputLayer)    [(None, 16, 71)]             0         []                            
                                                                                                   
- bi_lstm (Bidirectional)     (None, 10, 128)              69632     ['flow_window[0][0]']         
+ bi_lstm (Bidirectional)     (None, 16, 128)              69632     ['flow_window[0][0]']         
                                                                                                   
- attn_score (Dense)          (None, 10, 1)                129       ['bi_lstm[0][0]']             
+ attn_score (Dense)          (None, 16, 1)                129       ['bi_lstm[0][0]']             
                                                                                                   
- attn_weights (Softmax)      (None, 10, 1)                0         ['attn_score[0][0]']          
+ attn_weights (Softmax)      (None, 16, 1)                0         ['attn_score[0][0]']          
                                                                                                   
- attn_weighted (Multiply)    (None, 10, 128)              0         ['bi_lstm[0][0]',             
+ attn_weighted (Multiply)    (None, 16, 128)              0         ['bi_lstm[0][0]',             
                                                                      'attn_weights[0][0]']        
                                                                                                   
  attn_pool (SumPooling1D)    (None, 128)                  0         ['attn_weighted[0][0]']       

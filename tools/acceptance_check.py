@@ -227,6 +227,35 @@ def check_demo(r: Report) -> None:
     r.check(bool(hp.get("ok")), "健康检查通过")
 
 
+def check_unit_tests(r: Report) -> None:
+    """6) 单元测试：覆盖生成器、数据管线、窗口构建、评估口径。"""
+    section("6) 单元测试（无需 pytest，直接执行）")
+    test_file = ROOT / "tests" / "test_core.py"
+    if not test_file.exists():
+        r.check(False, "单元测试文件存在", str(test_file))
+        return
+    import contextlib
+    import importlib.util
+    import io
+
+    try:
+        spec = importlib.util.spec_from_file_location("cida_unit_tests", test_file)
+        mod = importlib.util.module_from_spec(spec)  # type: ignore[arg-type]
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            spec.loader.exec_module(mod)  # type: ignore[union-attr]
+            rc = mod._run_all()
+        out = buf.getvalue().strip().splitlines()
+        summary = out[-1] if out else ""
+        failed = [ln for ln in out if ln.strip().startswith("✗")]
+        r.check(rc == 0, "单元测试全部通过", summary)
+        if failed:
+            for ln in failed[:5]:
+                print("     ", ln.strip())
+    except Exception as exc:  # noqa: BLE001
+        r.check(False, "单元测试可执行", f"{type(exc).__name__}: {exc}")
+
+
 def main() -> int:
     print("=" * 74)
     print("交付验收自检 · CNN + BiLSTM SDN 异常检测工程")
@@ -237,6 +266,7 @@ def main() -> int:
     check_prepared(r)
     check_results(r)
     check_demo(r)
+    check_unit_tests(r)
 
     section("结论")
     print(f"  通过 {len(r.rows) - r.failed - r.warned} 项 | 警告 {r.warned} 项 | 失败 {r.failed} 项")

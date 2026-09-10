@@ -88,11 +88,15 @@
   ],
   "id_columns": [
     "Flow ID",
+    "Timestamp",
     "Source IP",
     "Source Port",
     "Destination IP",
     "Destination Port",
-    "Timestamp"
+    "Src IP",
+    "Src Port",
+    "Dst IP",
+    "Dst Port"
   ],
   "classes": [
     "Normal",

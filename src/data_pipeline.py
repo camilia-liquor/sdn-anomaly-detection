@@ -19,6 +19,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+from numpy.lib.stride_tricks import sliding_window_view
 
 from .config import Config
 from .traffic_generator import (
@@ -343,46 +344,72 @@ def build_windows(
     对应"攻击片段一旦开始就持续一段时间"的真实情形）；
     pure_only=False 时用多数投票打标签，并额外返回每个窗口的真值集合
     （在线检测/演示用，可以看到告警时延）。
+
+    实现说明（性能）
+    ----------------
+    这里用 ``numpy.lib.stride_tricks.sliding_window_view`` 构造**零拷贝的滑窗视图**，
+    纯标签到整数编码后用"计数矩阵 + argmax"一次性判纯与投票，
+    取代了早期"for 循环 + 每个窗口 np.unique"的写法（后者在 18 万条真实数据上要跑几十秒）。
+    语义与旧实现逐位对齐：平票时取**标签字典序更小**的那一类（与 np.unique 的升序一致）。
     """
+    features = np.asarray(features)
     n = len(features)
-    if n < window_size:
-        raise ValueError(f"样本数 {n} 少于窗口长度 {window_size}，请减小 window_size 或增加数据量")
-    starts = np.arange(0, n - window_size + 1, stride, dtype=np.int64)
-    X_list, y_list, ts_list, kept_starts = [], [], [], []
-    skipped = 0
-    for s in starts:
-        seg = labels[s : s + window_size]
-        uniq = pd.unique(seg)
-        if pure_only:
-            if len(uniq) != 1:
-                skipped += 1
-                continue
-            lab = uniq[0]
-        else:
-            vals, cnts = np.unique(seg, return_counts=True)
-            attacks = [(int(c), str(v)) for v, c in zip(vals, cnts) if str(v) != BINARY_NORMAL]
-            if attacks:  # 告警导向：窗口内只要出现攻击，就标注为出现最多的那类攻击
-                lab = max(attacks, key=lambda t: t[0])[1]
-            else:
-                lab = max(zip(cnts, vals), key=lambda t: t[0])[1]
-        X_list.append(features[s : s + window_size])
-        y_list.append(lab)
-        kept_starts.append(int(s))
-        if timestamps is not None:
-            ts_list.append(timestamps[s : s + window_size])
-    info = {
-        "n_candidates": int(len(starts)),
-        "n_kept": int(len(X_list)),
-        "n_skipped_mixed": int(skipped),
-        "window_size": int(window_size),
-        "stride": int(stride),
-        "starts": np.asarray(kept_starts, dtype=np.int64),
-    }
-    if not X_list:
+    T = int(window_size)
+    if n < T:
+        raise ValueError(f"样本数 {n} 少于窗口长度 {T}，请减小 window_size 或增加数据量")
+
+    # 标签 → 整数编码（升序），保证平票规则与旧实现一致
+    lab_arr = np.asarray(labels).astype(str)
+    uniq_labels, codes = np.unique(lab_arr, return_inverse=True)
+    n_cls = len(uniq_labels)
+    normal_code = int(np.flatnonzero(uniq_labels == BINARY_NORMAL)[0]) if BINARY_NORMAL in uniq_labels else -1
+
+    starts_all = np.arange(0, n - T + 1, stride, dtype=np.int64)
+    sw_codes = sliding_window_view(codes, T)[::stride]            # (M, T)
+    m = sw_codes.shape[0]
+
+    # 每个窗口的类别计数（C ≤ 8，循环次数很少，整体仍是向量化运算）
+    counts = np.zeros((m, n_cls), dtype=np.int32)
+    for c in range(n_cls):
+        counts[:, c] = (sw_codes == c).sum(axis=1)
+
+    if pure_only:
+        keep_mask = counts.max(axis=1) == T
+        skipped = int(m - keep_mask.sum())
+    else:
+        keep_mask = np.ones(m, dtype=bool)
+        skipped = 0
+
+    if keep_mask.sum() == 0:
         raise ValueError("没有生成任何窗口，请检查 window_size / stride 与数据量")
-    X = np.stack(X_list).astype(np.float32)
-    y = np.asarray(y_list, dtype=object)
-    ts = np.stack(ts_list) if ts_list else None
+
+    if pure_only:
+        y_codes = counts[keep_mask].argmax(axis=1)
+    else:
+        # 告警导向：窗口内只要出现攻击，就取"出现最多的那类攻击"；否则取最多的正常类
+        acount = counts.copy()
+        if normal_code >= 0:
+            acount[:, normal_code] = 0
+        has_attack = acount.sum(axis=1) > 0
+        y_codes = np.where(has_attack, acount.argmax(axis=1), counts.argmax(axis=1))
+
+    keep_idx = np.flatnonzero(keep_mask)
+    sw_feat = np.moveaxis(sliding_window_view(features, T, axis=0), -1, 1)   # (n-T+1, T, F)
+    X = np.ascontiguousarray(sw_feat[::stride][keep_idx]).astype(np.float32)
+    y = uniq_labels[y_codes]
+    ts = None
+    if timestamps is not None:
+        ts_all = np.asarray(timestamps)
+        ts = np.ascontiguousarray(sliding_window_view(ts_all, T)[::stride][keep_idx])
+
+    info = {
+        "n_candidates": int(len(starts_all)),
+        "n_kept": int(X.shape[0]),
+        "n_skipped_mixed": skipped,
+        "window_size": T,
+        "stride": int(stride),
+        "starts": starts_all[keep_idx],
+    }
     return X, y, ts, info
 
 

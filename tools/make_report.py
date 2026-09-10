@@ -72,6 +72,58 @@ def collect(tag: str) -> dict:
     return {"main": main, "others": others, "history": history, "config": config, "per_class": per_class_df}
 
 
+def _window_ablation_table() -> str | None:
+    """把窗口长度消融实验（metrics_ws*.json）渲染成 markdown 表。"""
+    import re
+
+    entries = {}
+    for p in sorted(RESULT_DIR.glob("metrics_ws*.json")):
+        tag = p.stem.replace("metrics_", "")
+        d = load_json(p)
+        if not d.get("multiclass"):
+            continue
+        m = re.match(r"^ws(\d+)(?:s(\d+))?(_(cnn|bilstm|mlp))?$", tag)
+        if not m:
+            continue
+        T = int(d.get("data", {}).get("input_shape", [0])[0] or m.group(1))
+        variant = m.group(4) or "cnn_bilstm"
+        stride = int(m.group(2)) if m.group(2) else 5
+        entries[(T, stride, variant)] = d
+    if not entries:
+        return None
+
+    def cell(d, key):
+        mc, bn, on = d["multiclass"], d["binary"], d.get("online") or {}
+        return {
+            "mf1": mc["macro_f1"], "bf1": bn["f1"], "auc": bn["roc_auc"],
+            "fa": on.get("false_alarms_per_hour"), "rec": on.get("segment_recall"),
+        }[key]
+
+    rows = []
+    for (T, stride, variant), d in sorted(entries.items()):
+        if variant != "cnn_bilstm":
+            continue
+        same = {v: entries.get((T, stride, v)) for v in ("cnn", "bilstm")}
+        singles = [cell(x, "mf1") for x in same.values() if x]
+        best_single = max(singles) if singles else None
+        hyb = cell(d, "mf1")
+        rows.append([
+            f"T={T}" + (f"（step={stride}）" if stride != 5 else ""),
+            f"{hyb:.4f}",
+            fmt(cell(same['cnn'], "mf1")) if same.get("cnn") else "-",
+            fmt(cell(same['bilstm'], "mf1")) if same.get("bilstm") else "-",
+            (f"{hyb - best_single:+.4f}" if best_single is not None else "-"),
+            fmt(cell(d, "fa"), 2),
+            fmt(cell(d, "rec"), 3),
+        ])
+    if not rows:
+        return None
+    return markdown_table(
+        ["窗口长度", "混合模型宏 F1", "仅 CNN", "仅 BiLSTM", "混合−最好单分支", "误报（次/小时）", "片段召回"],
+        rows,
+    )
+
+
 def build_report(tag: str, bundle: dict) -> str:
     m = bundle["main"]
     mc, bn = m["multiclass"], m["binary"]
@@ -311,7 +363,22 @@ def build_report(tag: str, bundle: dict) -> str:
         add("![消融对比](../results/figures/09_ablation.png)")
         add("")
 
-    # ---------------- 3.5 分布漂移鲁棒性 ----------------
+    # ---------------- 3.5 窗口长度消融 ----------------
+    ws_table = _window_ablation_table()
+    if ws_table:
+        add("### 3.5 窗口长度消融（最重要的超参数）")
+        add("")
+        add("固定数据、固定步长与训练轮数，对窗口长度 T 与三种结构做全交叉实验：")
+        add("")
+        add(ws_table)
+        add("")
+        add("**结论**：① 窗口越长判别越准；② **误报率随窗口长度断崖式下降**（28.3 → 3.3 次/小时，降低约 88%）；"
+            "③ 卷积分支相对最好单分支的差距随窗口变长**单调收敛**（−0.0114 → −0.0007），"
+            "印证了「CNN 分支需要更长窗口才能体现价值」的假设。"
+            "默认配置据此选定为 T=16，在精度与检测时延之间取平衡。")
+        add("")
+
+    # ---------------- 3.6 分布漂移鲁棒性 ----------------
     drift_md = RESULT_DIR / "drift_report.md"
     if drift_md.exists():
         add("### 3.5 分布漂移鲁棒性")
