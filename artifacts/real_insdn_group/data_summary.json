@@ -1,0 +1,56 @@
+{
+  "input_mode": "sequence",
+  "input_shape": [
+    10,
+    65
+  ],
+  "window_size": 10,
+  "n_features": 65,
+  "n_classes": 2,
+  "class_names": [
+    "Attack",
+    "Normal"
+  ],
+  "train": 11083,
+  "val": 2770,
+  "test": 4618,
+  "class_weight": {
+    "0": 0.7657178388835153,
+    "1": 1.4408476339053562
+  },
+  "train_class_counts": {
+    "Attack": 7237,
+    "Normal": 3846
+  },
+  "split": {
+    "train": 110846,
+    "val": 27711,
+    "test": 46190,
+    "purge_rows": 0,
+    "windows": {
+      "train": {
+        "n_candidates": 11084,
+        "n_kept": 11083,
+        "n_skipped_mixed": 1,
+        "window_size": 10,
+        "stride": 10
+      },
+      "val": {
+        "n_candidates": 2771,
+        "n_kept": 2770,
+        "n_skipped_mixed": 1,
+        "window_size": 10,
+        "stride": 10
+      },
+      "test": {
+        "n_candidates": 4619,
+        "n_kept": 4618,
+        "n_skipped_mixed": 1,
+        "window_size": 10,
+        "stride": 10
+      }
+    },
+    "time_ordered_split": false,
+    "split_mode": "random"
+  }
+}

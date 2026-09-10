@@ -1,0 +1,8 @@
+{
+  "tag": "cnn_bilstm_main_s0",
+  "variant": "cnn_bilstm",
+  "seed": 0,
+  "predictions": "predictions_cnn_bilstm_main_s0.csv",
+  "metrics": "metrics_cnn_bilstm_main_s0.json",
+  "attention": "attention_cnn_bilstm_main_s0.npy"
+}

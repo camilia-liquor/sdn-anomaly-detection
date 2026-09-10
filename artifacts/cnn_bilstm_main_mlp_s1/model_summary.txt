@@ -1,0 +1,44 @@
+Model: "cnn_bilstm_mlp"
+__________________________________________________________________________________________________
+ Layer (type)                Output Shape                 Param #   Connected to                  
+==================================================================================================
+ flow_window (InputLayer)    [(None, 10, 71)]             0         []                            
+                                                                                                  
+ flatten (Flatten)           (None, 710)                  0         ['flow_window[0][0]']         
+                                                                                                  
+ mlp_dense_0 (Dense)         (None, 128)                  91008     ['flatten[0][0]']             
+                                                                                                  
+ mlp_bn_0 (BatchNormalizati  (None, 128)                  512       ['mlp_dense_0[0][0]']         
+ on)                                                                                              
+                                                                                                  
+ mlp_relu_0 (Activation)     (None, 128)                  0         ['mlp_bn_0[0][0]']            
+                                                                                                  
+ mlp_drop_0 (Dropout)        (None, 128)                  0         ['mlp_relu_0[0][0]']          
+                                                                                                  
+ clf_dense_0 (Dense)         (None, 128)                  16512     ['mlp_drop_0[0][0]']          
+                                                                                                  
+ clf_bn_0 (BatchNormalizati  (None, 128)                  512       ['clf_dense_0[0][0]']         
+ on)                                                                                              
+                                                                                                  
+ clf_relu_0 (Activation)     (None, 128)                  0         ['clf_bn_0[0][0]']            
+                                                                                                  
+ clf_drop_0 (Dropout)        (None, 128)                  0         ['clf_relu_0[0][0]']          
+                                                                                                  
+ clf_dense_1 (Dense)         (None, 64)                   8256      ['clf_drop_0[0][0]']          
+                                                                                                  
+ clf_bn_1 (BatchNormalizati  (None, 64)                   256       ['clf_dense_1[0][0]']         
+ on)                                                                                              
+                                                                                                  
+ clf_relu_1 (Activation)     (None, 64)                   0         ['clf_bn_1[0][0]']            
+                                                                                                  
+ clf_drop_1 (Dropout)        (None, 64)                   0         ['clf_relu_1[0][0]']          
+                                                                                                  
+ bin (Dense)                 (None, 1)                    65        ['clf_drop_1[0][0]']          
+                                                                                                  
+ mc (Dense)                  (None, 8)                    520       ['clf_drop_1[0][0]']          
+                                                                                                  
+==================================================================================================
+Total params: 117641 (459.54 KB)
+Trainable params: 117001 (457.04 KB)
+Non-trainable params: 640 (2.50 KB)
+__________________________________________________________________________________________________

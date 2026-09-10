@@ -1,0 +1,176 @@
+{
+  "tag": "real_insdn_dedup3",
+  "model": {
+    "variant": "cnn_bilstm_cnn_bilstm",
+    "n_params": 146820,
+    "input_shape": [
+      10,
+      65
+    ]
+  },
+  "data": {
+    "input_mode": "sequence",
+    "input_shape": [
+      10,
+      65
+    ],
+    "window_size": 10,
+    "n_features": 65,
+    "n_classes": 2,
+    "class_names": [
+      "Attack",
+      "Normal"
+    ],
+    "train": 9825,
+    "val": 2455,
+    "test": 4093,
+    "class_weight": {
+      "0": 0.8119834710743802,
+      "1": 1.3013245033112584
+    },
+    "train_class_counts": {
+      "Attack": 6050,
+      "Normal": 3775
+    },
+    "split": {
+      "train": 98251,
+      "val": 24562,
+      "test": 40941,
+      "purge_rows": 0,
+      "windows": {
+        "train": {
+          "n_candidates": 9825,
+          "n_kept": 9825,
+          "n_skipped_mixed": 0,
+          "window_size": 10,
+          "stride": 10
+        },
+        "val": {
+          "n_candidates": 2456,
+          "n_kept": 2455,
+          "n_skipped_mixed": 1,
+          "window_size": 10,
+          "stride": 10
+        },
+        "test": {
+          "n_candidates": 4094,
+          "n_kept": 4093,
+          "n_skipped_mixed": 1,
+          "window_size": 10,
+          "stride": 10
+        }
+      },
+      "time_ordered_split": false,
+      "split_mode": "random"
+    }
+  },
+  "multiclass": {
+    "accuracy": 0.9975568043000245,
+    "macro_precision": 0.9979009474747659,
+    "macro_recall": 0.996939070585706,
+    "macro_f1": 0.9974155132349969,
+    "weighted_f1": 0.9975556231834934,
+    "cohen_kappa": 0.9948310473588711,
+    "top2_accuracy": NaN,
+    "n_classes_present": 2,
+    "confusion_matrix": [
+      [
+        2520,
+        1
+      ],
+      [
+        9,
+        1563
+      ]
+    ],
+    "confusion_matrix_normalized": [
+      [
+        0.9996033320111067,
+        0.0003966679888932963
+      ],
+      [
+        0.0057251908396946565,
+        0.9942748091603053
+      ]
+    ],
+    "per_class": {
+      "Attack": {
+        "precision": 0.99644128113879,
+        "recall": 0.9996033320111067,
+        "f1": 0.998019801980198,
+        "support": 2521
+      },
+      "Normal": {
+        "precision": 0.9993606138107417,
+        "recall": 0.9942748091603053,
+        "f1": 0.9968112244897959,
+        "support": 1572
+      }
+    },
+    "macro_roc_auc_ovr": NaN
+  },
+  "binary": {
+    "threshold": 0.5,
+    "accuracy": 0.9982897630100172,
+    "balanced_accuracy": 0.9978932690589886,
+    "precision": 0.997624703087886,
+    "recall": 0.9996033320111067,
+    "f1": 0.9986130374479889,
+    "roc_auc": 0.9996034581777697,
+    "pr_auc": 0.9998473370148958,
+    "mcc": 0.9963863589026815,
+    "tn": 1566,
+    "fp": 6,
+    "fn": 1,
+    "tp": 2520,
+    "false_positive_rate": 0.003816793893129771,
+    "false_negative_rate": 0.0003966679888932963,
+    "tpr_at_fpr_0.01": 0.9996033320111067,
+    "tpr_at_fpr_0.001": 0.9992066640222134,
+    "best_f1": 0.9996031746031746,
+    "best_f1_threshold": 0.9975578188896179
+  },
+  "binary_best_threshold": {
+    "threshold": 0.9975578188896179,
+    "accuracy": 0.9995113608600049,
+    "balanced_accuracy": 0.9996033320111066,
+    "precision": 1.0,
+    "recall": 0.9992066640222134,
+    "f1": 0.9996031746031746,
+    "roc_auc": 0.9996034581777697,
+    "pr_auc": 0.9998473370148958,
+    "mcc": 0.9989679794880894,
+    "tn": 1572,
+    "fp": 0,
+    "fn": 2,
+    "tp": 2519,
+    "false_positive_rate": 0.0,
+    "false_negative_rate": 0.0007933359777865926,
+    "tpr_at_fpr_0.01": 0.9996033320111067,
+    "tpr_at_fpr_0.001": 0.9992066640222134,
+    "best_f1": 0.9996031746031746,
+    "best_f1_threshold": 0.9975578188896179
+  },
+  "online": {
+    "threshold": 0.5,
+    "stream_rows": 40941,
+    "stream_hours": 45.4833,
+    "min_segment_rows": 10,
+    "n_raw_attack_segments": 1,
+    "n_ignored_short_segments": 0,
+    "n_attack_segments": 1,
+    "n_segments_detected": 1,
+    "segment_recall": 1.0,
+    "n_segments_missed": 0,
+    "mean_detection_delay_rows": 7.0,
+    "median_detection_delay_rows": 7.0,
+    "mean_detection_delay_sec": 22.0,
+    "p95_detection_delay_sec": 22.0,
+    "false_alarms": 23,
+    "false_alarms_per_hour": 0.5056797361670942,
+    "n_windows": 13644,
+    "n_alarmed_windows": 8422,
+    "alarm_rate": 0.617267663441806
+  },
+  "attention_file": "<USER_HOME>\\Desktop\\generate_normal_traffic\\artifacts\\attention_real_insdn_dedup3.npy"
+}

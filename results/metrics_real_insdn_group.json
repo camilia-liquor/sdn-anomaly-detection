@@ -1,0 +1,176 @@
+{
+  "tag": "real_insdn_group",
+  "model": {
+    "variant": "cnn_bilstm_cnn_bilstm",
+    "n_params": 146820,
+    "input_shape": [
+      10,
+      65
+    ]
+  },
+  "data": {
+    "input_mode": "sequence",
+    "input_shape": [
+      10,
+      65
+    ],
+    "window_size": 10,
+    "n_features": 65,
+    "n_classes": 2,
+    "class_names": [
+      "Attack",
+      "Normal"
+    ],
+    "train": 11083,
+    "val": 2770,
+    "test": 4618,
+    "class_weight": {
+      "0": 0.7657178388835153,
+      "1": 1.4408476339053562
+    },
+    "train_class_counts": {
+      "Attack": 7237,
+      "Normal": 3846
+    },
+    "split": {
+      "train": 110846,
+      "val": 27711,
+      "test": 46190,
+      "purge_rows": 0,
+      "windows": {
+        "train": {
+          "n_candidates": 11084,
+          "n_kept": 11083,
+          "n_skipped_mixed": 1,
+          "window_size": 10,
+          "stride": 10
+        },
+        "val": {
+          "n_candidates": 2771,
+          "n_kept": 2770,
+          "n_skipped_mixed": 1,
+          "window_size": 10,
+          "stride": 10
+        },
+        "test": {
+          "n_candidates": 4619,
+          "n_kept": 4618,
+          "n_skipped_mixed": 1,
+          "window_size": 10,
+          "stride": 10
+        }
+      },
+      "time_ordered_split": false,
+      "split_mode": "random"
+    }
+  },
+  "multiclass": {
+    "accuracy": 1.0,
+    "macro_precision": 1.0,
+    "macro_recall": 1.0,
+    "macro_f1": 1.0,
+    "weighted_f1": 1.0,
+    "cohen_kappa": 1.0,
+    "top2_accuracy": NaN,
+    "n_classes_present": 2,
+    "confusion_matrix": [
+      [
+        3015,
+        0
+      ],
+      [
+        0,
+        1603
+      ]
+    ],
+    "confusion_matrix_normalized": [
+      [
+        1.0,
+        0.0
+      ],
+      [
+        0.0,
+        1.0
+      ]
+    ],
+    "per_class": {
+      "Attack": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 3015
+      },
+      "Normal": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 1603
+      }
+    },
+    "macro_roc_auc_ovr": NaN
+  },
+  "binary": {
+    "threshold": 0.5,
+    "accuracy": 1.0,
+    "balanced_accuracy": 1.0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0,
+    "roc_auc": 1.0,
+    "pr_auc": 1.0,
+    "mcc": 1.0,
+    "tn": 1603,
+    "fp": 0,
+    "fn": 0,
+    "tp": 3015,
+    "false_positive_rate": 0.0,
+    "false_negative_rate": 0.0,
+    "tpr_at_fpr_0.01": 1.0,
+    "tpr_at_fpr_0.001": 1.0,
+    "best_f1": 1.0,
+    "best_f1_threshold": 0.9967209696769714
+  },
+  "binary_best_threshold": {
+    "threshold": 0.9967209696769714,
+    "accuracy": 1.0,
+    "balanced_accuracy": 1.0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0,
+    "roc_auc": 1.0,
+    "pr_auc": 1.0,
+    "mcc": 1.0,
+    "tn": 1603,
+    "fp": 0,
+    "fn": 0,
+    "tp": 3015,
+    "false_positive_rate": 0.0,
+    "false_negative_rate": 0.0,
+    "tpr_at_fpr_0.01": 1.0,
+    "tpr_at_fpr_0.001": 1.0,
+    "best_f1": 1.0,
+    "best_f1_threshold": 0.9967209696769714
+  },
+  "online": {
+    "threshold": 0.5,
+    "stream_rows": 46190,
+    "stream_hours": 51.3158,
+    "min_segment_rows": 10,
+    "n_raw_attack_segments": 1,
+    "n_ignored_short_segments": 0,
+    "n_attack_segments": 1,
+    "n_segments_detected": 1,
+    "segment_recall": 1.0,
+    "n_segments_missed": 0,
+    "mean_detection_delay_rows": 7.0,
+    "median_detection_delay_rows": 7.0,
+    "mean_detection_delay_sec": 18.0,
+    "p95_detection_delay_sec": 18.0,
+    "false_alarms": 0,
+    "false_alarms_per_hour": 0.0,
+    "n_windows": 15394,
+    "n_alarmed_windows": 10051,
+    "alarm_rate": 0.6529167208003118
+  },
+  "attention_file": "<USER_HOME>\\Desktop\\generate_normal_traffic\\artifacts\\attention_real_insdn_group.npy"
+}

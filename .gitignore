@@ -1,0 +1,47 @@
+# ============================================================================
+#  .gitignore —— 公开仓库只包含团队自主创作、依法有权开放的内容
+#  依竞赛规则，以下三类内容不得公开再分发，故一律排除：
+#    1) 上游参考素材（未标注许可证）
+#    2) 第三方真实数据集（未标注许可证）
+#    3) 含本机个人信息/体量过大的环境与产物
+# ============================================================================
+
+# ---------- 上游参考素材：未标注许可证，不随作品公开（见 NOTICE）----------
+CNN_biLSTM2.py
+generate_normal_traffic/
+generate_ddos_traffic/
+
+# ---------- 第三方真实数据集：未标注许可证，仅本地评估使用（见 NOTICE）----------
+data/real/
+
+# ---------- 运行环境与缓存 ----------
+.venv/
+.cache/
+_tmp/
+_piptest/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# ---------- 自研数据与产物（可再生成；如需随仓库发布小规模样例，请单独挑选）----------
+data/raw/*.csv
+data/processed/*.npz
+data/processed/*.joblib
+data/raw_smoke/
+data/processed_smoke/
+data/processed_real*/
+artifacts/*/*.keras
+artifacts/*/*.h5
+artifacts/*.npy
+artifacts/*/*.npy
+artifacts/*/*.joblib
+artifacts/_smoke/
+results/_smoke/
+results/figures_real*/
+results/predictions_cli.csv
+results/summary_backup.json
+logs/
+
+# ---------- 系统杂项 ----------
+.DS_Store
+Thumbs.db

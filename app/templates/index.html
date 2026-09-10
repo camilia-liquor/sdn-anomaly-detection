@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SDN 异常检测实时演示 · CNN + BiLSTM</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <div class="logo">SDN·IDS</div>
+    <div class="titles">
+      <h1>SDN 流量异常检测实时演示</h1>
+      <p>CNN + BiLSTM 混合模型 · 滑动窗口在线检测 · 留出测试集真实回放</p>
+    </div>
+  </div>
+  <div class="controls">
+    <div class="pill" id="status-pill"><span class="dot"></span><span id="status-text">加载中…</span></div>
+    <label class="ctl">阈值 <input type="range" id="threshold" min="0.05" max="0.95" step="0.05" value="0.5" /><span id="threshold-val">0.50</span></label>
+    <label class="ctl">速度 <select id="speed">
+      <option value="1">1×</option><option value="4">4×</option>
+      <option value="10" selected>10×</option><option value="30">30×</option>
+      <option value="100">100×</option><option value="1000">1000×</option>
+    </select></label>
+    <button id="btn-play" class="btn primary">暂停</button>
+    <button id="btn-step" class="btn">单步</button>
+    <button id="btn-reset" class="btn">回到起点</button>
+  </div>
+</header>
+
+<div class="layout">
+  <!-- 左：实时曲线 + 流量流水 -->
+  <section class="panel span-2">
+    <div class="panel-head">
+      <h2>实时检测曲线</h2>
+      <div class="legend">
+        <span class="lg"><i class="sw alert"></i>告警区间</span>
+        <span class="lg"><i class="sw truth"></i>真实攻击</span>
+        <span class="lg"><i class="sw prob"></i>异常概率</span>
+      </div>
+    </div>
+    <canvas id="chart" height="220"></canvas>
+    <div class="progress"><div id="progress-bar"></div></div>
+    <div class="hint" id="pos-hint">位置 0 / 0</div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head"><h2>当前窗口判定</h2></div>
+    <div class="gauge">
+      <div class="gauge-val" id="risk-val">--</div>
+      <div class="gauge-label" id="risk-label">等待数据</div>
+    </div>
+    <div class="prob-bars" id="prob-bars"></div>
+    <div class="kv" id="win-meta"></div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head"><h2>一键注入攻击（真实攻击片段回放）</h2></div>
+    <div class="inject" id="inject-buttons"></div>
+    <div class="panel-head"><h2>告警日志</h2></div>
+    <div class="log" id="alarm-log"><div class="log-empty">暂无告警</div></div>
+  </section>
+
+  <section class="panel span-2">
+    <div class="panel-head"><h2>流量流水（模型只看得到特征，人工可对照真实标签）</h2></div>
+    <div class="table-wrap">
+      <table id="flow-table">
+        <thead id="flow-head"></thead>
+        <tbody id="flow-body"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="panel span-3">
+    <div class="panel-head"><h2>运行统计</h2></div>
+    <div class="stats" id="stats"></div>
+  </section>
+
+  <section class="panel span-3">
+    <div class="panel-head">
+      <h2>实验指标与图表</h2>
+      <span class="hint" id="metrics-source"></span>
+    </div>
+    <div class="metrics" id="metrics"></div>
+    <div class="gallery" id="gallery"></div>
+  </section>
+</div>
+
+<div class="overlay" id="overlay"><img id="overlay-img" alt="figure" /></div>
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

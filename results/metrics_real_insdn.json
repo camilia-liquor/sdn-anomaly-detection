@@ -1,0 +1,176 @@
+{
+  "tag": "real_insdn",
+  "model": {
+    "variant": "cnn_bilstm_cnn_bilstm",
+    "n_params": 146820,
+    "input_shape": [
+      10,
+      65
+    ]
+  },
+  "data": {
+    "input_mode": "sequence",
+    "input_shape": [
+      10,
+      65
+    ],
+    "window_size": 10,
+    "n_features": 65,
+    "n_classes": 2,
+    "class_names": [
+      "Attack",
+      "Normal"
+    ],
+    "train": 11083,
+    "val": 2770,
+    "test": 4617,
+    "class_weight": {
+      "0": 0.766565223405727,
+      "1": 1.437856772184743
+    },
+    "train_class_counts": {
+      "Attack": 7229,
+      "Normal": 3854
+    },
+    "split": {
+      "train": 110848,
+      "val": 27712,
+      "test": 46187,
+      "purge_rows": 0,
+      "windows": {
+        "train": {
+          "n_candidates": 11084,
+          "n_kept": 11083,
+          "n_skipped_mixed": 1,
+          "window_size": 10,
+          "stride": 10
+        },
+        "val": {
+          "n_candidates": 2771,
+          "n_kept": 2770,
+          "n_skipped_mixed": 1,
+          "window_size": 10,
+          "stride": 10
+        },
+        "test": {
+          "n_candidates": 4618,
+          "n_kept": 4617,
+          "n_skipped_mixed": 1,
+          "window_size": 10,
+          "stride": 10
+        }
+      },
+      "time_ordered_split": false,
+      "split_mode": "random"
+    }
+  },
+  "multiclass": {
+    "accuracy": 0.9997834091401343,
+    "macro_precision": 0.9996869129618033,
+    "macro_recall": 0.9998344918901025,
+    "macro_f1": 0.999760639700122,
+    "weighted_f1": 0.9997834251299096,
+    "cohen_kappa": 0.9995212794250625,
+    "top2_accuracy": NaN,
+    "n_classes_present": 2,
+    "confusion_matrix": [
+      [
+        3020,
+        1
+      ],
+      [
+        0,
+        1596
+      ]
+    ],
+    "confusion_matrix_normalized": [
+      [
+        0.9996689837802052,
+        0.00033101621979476995
+      ],
+      [
+        0.0,
+        1.0
+      ]
+    ],
+    "per_class": {
+      "Attack": {
+        "precision": 1.0,
+        "recall": 0.9996689837802052,
+        "f1": 0.9998344644926337,
+        "support": 3021
+      },
+      "Normal": {
+        "precision": 0.9993738259236068,
+        "recall": 1.0,
+        "f1": 0.9996868149076104,
+        "support": 1596
+      }
+    },
+    "macro_roc_auc_ovr": NaN
+  },
+  "binary": {
+    "threshold": 0.5,
+    "accuracy": 0.9997834091401343,
+    "balanced_accuracy": 0.9998344918901025,
+    "precision": 1.0,
+    "recall": 0.9996689837802052,
+    "f1": 0.9998344644926337,
+    "roc_auc": 1.0,
+    "pr_auc": 1.0,
+    "mcc": 0.9995213939569216,
+    "tn": 1596,
+    "fp": 0,
+    "fn": 1,
+    "tp": 3020,
+    "false_positive_rate": 0.0,
+    "false_negative_rate": 0.00033101621979476995,
+    "tpr_at_fpr_0.01": 1.0,
+    "tpr_at_fpr_0.001": 1.0,
+    "best_f1": 1.0,
+    "best_f1_threshold": 0.11402437090873718
+  },
+  "binary_best_threshold": {
+    "threshold": 0.11402437090873718,
+    "accuracy": 1.0,
+    "balanced_accuracy": 1.0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0,
+    "roc_auc": 1.0,
+    "pr_auc": 1.0,
+    "mcc": 1.0,
+    "tn": 1596,
+    "fp": 0,
+    "fn": 0,
+    "tp": 3021,
+    "false_positive_rate": 0.0,
+    "false_negative_rate": 0.0,
+    "tpr_at_fpr_0.01": 1.0,
+    "tpr_at_fpr_0.001": 1.0,
+    "best_f1": 1.0,
+    "best_f1_threshold": 0.11402437090873718
+  },
+  "online": {
+    "threshold": 0.5,
+    "stream_rows": 46187,
+    "stream_hours": 51.3161,
+    "min_segment_rows": 10,
+    "n_raw_attack_segments": 1,
+    "n_ignored_short_segments": 0,
+    "n_attack_segments": 1,
+    "n_segments_detected": 1,
+    "segment_recall": 1.0,
+    "n_segments_missed": 0,
+    "mean_detection_delay_rows": 8.0,
+    "median_detection_delay_rows": 8.0,
+    "mean_detection_delay_sec": 41.0,
+    "p95_detection_delay_sec": 41.0,
+    "false_alarms": 0,
+    "false_alarms_per_hour": 0.0,
+    "n_windows": 15393,
+    "n_alarmed_windows": 10069,
+    "alarm_rate": 0.6541284999675177
+  },
+  "attention_file": "<USER_HOME>\\Desktop\\generate_normal_traffic\\artifacts\\attention_real_insdn.npy"
+}

@@ -1,0 +1,34 @@
+# 运行环境（本清单为「本机实测通过」的精确版本，非估计值）
+#
+# 安装：
+#   python -m venv .venv
+#   .venv\Scripts\activate                     # Linux/macOS: source .venv/bin/activate
+#   pip install -r requirements.txt
+#
+# 说明：
+#   * 以下版本组合已在 Windows 11 + Python 3.11.9 上完整跑通全部流程
+#     （数据生成 → 训练 → 三套评估 → 出图 → 演示大屏 → 36 项验收自检）；
+#   * CPU 即可完成全部实验：完整实验（4 结构 × 3 种子 + 3 基线）约 8 分钟；
+#   * 有 NVIDIA 显卡时：Windows 下 TF>=2.11 需走 WSL2，Linux 上换成 `tensorflow==2.15.1`；
+#   * 若无法安装 TensorFlow，数据链路与演示仍可用 `python tools/smoke_test.py` 自检。
+
+# ---- 核心依赖 ----
+numpy==1.26.4
+pandas==2.1.4
+scikit-learn==1.4.2
+scipy==1.17.1
+joblib==1.3.2
+
+# ---- 深度学习（CPU 版；约 200MB，国内建议用官方源或先下载 wheel 再用 tools/fetch_wheel.py）----
+tensorflow-cpu==2.15.1
+keras==2.15.0
+
+# ---- 可视化 ----
+matplotlib==3.8.4
+seaborn==0.13.2
+
+# ---- 演示大屏 ----
+flask==3.0.3
+
+# ---- 可选：仅开发期用于解析官方 PDF 附件，不参与作品运行 ----
+# pypdf==6.18.0

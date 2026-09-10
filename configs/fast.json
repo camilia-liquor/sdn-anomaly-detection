@@ -1,0 +1,18 @@
+{
+  "run_name": "fast",
+  "schema": "insdn",
+  "source": "synthetic",
+  "scale": 0.25,
+  "input_mode": "sequence",
+  "window_size": 10,
+  "window_stride": 5,
+  "epochs": 15,
+  "early_stop_patience": 5,
+  "batch_size": 256,
+  "learning_rate": 0.001,
+  "binary_loss_weight": 0.3,
+  "use_attention": true,
+  "use_class_weight": true,
+  "figures": true,
+  "seed": 42
+}
