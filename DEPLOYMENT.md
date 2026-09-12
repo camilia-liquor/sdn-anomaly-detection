@@ -79,7 +79,8 @@ python tools/check_env.py
 ```bash
 python tools/smoke_test.py        # 冒烟：小样本全链路跑通（约 1 分钟，产物写在 _smoke 隔离目录）
 python tests/test_core.py         # 单元测试：10 个用例，覆盖数据切分/窗口/泄漏防护
-python tools/acceptance_check.py  # 交付验收：文件齐全性 + 指标复算 + 在线接口真实调用（55 项）
+python tests/test_ryu_guard.py    # Ryu 适配层行为测试：25 个用例，无需安装 Ryu（见 3.5）
+python tools/acceptance_check.py  # 交付验收：文件齐全性 + 指标复算 + 在线接口真实调用（56 项）
 ```
 
 ---
@@ -256,8 +257,24 @@ ryu-manager integrations/ryu_guard.py --execute --whitelist 10.0.0.1 10.0.0.254 
 * 本仓库**在没有 Ryu / OpenFlow 交换机的机器上完成了全部开发与验证**，
   因此 `integrations/ryu_guard.py` **未在真实交换机上实跑**，它属于「按 Ryu 官方 API 写好的适配层」。
 * 但**控制器↔检测服务之间的完整闭环已经被实测验证**：`tools/controller_simulator.py`
-  在无 Ryu 环境下扮演控制器，实测吞吐 **1,647 条流/秒**、判定时延 **p50 30.3 ms / p95 44.8 ms**、
+  在无 Ryu 环境下扮演控制器，实测吞吐 **1,364~1,918 条流/秒**、判定时延
+  **p50 29.8 ms / p95 44.7 ms / p99 45.7 ms**（剔除首批 TensorFlow 计算图构建的约 0.5 s 一次性开销）、
   端到端处置动作全部正确执行，报告见 `results/e2e_controller_report.md`。
+* 另外，「没装 Ryu 就跑不了」**不等于「没法验证」**：`tests/test_ryu_guard.py` 用桩件替代 `ryu` 模块，
+  **真的调用适配层的核心逻辑**，把 25 项接口契约与安全默认值锁死（见下表）。
+  这个测试在编写过程中就抓出了两处**「账实不符」**的真缺陷并已修复——
+  它们恰好是最危险的一类问题：台账显示"已处置"，交换机上其实什么都没发生。
+
+  | 已验证项 | 说明 |
+  |---|---|
+  | 接口契约 | 适配层组装的流记录**覆盖控制器原生口径模型要求的全部 17 个特征名**（直接读 `data/processed_sdn/meta.json` 比对），字段名对不上服务会直接拒绝服务 |
+  | 安全默认 | 不加 `--execute` 时**不发出任何流表消息**；审计台账如实标注「演练 / 未执行」 |
+  | 白名单 | 白名单内的源 IP 即使开启真实处置也不下发规则 |
+  | **`block` 真下发** | 必须观察到一条 `OFPFlowMod`（`priority=100`、`hard_timeout=60`、按攻击源 IP 匹配）——修掉了「只记账不下发」的缺陷 |
+  | **`throttle` 真生效** | 除了 `OFPMeterMod`，还必须下发**引用该 Meter 的流表项**（`OFPInstructionMeter`）——只建 Meter 是不限速的，这也是一个已修缺陷 |
+  | `observe` 无副作用 | 只记录，不下发任何规则 |
+  | 审计可追溯 | 每条动作落盘，含源 IP / 类别 / 置信度 / 是否执行 / 有效期 |
+
 * 请按照 3.2 的「先演练、后执行」顺序在你的环境中验证，不要一上来就 `--execute`。
 
 ---

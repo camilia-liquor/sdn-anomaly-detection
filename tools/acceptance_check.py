@@ -78,7 +78,7 @@ def check_files(r: Report) -> None:
         "integrations/ryu_guard.py",
         "deploy/README.md", "deploy/cida-detect.service", "deploy/cida-detect.env",
         "deploy/nginx-cida.conf", "deploy/install-windows-service.ps1",
-        "tests/test_core.py",
+        "tests/test_core.py", "tests/test_ryu_guard.py",
         "tools/check_env.py", "tools/smoke_test.py", "tools/predict_cli.py",
         "tools/reevaluate.py", "tools/drift_test.py", "tools/ensemble_eval.py",
         "tools/make_report.py", "tools/fetch_wheel.py", "tools/sanitize_paths.py",
@@ -362,15 +362,38 @@ def check_deployable(r: Report) -> None:
     else:
         r.check(False, "运维换算报告存在", f"{ops}（运行 tools/ops_impact.py 生成）")
 
-    # 控制器适配层：本机没有 Ryu 时只能做静态检查（不假装跑过）
+    # 控制器适配层：本机没有 Ryu，因此改用「桩件 + 真实调用核心逻辑」的行为测试来验证，
+    # 而不是只做静态字符串检查（那样等于什么都没验证）。
     guard = (ROOT / "integrations" / "ryu_guard.py").read_text(encoding="utf-8")
     r.check(all(k in guard for k in ("add_arguments", "OFPFlowStatsRequest", "OFPMatch", "whitelist")),
             "Ryu 适配层结构完整（参数注册 / 流表统计 / 规则下发 / 白名单）")
-    r.check("未做运行验证" in guard or "未在真实交换机上实跑" in guard or "dry_run" in guard,
+    r.check("未在真实交换机上实跑" in guard or "未做运行验证" in guard or "dry_run" in guard,
             "Ryu 适配层已声明运行边界与演练默认（不夸大验证范围）")
-    has_ryu = importlib.util.find_spec("ryu") is not None
-    r.warn(has_ryu, "本机 Ryu 环境（未安装属正常，适配层需在真实 SDN 环境验证）",
-           "已安装" if has_ryu else "未安装：ryu_guard.py 只在有 Ryu 的机器上运行")
+    guard_test = ROOT / "tests" / "test_ryu_guard.py"
+    if guard_test.exists():
+        import contextlib
+        import io
+
+        spec2 = importlib.util.spec_from_file_location("cida_ryu_tests", guard_test)
+        m2 = importlib.util.module_from_spec(spec2)  # type: ignore[arg-type]
+        buf2 = io.StringIO()
+        with contextlib.redirect_stdout(buf2):
+            spec2.loader.exec_module(m2)  # type: ignore[union-attr]
+            rc2 = m2._run_all()
+        out2 = buf2.getvalue().strip().splitlines()
+        summary2 = next((ln for ln in reversed(out2) if "项通过" in ln), out2[-1] if out2 else "")
+        bad2 = [ln.strip() for ln in out2 if ln.strip().startswith("✗")]
+        r.check(rc2 == 0, "Ryu 适配层行为测试（桩件替代 Ryu，验证接口契约与下发路径）", summary2)
+        for ln in bad2[:5]:
+            print("     ", ln)
+    else:
+        r.check(False, "Ryu 适配层行为测试存在", str(guard_test))
+    try:
+        has_ryu = importlib.util.find_spec("ryu") is not None
+    except (ImportError, ValueError):  # 桩件/异常模块都可能让 find_spec 直接抛错
+        has_ryu = False
+    r.warn(has_ryu, "本机 Ryu 环境（未安装属正常，真机验证仍需在 SDN 环境完成）",
+           "已安装" if has_ryu else "未安装：行为测试用桩件替代 Ryu 已覆盖接口契约与下发路径")
 
     # 跨域适用边界报告（零样本跨域 + 校准阶梯）：回答"换个网络还能不能用"
     cross = RESULT_DIR / "cross_dataset.json"

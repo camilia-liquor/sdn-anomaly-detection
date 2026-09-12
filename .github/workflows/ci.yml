@@ -46,6 +46,8 @@ jobs:
           os.environ['CIDA_POLICY_ACTION']='nuke'; assert DetectorConfig.from_env().action=='observe'; print('OK 非法动作已回退')"
       - name: 单元测试（10 项）
         run: python tests/test_core.py
+      - name: Ryu 适配层行为测试（桩件替代 Ryu：接口契约 + 安全默认值 + 下发路径）
+        run: python tests/test_ryu_guard.py
       - name: 无 TF 全链路自检（数据生成 → 评估 → 出图）
         run: python tools/smoke_test.py --scale 0.08
 

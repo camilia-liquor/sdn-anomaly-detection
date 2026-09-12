@@ -157,9 +157,16 @@ class GuardSwitch(simple_switch_13.SimpleSwitch13):
         executed = False
         if action in ("block", "throttle") and src and src not in self.whitelist:
             if self.execute:
-                executed = True if action == "block" else self._meter_or_limit(datapath, src)
+                # ⚠️ 这里必须真的把规则下发出去：早期实现写成 `executed = True if action == "block" ...`，
+                # 结果是 block 动作只把 executed 记成 True、却**从未调用 `_drop()`**——
+                # 审计台账会显示"已下发"，而交换机上什么都没变。对一套声称能处置的系统来说，
+                # 这种"账实不符"比不处置更危险，故修正为两条动作各自走真实下发路径。
+                executed = (self._meter_or_limit(datapath, src) if action == "throttle"
+                            else self._drop(datapath, src))
                 if executed:
                     self.blocked[src] = time.time() + self.block_seconds
+                else:
+                    self.logger.error("[guard] 动作 %s 下发失败，src=%s —— 已记入台账但未生效", action, src)
             else:
                 self.logger.warning("[guard][演练] 将下发动作 action=%s src=%s（到期自动解除 %ds）",
                                     action, src, self.block_seconds)
@@ -178,15 +185,30 @@ class GuardSwitch(simple_switch_13.SimpleSwitch13):
                             "（已下发）" if executed else "（仅记录）")
 
     def _meter_or_limit(self, datapath, src):
-        """限速：优先使用 OpenFlow Meter（需要交换机支持），失败则退化为丢弃。"""
+        """限速：下发 Meter **并把流表项挂到这个 Meter 上**，失败则退化为丢弃。
+
+        ⚠️ 这里有一个很容易写错的坑：**只下发 `OFPMeterMod` 是不会限速的**——
+        Meter 必须被某条流表项通过 `OFPInstructionMeter` 引用才会对该流生效。
+        早期实现只创建了 Meter 就直接 `return True`，交换机上其实什么都没变，
+        属于和 `block` 同一类的「账实不符」。因此这里第二步必须再下发一条
+        带 `OFPInstructionMeter(meter_id)` 的流表项。
+        """
         ofproto, parser = datapath.ofproto, datapath.ofproto_parser
+        meter_id = 1
         try:
             bands = [parser.OFPMeterBandDrop(rate=1000, burst_size=100)]
             datapath.send_msg(parser.OFPMeterMod(datapath=datapath, command=ofproto.OFPMC_ADD,
-                                                 flags=ofproto.OFPMF_KBPS, meter_id=1, bands=bands))
-            self.logger.info("[guard] 已下发限速 Meter（1 Mbps）src=%s", src)
+                                                 flags=ofproto.OFPMF_KBPS, meter_id=meter_id,
+                                                 bands=bands))
+            match = parser.OFPMatch(eth_type=0x0800, ipv4_src=src)
+            inst = [parser.OFPInstructionMeter(meter_id)]
+            datapath.send_msg(parser.OFPFlowMod(datapath=datapath, priority=100, match=match,
+                                                instructions=inst, hard_timeout=self.block_seconds,
+                                                command=ofproto.OFPFC_ADD))
+            self.logger.info("[guard] 已下发限速规则（Meter %d，1 Mbps）并挂到 src=%s 的流表项上",
+                             meter_id, src)
             return True
-        except Exception as exc:  # 交换机不支持 meter 时退化为丢弃
+        except Exception as exc:  # 交换机不支持 meter / OF1.3 未启用时退化为丢弃
             self.logger.warning("[guard] 限速不可用（%s），改为丢弃", exc)
             return self._drop(datapath, src)
 

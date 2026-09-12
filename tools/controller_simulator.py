@@ -157,14 +157,28 @@ def main(argv: list[str] | None = None) -> int:
     for r in alarm_records:
         by_action[r["action"]] = by_action.get(r["action"], 0) + 1
 
+    # ---- 时延分位：同时给出「含首批预热」与「剔除首批预热」两种口径 ----
+    # 服务端第一次推理要构建 TensorFlow 计算图（数十~数百毫秒），若把它算进分位，
+    # p99 会被首批拉高一个量级，看起来像"服务不稳定"。真实部署里这段只发生一次，
+    # 因此两个口径都给出来，并注明差异原因——比只给一个好看的数更可信。
+    warm_ms = float(lat[0]) if lat else 0.0
+    steady = lat[1:] if len(lat) > 1 else lat
+
+    def pct(vals, q: float) -> float:
+        return float(np.percentile(vals, q)) if vals else 0.0
+
     rows_tbl = markdown_table(
         ["指标", "实测值"],
         [
             ["推送流记录", f"{sent:,} 条（分 {len(lat)} 批，每批 {args.batch} 条）"],
             ["总墙钟耗时", f"{elapsed:.2f} 秒"],
             ["吞吐", f"{sent/max(elapsed,1e-9):,.0f} 条流记录/秒"],
-            ["**端到端时延（每批）**", f"p50 {np.percentile(lat,50):.1f} ms / p95 {np.percentile(lat,95):.1f} ms / p99 {np.percentile(lat,99):.1f} ms"],
-            ["服务侧已处理", f"{st2['rows']:,} 条 / {st2['windows']:,} 个窗口"],
+            ["**端到端时延（每批，含首批预热）**",
+             f"p50 {pct(lat,50):.1f} ms / p95 {pct(lat,95):.1f} ms / p99 {pct(lat,99):.1f} ms"],
+            ["**端到端时延（剔除首批预热）**",
+             f"p50 {pct(steady,50):.1f} ms / p95 {pct(steady,95):.1f} ms / p99 {pct(steady,99):.1f} ms"
+             f"（首批 {warm_ms:.1f} ms，为 TensorFlow 计算图构建的一次性开销）"],
+            ["服务侧已处理（自服务启动累计，含本次）", f"{st2['rows']:,} 条 / {st2['windows']:,} 个窗口"],
             ["确认告警数", f"{len(alarm_records)}"],
             ["其中命中真实攻击", f"{len(hits)}"],
             ["其中误报（真值为 Normal）", f"{len(false_alarms)}"],
@@ -189,8 +203,10 @@ def main(argv: list[str] | None = None) -> int:
     )
     save_text(text, RESULT_DIR / "e2e_controller_report.md")
     save_json({"rows_sent": sent, "batches": len(lat), "elapsed_sec": round(elapsed, 3),
-               "latency_ms": {"p50": float(np.percentile(lat, 50)), "p95": float(np.percentile(lat, 95)),
-                              "p99": float(np.percentile(lat, 99))},
+               "latency_ms": {"p50": pct(lat, 50), "p95": pct(lat, 95), "p99": pct(lat, 99)},
+               "latency_ms_excl_warmup": {"p50": pct(steady, 50), "p95": pct(steady, 95),
+                                          "p99": pct(steady, 99)},
+               "first_batch_warmup_ms": warm_ms,
                "throughput_rows_per_sec": sent / max(elapsed, 1e-9),
                "alerts": len(alarm_records), "alerts_hitting_attack": len(hits),
                "false_alarms": len(false_alarms), "by_action": by_action,

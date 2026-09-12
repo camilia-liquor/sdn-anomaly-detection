@@ -1,18 +1,24 @@
 {
   "rows_sent": 3000,
   "batches": 60,
-  "elapsed_sec": 1.822,
+  "elapsed_sec": 2.199,
   "latency_ms": {
-    "p50": 30.263600001489976,
-    "p95": 44.759610001710826,
-    "p99": 59.17554199950238
+    "p50": 29.871300001104828,
+    "p95": 45.23571500139951,
+    "p99": 248.824345998508
   },
-  "throughput_rows_per_sec": 1646.9421554386292,
-  "alerts": 236,
-  "alerts_hitting_attack": 227,
-  "false_alarms": 9,
+  "latency_ms_excl_warmup": {
+    "p50": 29.838800001016352,
+    "p95": 44.67635000255541,
+    "p99": 45.657044000399765
+  },
+  "first_batch_warmup_ms": 540.7921000005445,
+  "throughput_rows_per_sec": 1364.2840264732538,
+  "alerts": 235,
+  "alerts_hitting_attack": 228,
+  "false_alarms": 7,
   "by_action": {
-    "block": 236
+    "block": 235
   },
   "policy": {
     "action": "block",

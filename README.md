@@ -33,7 +33,7 @@ A reproducible, open-source **SDN intrusion/anomaly detection** project (Apache-
 - **Actually a system, not a notebook**: an online detection service (`POST /api/detect` with
   sliding buffer, threshold + N-of-M confirmation, throttling/blocking policy, whitelist,
   dry-run, JSONL audit trail, Prometheus `/metrics`), a **Ryu controller adapter**, and a
-  no-Ryu controller simulator that measured **1,647 flows/s** end-to-end.
+  no-Ryu controller simulator that measured **1,364–1,918 flows/s** end-to-end.
 - **Reproducible**: one command (`python run_all.py`), **50-item acceptance self-check**,
   10 unit tests, offline demo dashboard, no GPU required (~0.02 ms per window batched).
 
@@ -47,7 +47,7 @@ then `python app/app.py` for the live dashboard. See sections below for details.
 | # | 亮点 | 说明 |
 |---|------|------|
 | 1 | **误报可控：检测工作点选择（本作品核心设计）** | 把「窗口长度 × 判定阈值 × 告警确认次数」放进同一评估框架全枚举，给出 Pareto 表与图：**召回保持 100% 的前提下把误报从 8.56 降到 0.66 次/小时**（−92%），也可选零误报点。直接回应行业第一痛点（2025 SANS：**73% 的组织把误报列为威胁检测最大挑战**） |
-| 2 | **是一个能接进控制平面的系统，不是一个 notebook** | 在线检测服务（`POST /api/detect`：滑窗缓冲 + 阈值 + 连续确认 + 处置策略 + 白名单 + 演练模式 + JSONL 审计台账 + Prometheus `/metrics`）、**Ryu 控制器适配层**（流表统计→判定→下发限速/阻断规则）、离线大屏；无 Ryu 环境下用 `tools/controller_simulator.py` 实测整条闭环：**1,647 条流/秒、判定 p50 30 ms** |
+| 2 | **是一个能接进控制平面的系统，不是一个 notebook** | 在线检测服务（`POST /api/detect`：滑窗缓冲 + 阈值 + 连续确认 + 处置策略 + 白名单 + 演练模式 + JSONL 审计台账 + Prometheus `/metrics`）、**Ryu 控制器适配层**（流表统计→判定→下发限速/阻断规则）、离线大屏；无 Ryu 环境下用 `tools/controller_simulator.py` 实测整条闭环：**1,364~1,918 条流/秒、判定 p50 30 ms** |
 | 3 | **把算法指标翻译成运维指标（评委最关心的"能不能用"）** | 告警量/天、人工处置工时/天、漏报次数/天、响应时延，以及流量放大 1×/10×/100× 的容量预警线：推荐工作点 **≈36 条告警/天、3.6 人工小时/天、漏报 0、时延 18 ms**；并量化出「连续确认」这一零成本机制每天省下 **19 个人工小时** |
 | 4 | **自带数据生成器，不依赖外部数据集** | 按攻击机理建模（速率、时长、标志位、到达间隔……）生成 8 类 SDN 流量；输出格式与公开数据集 inSDN/CICFlowMeter **列名逐字一致**，也与本仓库 Ryu 采集脚本**完全一致** → 赛后可直接换成真实采集数据 |
 | 5 | **真正的时序建模 + 窗口机理发现** | 用真实**滑动窗口 (T,F)**（原 demo 是把特征硬切成假时间步）；并量化出"窗口越长越准、**误报断崖下降**（28.3→3.3 次/小时）、卷积分支增益随窗口单调收敛"的机理结论 |
@@ -55,7 +55,7 @@ then `python app/app.py` for the live dashboard. See sections below for details.
 | 8 | **两种特征口径都验证过（含诚实的负面结论）** | 完整流特征口径（84 列，宏 F1 0.994）与**控制器原生字段口径**（只用 OpenFlow 流表统计的 17 列，宏 F1 0.844）都训练评估过；并量化出字段缺口如何转化为**工作点代价**（阈值须从 0.50 提到 0.99、时延从 18 ms 升到 41 ms 才能把误报压到同一水平）——这是上线前必须知道的事 |
 | 9 | **连"哪里会失效"都做了实验** | 零样本跨域迁移（自研→真实）不可用，且**只重拟合标准化器会把 AUC 从 0.67 打到 0.47**（跨域 AUC 高≠可用）；500 个标注窗口 + 3 秒微调可把召回从 0.0006 提到 0.4257。诊断出根因是采集口径差异，并给出"用目标域统计量反向标定生成器参数（域随机化）"的正确下一步 |
 | 10 | **可核验的方法学** | 错误分析（**漏报 0**、误报集中在 4 组混淆对、错例特征画像）、性能基准（单窗口 **p50 0.92 ms**）、泄漏诊断（公开数据集 **85% 近似重复**）、多种子均值±标准差、分布漂移测试 |
-| 11 | **一键复现 + 现场演示 + 工程规范** | `python run_all.py` 一条命令跑完全流程；**55 项交付验收自检 + 10 项单元测试 + CI**；`python app/app.py` 起一个离线可用的实时检测大屏 |
+| 11 | **一键复现 + 现场演示 + 工程规范** | `python run_all.py` 一条命令跑完全流程；**56 项交付验收自检 + 10 项单元测试 + 25 项 Ryu 适配层行为测试 + CI**；`python app/app.py` 起一个离线可用的实时检测大屏 |
 
 ---
 
@@ -93,7 +93,7 @@ python tools/controller_simulator.py --rows 3000 --batch 50 --policy block --no-
 # 6) 生成实验报告 + 交付验收自检
 python tools/make_report.py
 python tests/test_core.py                 # 单元测试（10 项，不依赖 TensorFlow）
-python tools/acceptance_check.py          # 55 项全过 = 可以直接提交
+python tools/acceptance_check.py          # 56 项全过 = 可以直接提交
 
 # 7) 启动演示大屏
 python app/app.py            # 浏览器打开 http://127.0.0.1:5000
@@ -114,7 +114,9 @@ python app/app.py            # 浏览器打开 http://127.0.0.1:5000
 >
 > **工程质量**：`python tests/test_core.py` 跑 10 项单元测试（生成器物理自洽性、列名自动识别、
 > 行号泄漏回归测试、滑窗纯窗口/多数投票、类别逆频加权、评估口径边界），无需 pytest；
-> `acceptance_check.py` 会把它一并纳入 55 项验收。
+> `python tests/test_ryu_guard.py` 再跑 25 项 **Ryu 适配层行为测试**（桩件替代 Ryu，验证接口契约、
+> 演练默认、白名单与规则下发路径），**同样不需要安装 Ryu**；
+> `acceptance_check.py` 会把两者一并纳入 56 项验收。
 
 ---
 
@@ -329,20 +331,31 @@ CPU 单进程实测（`python tools/benchmark_latency.py`）：
 
 | 指标 | 实测值 |
 |---|---|
-| 回放规模 | 3,000 条流 / 50 条一批 / 共 50 批 |
-| 吞吐 | **1,647 条流/秒** |
-| 判定时延 | **p50 30.3 ms / p95 44.8 ms / p99 59.2 ms** |
-| 端到端总耗时 | 1.82 s（含 HTTP 与策略下发） |
-| 告警 | 236 条确认告警，其中 **227 条命中真实攻击、9 条误报** |
+| 回放规模 | 3,000 条流 / 50 条一批 / 共 60 批 |
+| 吞吐 | **1,364~1,918 条流/秒**（多次运行区间，中位约 1,650） |
+| 判定时延 | **p50 29.8 ms / p95 44.7 ms / p99 45.7 ms**（剔除首批预热） |
+| 首批预热 | 约 0.5 s —— TensorFlow 计算图构建的**一次性**开销，真实部署里只发生一次 |
+| 端到端总耗时 | 1.6~2.2 s（含 HTTP 与策略下发） |
+| 告警 | 235 条确认告警，其中 **228 条命中真实攻击、7 条误报** |
 | 处置 | 全部按 `block` 策略正确执行（策略经 `/api/policy` 热更新，`dry_run=false`） |
-| 可追溯性 | 每条告警写入 `results/audit_alerts.jsonl`（时间/源 IP/类别/置信度/动作/触发窗口） |
+| 可追溯性 | 每条告警写入 `results/audit_alerts.jsonl`（时间/源 IP/类别/置信度/动作/触发窗口/覆盖行区间） |
+
+> 时延分位给出**两个口径**：含首批预热时 p99 会被预热拉到 200 ms 以上，
+> 看起来像"服务不稳定"；剔除后 p99 仅 45.7 ms。我们两个数都列出来并说明原因，
+> 而不是只挑好看的那个报。
 
 对比优化前：**逐条调用 `predict()` 时 p50 为 1,261 ms（32 条流/秒）**，改成"批内合并 + 直接调用推理图"
-后降到 **30 ms（1,647 条流/秒）**，**提速 51 倍**。这说明在线部署的关键不是模型本身，
+后降到 **30 ms（1,364~1,918 条流/秒）**，**提速约 43~60 倍**。这说明在线部署的关键不是模型本身，
 而是**把推理调用攒成批**这一层工程实现。
 
 > 诚实声明：`integrations/ryu_guard.py` 是按 Ryu 官方 API 写好的适配层，**本机没有 Ryu/OpenFlow 交换机，
 > 因此未在真实交换机上实跑**；上面这份报告验证的是**控制器↔检测服务之间的接口与处置逻辑**。
+>
+> 但"没装 Ryu 就跑不了"**不等于"没法验证"**：`tests/test_ryu_guard.py` 用桩件替代 `ryu` 模块、
+> **真的调用适配层核心逻辑**，锁死 25 项接口契约与安全默认值（含「记录字段必须覆盖模型全部 17 个特征名」
+> 这条硬接口契约）。这个测试当场抓出并修掉了两处**「账实不符」**缺陷：
+> `block` 只记账不下发规则、`throttle` 只建 Meter 却没把流表项挂上去（**只建 Meter 是不限速的**）——
+> 它们是最危险的一类问题：台账显示"已处置"，交换机上其实什么都没发生。
 
 ### 3.12 跨域适用边界：我们主动做的一次"失败实验"（`results/cross_dataset_report.md`）
 
@@ -390,7 +403,7 @@ CPU 单进程实测（`python tools/benchmark_latency.py`）：
 > 工作点分析给出**误报可控的部署方案**（召回 100% 不变，确认 3 窗口把误报再降 92%），
 > 运维换算把上述指标落成 **≈36 条告警/天、3.6 人工小时/天、漏报 0**，
 > 漂移实验表明它对环境变化比树模型稳健得多（退化 ≤0.2% vs 3.8%~7.7%），
-> 性能基准与闭环实测表明**普通 CPU 即可在线部署**（批量推理 13.6 万条流/秒、端到端 1,647 条流/秒）。
+> 性能基准与闭环实测表明**普通 CPU 即可在线部署**（批量推理 13.6 万条流/秒、端到端 1,364~1,918 条流/秒）。
 
 ---
 
@@ -422,7 +435,7 @@ generate_normal_traffic/
 ├─ deploy/                     ★ 部署样例（systemd 单元 / 环境变量模板 / nginx 反代 / Windows 服务脚本）
 ├─ tools/
 │  ├─ check_env.py             环境自检
-│  ├─ acceptance_check.py      ★ 交付验收自检（提交前跑这个：55 项全过才算完整）
+│  ├─ acceptance_check.py      ★ 交付验收自检（提交前跑这个：56 项全过才算完整）
 │  ├─ smoke_test.py            无 TF 依赖的全链路自检（独立目录，不污染正式结果）
 │  ├─ reevaluate.py            改口径/阈值后重新评估（不用重训）
 │  ├─ operating_point.py       ★ 检测工作点选择器（阈值×窗口×确认次数的 Pareto 表与图）
