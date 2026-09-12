@@ -1,0 +1,1053 @@
+{
+  "experiment": "domain_randomization_cross_domain",
+  "question": "把训练数据换成多个网络/采集条件下的域，零样本跨域是否从「不可用」变成「可用」？",
+  "domains": [
+    {
+      "key": "D1",
+      "name": "基准分布",
+      "seed_offset": 0,
+      "overrides": {}
+    },
+    {
+      "key": "D2",
+      "name": "隐蔽攻击为主",
+      "seed_offset": 11,
+      "overrides": {
+        "stealth_ratio": 0.75,
+        "stealth_mix": 0.6
+      }
+    },
+    {
+      "key": "D3",
+      "name": "类别边界模糊",
+      "seed_offset": 22,
+      "overrides": {
+        "overlap_ratio": 0.65
+      }
+    },
+    {
+      "key": "D4",
+      "name": "强噪声+标注更乱",
+      "seed_offset": 33,
+      "overrides": {
+        "feature_noise": 0.15,
+        "label_noise": 0.02
+      }
+    },
+    {
+      "key": "D5",
+      "name": "老式明显攻击",
+      "seed_offset": 44,
+      "overrides": {
+        "stealth_ratio": 0.15,
+        "stealth_mix": 0.2,
+        "overlap_ratio": 0.15
+      }
+    },
+    {
+      "key": "D6",
+      "name": "业务构成变化",
+      "seed_offset": 55,
+      "overrides": {
+        "episodes_scale": {
+          "attack": 0.45,
+          "normal": 1.8
+        }
+      }
+    }
+  ],
+  "settings": [
+    "multi",
+    "single",
+    "multi_matched"
+  ],
+  "params": {
+    "domain_flows": 0.12,
+    "epochs": 20,
+    "window": 16,
+    "stride": 5,
+    "variant": "cnn_bilstm"
+  },
+  "folds": [
+    {
+      "fold": "D1",
+      "domain": "基准分布",
+      "single_source": "D2",
+      "multi_train_domains": [
+        "D2",
+        "D3",
+        "D4",
+        "D5",
+        "D6"
+      ],
+      "multi_zero_shot_f1": 0.49691012990512273,
+      "multi_zero_shot_auc": 0.9583333333333334,
+      "multi_zero_shot_tpr1": 0.12244897959183673,
+      "multi_in_domain_f1": 0.39944691376085734,
+      "single_zero_shot_f1": 0.5112435081779042,
+      "single_zero_shot_auc": 0.6383928571428572,
+      "single_zero_shot_tpr1": 0.22448979591836735,
+      "single_in_domain_f1": 0.57984496124031,
+      "multi_matched_zero_shot_f1": 0.5481513560331295,
+      "multi_matched_zero_shot_auc": 0.6082057823129252,
+      "multi_matched_zero_shot_tpr1": 0.20408163265306123,
+      "multi_matched_in_domain_f1": 0.5469158878504673
+    },
+    {
+      "fold": "D2",
+      "domain": "隐蔽攻击为主",
+      "single_source": "D1",
+      "multi_train_domains": [
+        "D1",
+        "D3",
+        "D4",
+        "D5",
+        "D6"
+      ],
+      "multi_zero_shot_f1": 0.38148617430637505,
+      "multi_zero_shot_auc": 0.5044430919050518,
+      "multi_zero_shot_tpr1": 0.03773584905660377,
+      "multi_in_domain_f1": 0.24018838304552587,
+      "single_zero_shot_f1": 0.6295465795465797,
+      "single_zero_shot_auc": 0.7334144856968959,
+      "single_zero_shot_tpr1": 0.07547169811320754,
+      "single_in_domain_f1": 0.5143690579083838,
+      "multi_matched_zero_shot_f1": 0.27146707739699655,
+      "multi_matched_zero_shot_auc": 0.5430310407790627,
+      "multi_matched_zero_shot_tpr1": 0.16981132075471697,
+      "multi_matched_in_domain_f1": 0.2972388955582233
+    },
+    {
+      "fold": "D3",
+      "domain": "类别边界模糊",
+      "single_source": "D1",
+      "multi_train_domains": [
+        "D1",
+        "D2",
+        "D4",
+        "D5",
+        "D6"
+      ],
+      "multi_zero_shot_f1": 0.5664190010035741,
+      "multi_zero_shot_auc": 0.9444939415538132,
+      "multi_zero_shot_tpr1": 0.3442622950819672,
+      "multi_in_domain_f1": 0.598656302735377,
+      "single_zero_shot_f1": 0.462316759045731,
+      "single_zero_shot_auc": 0.7322701354240913,
+      "single_zero_shot_tpr1": 0.19672131147540983,
+      "single_in_domain_f1": 0.5143690579083838,
+      "multi_matched_zero_shot_f1": 0.14844983924078914,
+      "multi_matched_zero_shot_auc": 0.5449928724162509,
+      "multi_matched_zero_shot_tpr1": 0.06557377049180328,
+      "multi_matched_in_domain_f1": 0.28434343434343434
+    },
+    {
+      "fold": "D4",
+      "domain": "强噪声+标注更乱",
+      "single_source": "D1",
+      "multi_train_domains": [
+        "D1",
+        "D2",
+        "D3",
+        "D5",
+        "D6"
+      ],
+      "multi_zero_shot_f1": 0.5450710723402281,
+      "multi_zero_shot_auc": 0.9641445511010729,
+      "multi_zero_shot_tpr1": 0.29545454545454547,
+      "multi_in_domain_f1": 0.3930245356703968,
+      "single_zero_shot_f1": 0.5739472436808999,
+      "single_zero_shot_auc": 0.7178147939017503,
+      "single_zero_shot_tpr1": 0.09090909090909091,
+      "single_in_domain_f1": 0.5143690579083838,
+      "multi_matched_zero_shot_f1": 0.3317173023055376,
+      "multi_matched_zero_shot_auc": 0.6236589497459063,
+      "multi_matched_zero_shot_tpr1": 0.25,
+      "multi_matched_in_domain_f1": 0.3131746031746032
+    },
+    {
+      "fold": "D5",
+      "domain": "老式明显攻击",
+      "single_source": "D1",
+      "multi_train_domains": [
+        "D1",
+        "D2",
+        "D3",
+        "D4",
+        "D6"
+      ],
+      "multi_zero_shot_f1": 0.8275700137757831,
+      "multi_zero_shot_auc": 1.0,
+      "multi_zero_shot_tpr1": 1.0,
+      "multi_in_domain_f1": 0.5339605079742861,
+      "single_zero_shot_f1": 0.6121817930271167,
+      "single_zero_shot_auc": 0.7764794168096055,
+      "single_zero_shot_tpr1": 0.18181818181818182,
+      "single_in_domain_f1": 0.5143690579083838,
+      "multi_matched_zero_shot_f1": 0.1552037845705968,
+      "multi_matched_zero_shot_auc": 0.45368782161234994,
+      "multi_matched_zero_shot_tpr1": 0.09090909090909091,
+      "multi_matched_in_domain_f1": 0.14779874213836477
+    },
+    {
+      "fold": "D6",
+      "domain": "业务构成变化",
+      "single_source": "D1",
+      "multi_train_domains": [
+        "D1",
+        "D2",
+        "D3",
+        "D4",
+        "D5"
+      ],
+      "multi_zero_shot_f1": 0.5179542050663516,
+      "multi_zero_shot_auc": 0.967640392848149,
+      "multi_zero_shot_tpr1": 0.8157894736842105,
+      "multi_in_domain_f1": 0.8113783110093945,
+      "single_zero_shot_f1": 0.5082633112189762,
+      "single_zero_shot_auc": 0.7500629564341476,
+      "single_zero_shot_tpr1": 0.3684210526315789,
+      "single_in_domain_f1": 0.5143690579083838,
+      "multi_matched_zero_shot_f1": 0.1288265306122449,
+      "multi_matched_zero_shot_auc": 0.58108788718207,
+      "multi_matched_zero_shot_tpr1": 0.23684210526315788,
+      "multi_matched_in_domain_f1": 0.3142857142857143
+    }
+  ],
+  "runs": {
+    "dr_D1_multi": {
+      "fold": "D1",
+      "setting": "multi",
+      "in_domain": {
+        "macro_f1": 0.39944691376085734,
+        "accuracy": 0.6302250803858521,
+        "binary_f1": 0.3868312757201646,
+        "binary_roc_auc": 0.9589780786589297,
+        "tpr_at_fpr_1pct": 0.7872340425531915,
+        "n_windows": 311,
+        "per_class_f1": {
+          "Botnet": 0.47368421052631576,
+          "BruteForce": 0.2,
+          "DDoS": 0.8181818181818182,
+          "DoS": 0.45454545454545453,
+          "Normal": 0.7338129496402878,
+          "Probe": 0.041666666666666664,
+          "U2R": 0.0,
+          "WebAttack": 0.47368421052631576
+        }
+      },
+      "zero_shot": {
+        "macro_f1": 0.49691012990512273,
+        "accuracy": 0.6016597510373444,
+        "binary_f1": 0.49,
+        "binary_roc_auc": 0.9583333333333334,
+        "tpr_at_fpr_1pct": 0.12244897959183673,
+        "n_windows": 241,
+        "per_class_f1": {
+          "Botnet": 0.625,
+          "BruteForce": 0.5263157894736842,
+          "DDoS": 0.9090909090909091,
+          "DoS": 0.48,
+          "Normal": 0.689419795221843,
+          "Probe": 0.14545454545454545,
+          "U2R": 0.0,
+          "WebAttack": 0.6
+        }
+      },
+      "n_train_rows": 648,
+      "n_train_windows": 648,
+      "train_seconds": 6.1
+    },
+    "dr_D1_single": {
+      "fold": "D1",
+      "setting": "single",
+      "in_domain": {
+        "macro_f1": 0.57984496124031,
+        "accuracy": 0.24444444444444444,
+        "binary_f1": 0.4482758620689655,
+        "binary_roc_auc": 0.8774038461538463,
+        "tpr_at_fpr_1pct": 0.5384615384615384,
+        "n_windows": 45,
+        "per_class_f1": {
+          "Botnet": 1.0,
+          "BruteForce": 0.0,
+          "DDoS": 0.23255813953488372,
+          "DoS": 0.6666666666666666,
+          "Normal": 0.0,
+          "Probe": 0.0,
+          "U2R": 0.0,
+          "WebAttack": 1.0
+        }
+      },
+      "zero_shot": {
+        "macro_f1": 0.5112435081779042,
+        "accuracy": 0.3112033195020747,
+        "binary_f1": 0.3391003460207612,
+        "binary_roc_auc": 0.6383928571428572,
+        "tpr_at_fpr_1pct": 0.22448979591836735,
+        "n_windows": 241,
+        "per_class_f1": {
+          "Botnet": 1.0,
+          "BruteForce": 0.5714285714285714,
+          "DDoS": 0.10989010989010989,
+          "DoS": 0.0,
+          "Normal": 0.351931330472103,
+          "Probe": 0.5454545454545454,
+          "U2R": 0.0,
+          "WebAttack": 1.0
+        }
+      },
+      "n_train_rows": 136,
+      "n_train_windows": 136,
+      "train_seconds": 5.4
+    },
+    "dr_D1_multi_matched": {
+      "fold": "D1",
+      "setting": "multi_matched",
+      "in_domain": {
+        "macro_f1": 0.5469158878504673,
+        "accuracy": 0.8852459016393442,
+        "binary_f1": 0.26666666666666666,
+        "binary_roc_auc": 0.3862745098039216,
+        "tpr_at_fpr_1pct": 0.2,
+        "n_windows": 61,
+        "per_class_f1": {
+          "Botnet": 0.8,
+          "BruteForce": 0.0,
+          "DDoS": 0.0,
+          "DoS": 0.0,
+          "Normal": 0.9345794392523364,
+          "Probe": 0.0,
+          "U2R": 0.0,
+          "WebAttack": 1.0
+        }
+      },
+      "zero_shot": {
+        "macro_f1": 0.5481513560331295,
+        "accuracy": 0.8755186721991701,
+        "binary_f1": 0.46153846153846156,
+        "binary_roc_auc": 0.6082057823129252,
+        "tpr_at_fpr_1pct": 0.20408163265306123,
+        "n_windows": 241,
+        "per_class_f1": {
+          "Botnet": 1.0,
+          "BruteForce": 0.5714285714285714,
+          "DDoS": 0.0,
+          "DoS": 0.0,
+          "Normal": 0.9359605911330049,
+          "Probe": 0.6153846153846154,
+          "U2R": 0.0,
+          "WebAttack": 0.7142857142857143
+        }
+      },
+      "n_train_rows": 119,
+      "n_train_windows": 119,
+      "train_seconds": 5.2
+    },
+    "dr_D2_multi": {
+      "fold": "D2",
+      "setting": "multi",
+      "in_domain": {
+        "macro_f1": 0.24018838304552587,
+        "accuracy": 0.8459119496855346,
+        "binary_f1": 0.2810810810810811,
+        "binary_roc_auc": 0.5020242914979758,
+        "tpr_at_fpr_1pct": 0.07692307692307693,
+        "n_windows": 318,
+        "per_class_f1": {
+          "Botnet": 0.0,
+          "BruteForce": 0.0,
+          "DDoS": 0.5384615384615384,
+          "DoS": 0.0,
+          "Normal": 0.9206349206349206,
+          "Probe": 0.2222222222222222,
+          "U2R": 0.0,
+          "WebAttack": 0.0
+        }
+      },
+      "zero_shot": {
+        "macro_f1": 0.38148617430637505,
+        "accuracy": 0.7836538461538461,
+        "binary_f1": 0.4061302681992337,
+        "binary_roc_auc": 0.5044430919050518,
+        "tpr_at_fpr_1pct": 0.03773584905660377,
+        "n_windows": 208,
+        "per_class_f1": {
+          "Botnet": 0.0,
+          "BruteForce": 0.0,
+          "DDoS": 0.6923076923076923,
+          "DoS": 0.10526315789473684,
+          "Normal": 0.8728323699421965,
+          "Probe": 1.0,
+          "U2R": 0.0,
+          "WebAttack": 0.0
+        }
+      },
+      "n_train_rows": 687,
+      "n_train_windows": 687,
+      "train_seconds": 4.4
+    },
+    "dr_D2_single": {
+      "fold": "D2",
+      "setting": "single",
+      "in_domain": {
+        "macro_f1": 0.5143690579083838,
+        "accuracy": 0.671875,
+        "binary_f1": 0.3188405797101449,
+        "binary_roc_auc": 0.6861063464837049,
+        "tpr_at_fpr_1pct": 0.2727272727272727,
+        "n_windows": 64,
+        "per_class_f1": {
+          "Botnet": 0.46153846153846156,
+          "BruteForce": 1.0,
+          "DDoS": 0.375,
+          "DoS": 0.0,
+          "Normal": 0.7640449438202247,
+          "Probe": 0.0,
+          "U2R": 0.0,
+          "WebAttack": 1.0
+        }
+      },
+      "zero_shot": {
+        "macro_f1": 0.6295465795465797,
+        "accuracy": 0.7788461538461539,
+        "binary_f1": 0.4340425531914894,
+        "binary_roc_auc": 0.7334144856968959,
+        "tpr_at_fpr_1pct": 0.07547169811320754,
+        "n_windows": 208,
+        "per_class_f1": {
+          "Botnet": 0.6153846153846154,
+          "BruteForce": 0.6666666666666666,
+          "DDoS": 0.6,
+          "DoS": 0.0,
+          "Normal": 0.8581081081081081,
+          "Probe": 0.6666666666666666,
+          "U2R": 0.0,
+          "WebAttack": 1.0
+        }
+      },
+      "n_train_rows": 131,
+      "n_train_windows": 131,
+      "train_seconds": 5.2
+    },
+    "dr_D2_multi_matched": {
+      "fold": "D2",
+      "setting": "multi_matched",
+      "in_domain": {
+        "macro_f1": 0.2972388955582233,
+        "accuracy": 0.8032786885245902,
+        "binary_f1": 0.28169014084507044,
+        "binary_roc_auc": 0.6352941176470588,
+        "tpr_at_fpr_1pct": 0.0,
+        "n_windows": 61,
+        "per_class_f1": {
+          "Botnet": 0.0,
+          "BruteForce": 0.0,
+          "DDoS": 0.5882352941176471,
+          "DoS": 0.0,
+          "Normal": 0.8979591836734694,
+          "Probe": 0.0,
+          "U2R": 0.0,
+          "WebAttack": 0.0
+        }
+      },
+      "zero_shot": {
+        "macro_f1": 0.27146707739699655,
+        "accuracy": 0.6778846153846154,
+        "binary_f1": 0.4061302681992337,
+        "binary_roc_auc": 0.5430310407790627,
+        "tpr_at_fpr_1pct": 0.16981132075471697,
+        "n_windows": 208,
+        "per_class_f1": {
+          "Botnet": 0.0,
+          "BruteForce": 0.0,
+          "DDoS": 0.42857142857142855,
+          "DoS": 0.0,
+          "Normal": 0.8050314465408805,
+          "Probe": 0.6666666666666666,
+          "U2R": 0.0,
+          "WebAttack": 0.0
+        }
+      },
+      "n_train_rows": 113,
+      "n_train_windows": 113,
+      "train_seconds": 4.5
+    },
+    "dr_D3_multi": {
+      "fold": "D3",
+      "setting": "multi",
+      "in_domain": {
+        "macro_f1": 0.598656302735377,
+        "accuracy": 0.7339743589743589,
+        "binary_f1": 0.34551495016611294,
+        "binary_roc_auc": 0.9803254437869823,
+        "tpr_at_fpr_1pct": 0.8846153846153846,
+        "n_windows": 312,
+        "per_class_f1": {
+          "Botnet": 0.9090909090909091,
+          "BruteForce": 0.11764705882352941,
+          "DDoS": 0.85,
+          "DoS": 0.6666666666666666,
+          "Normal": 0.8288288288288288,
+          "Probe": 0.09836065573770492,
+          "U2R": 0.0,
+          "WebAttack": 0.72
+        }
+      },
+      "zero_shot": {
+        "macro_f1": 0.5664190010035741,
+        "accuracy": 0.5224489795918368,
+        "binary_f1": 0.43109540636042404,
+        "binary_roc_auc": 0.9444939415538132,
+        "tpr_at_fpr_1pct": 0.3442622950819672,
+        "n_windows": 245,
+        "per_class_f1": {
+          "Botnet": 0.9523809523809523,
+          "BruteForce": 0.29411764705882354,
+          "DDoS": 0.9333333333333333,
+          "DoS": 0.8571428571428571,
+          "Normal": 0.5603112840466926,
+          "Probe": 0.08791208791208792,
+          "U2R": 0.0,
+          "WebAttack": 0.8461538461538461
+        }
+      },
+      "n_train_rows": 658,
+      "n_train_windows": 658,
+      "train_seconds": 6.2
+    },
+    "dr_D3_single": {
+      "fold": "D3",
+      "setting": "single",
+      "in_domain": {
+        "macro_f1": 0.5143690579083838,
+        "accuracy": 0.671875,
+        "binary_f1": 0.3188405797101449,
+        "binary_roc_auc": 0.6861063464837049,
+        "tpr_at_fpr_1pct": 0.2727272727272727,
+        "n_windows": 64,
+        "per_class_f1": {
+          "Botnet": 0.46153846153846156,
+          "BruteForce": 1.0,
+          "DDoS": 0.375,
+          "DoS": 0.0,
+          "Normal": 0.7640449438202247,
+          "Probe": 0.0,
+          "U2R": 0.0,
+          "WebAttack": 1.0
+        }
+      },
+      "zero_shot": {
+        "macro_f1": 0.462316759045731,
+        "accuracy": 0.6693877551020408,
+        "binary_f1": 0.4053156146179402,
+        "binary_roc_auc": 0.7322701354240913,
+        "tpr_at_fpr_1pct": 0.19672131147540983,
+        "n_windows": 245,
+        "per_class_f1": {
+          "Botnet": 0.5555555555555556,
+          "BruteForce": 0.5714285714285714,
+          "DDoS": 0.42424242424242425,
+          "DoS": 0.0,
+          "Normal": 0.7663551401869159,
+          "Probe": 0.38095238095238093,
+          "U2R": 0.0,
+          "WebAttack": 1.0
+        }
+      },
+      "n_train_rows": 131,
+      "n_train_windows": 131,
+      "train_seconds": 5.2
+    },
+    "dr_D3_multi_matched": {
+      "fold": "D3",
+      "setting": "multi_matched",
+      "in_domain": {
+        "macro_f1": 0.28434343434343434,
+        "accuracy": 0.4098360655737705,
+        "binary_f1": 0.28169014084507044,
+        "binary_roc_auc": 0.6529411764705882,
+        "tpr_at_fpr_1pct": 0.0,
+        "n_windows": 61,
+        "per_class_f1": {
+          "Botnet": 0.6666666666666666,
+          "BruteForce": 0.0,
+          "DDoS": 0.22727272727272727,
+          "DoS": 0.0,
+          "Normal": 0.5277777777777778,
+          "Probe": 0.0,
+          "U2R": 0.0,
+          "WebAttack": 0.0
+        }
+      },
+      "zero_shot": {
+        "macro_f1": 0.14844983924078914,
+        "accuracy": 0.24897959183673468,
+        "binary_f1": 0.39869281045751637,
+        "binary_roc_auc": 0.5449928724162509,
+        "tpr_at_fpr_1pct": 0.06557377049180328,
+        "n_windows": 245,
+        "per_class_f1": {
+          "Botnet": 0.18181818181818182,
+          "BruteForce": 0.0,
+          "DDoS": 0.14659685863874344,
+          "DoS": 0.0,
+          "Normal": 0.35918367346938773,
+          "Probe": 0.5,
+          "U2R": 0.0,
+          "WebAttack": 0.0
+        }
+      },
+      "n_train_rows": 114,
+      "n_train_windows": 114,
+      "train_seconds": 5.0
+    },
+    "dr_D4_multi": {
+      "fold": "D4",
+      "setting": "multi",
+      "in_domain": {
+        "macro_f1": 0.3930245356703968,
+        "accuracy": 0.5838709677419355,
+        "binary_f1": 0.3333333333333333,
+        "binary_roc_auc": 0.9236126883185707,
+        "tpr_at_fpr_1pct": 0.5882352941176471,
+        "n_windows": 310,
+        "per_class_f1": {
+          "Botnet": 0.4186046511627907,
+          "BruteForce": 0.16666666666666666,
+          "DDoS": 0.7659574468085106,
+          "DoS": 0.4166666666666667,
+          "Normal": 0.6886075949367089,
+          "Probe": 0.08163265306122448,
+          "U2R": 0.0,
+          "WebAttack": 0.6060606060606061
+        }
+      },
+      "zero_shot": {
+        "macro_f1": 0.5450710723402281,
+        "accuracy": 0.6195121951219512,
+        "binary_f1": 0.4036697247706422,
+        "binary_roc_auc": 0.9641445511010729,
+        "tpr_at_fpr_1pct": 0.29545454545454547,
+        "n_windows": 205,
+        "per_class_f1": {
+          "Botnet": 0.41379310344827586,
+          "BruteForce": 0.631578947368421,
+          "DDoS": 0.9333333333333333,
+          "DoS": 0.7,
+          "Normal": 0.6857142857142857,
+          "Probe": 0.04878048780487805,
+          "U2R": 0.0,
+          "WebAttack": 0.9473684210526315
+        }
+      },
+      "n_train_rows": 698,
+      "n_train_windows": 698,
+      "train_seconds": 5.8
+    },
+    "dr_D4_single": {
+      "fold": "D4",
+      "setting": "single",
+      "in_domain": {
+        "macro_f1": 0.5143690579083838,
+        "accuracy": 0.671875,
+        "binary_f1": 0.3188405797101449,
+        "binary_roc_auc": 0.6861063464837049,
+        "tpr_at_fpr_1pct": 0.2727272727272727,
+        "n_windows": 64,
+        "per_class_f1": {
+          "Botnet": 0.46153846153846156,
+          "BruteForce": 1.0,
+          "DDoS": 0.375,
+          "DoS": 0.0,
+          "Normal": 0.7640449438202247,
+          "Probe": 0.0,
+          "U2R": 0.0,
+          "WebAttack": 1.0
+        }
+      },
+      "zero_shot": {
+        "macro_f1": 0.5739472436808999,
+        "accuracy": 0.7804878048780488,
+        "binary_f1": 0.3474576271186441,
+        "binary_roc_auc": 0.7178147939017503,
+        "tpr_at_fpr_1pct": 0.09090909090909091,
+        "n_windows": 205,
+        "per_class_f1": {
+          "Botnet": 0.5714285714285714,
+          "BruteForce": 0.6666666666666666,
+          "DDoS": 0.5185185185185185,
+          "DoS": 0.0,
+          "Normal": 0.8610169491525423,
+          "Probe": 0.4,
+          "U2R": 0.0,
+          "WebAttack": 1.0
+        }
+      },
+      "n_train_rows": 131,
+      "n_train_windows": 131,
+      "train_seconds": 5.8
+    },
+    "dr_D4_multi_matched": {
+      "fold": "D4",
+      "setting": "multi_matched",
+      "in_domain": {
+        "macro_f1": 0.3131746031746032,
+        "accuracy": 0.4262295081967213,
+        "binary_f1": 0.2413793103448276,
+        "binary_roc_auc": 0.7058823529411765,
+        "tpr_at_fpr_1pct": 0.7,
+        "n_windows": 61,
+        "per_class_f1": {
+          "Botnet": 0.8,
+          "BruteForce": 0.0,
+          "DDoS": 0.23809523809523808,
+          "DoS": 0.0,
+          "Normal": 0.5277777777777778,
+          "Probe": 0.0,
+          "U2R": 0.0,
+          "WebAttack": 0.0
+        }
+      },
+      "zero_shot": {
+        "macro_f1": 0.3317173023055376,
+        "accuracy": 0.37073170731707317,
+        "binary_f1": 0.3063063063063063,
+        "binary_roc_auc": 0.6236589497459063,
+        "tpr_at_fpr_1pct": 0.25,
+        "n_windows": 205,
+        "per_class_f1": {
+          "Botnet": 0.8571428571428571,
+          "BruteForce": 0.2857142857142857,
+          "DDoS": 0.19047619047619047,
+          "DoS": 0.0,
+          "Normal": 0.48868778280542985,
+          "Probe": 0.5,
+          "U2R": 0.0,
+          "WebAttack": 0.0
+        }
+      },
+      "n_train_rows": 146,
+      "n_train_windows": 146,
+      "train_seconds": 5.4
+    },
+    "dr_D5_multi": {
+      "fold": "D5",
+      "setting": "multi",
+      "in_domain": {
+        "macro_f1": 0.5339605079742861,
+        "accuracy": 0.652317880794702,
+        "binary_f1": 0.3322884012539185,
+        "binary_roc_auc": 0.9841630673637949,
+        "tpr_at_fpr_1pct": 0.7924528301886793,
+        "n_windows": 302,
+        "per_class_f1": {
+          "Botnet": 0.5333333333333333,
+          "BruteForce": 0.2857142857142857,
+          "DDoS": 0.8461538461538461,
+          "DoS": 0.8148148148148148,
+          "Normal": 0.7360406091370558,
+          "Probe": 0.041666666666666664,
+          "U2R": 0.0,
+          "WebAttack": 0.48
+        }
+      },
+      "zero_shot": {
+        "macro_f1": 0.8275700137757831,
+        "accuracy": 0.875,
+        "binary_f1": 0.38427947598253276,
+        "binary_roc_auc": 1.0,
+        "tpr_at_fpr_1pct": 1.0,
+        "n_windows": 256,
+        "per_class_f1": {
+          "Botnet": 0.8695652173913043,
+          "BruteForce": 0.8888888888888888,
+          "DDoS": 1.0,
+          "DoS": 1.0,
+          "Normal": 0.9183673469387755,
+          "Probe": 0.20689655172413793,
+          "U2R": 1.0,
+          "WebAttack": 0.7368421052631579
+        }
+      },
+      "n_train_rows": 695,
+      "n_train_windows": 695,
+      "train_seconds": 5.9
+    },
+    "dr_D5_single": {
+      "fold": "D5",
+      "setting": "single",
+      "in_domain": {
+        "macro_f1": 0.5143690579083838,
+        "accuracy": 0.671875,
+        "binary_f1": 0.3188405797101449,
+        "binary_roc_auc": 0.6861063464837049,
+        "tpr_at_fpr_1pct": 0.2727272727272727,
+        "n_windows": 64,
+        "per_class_f1": {
+          "Botnet": 0.46153846153846156,
+          "BruteForce": 1.0,
+          "DDoS": 0.375,
+          "DoS": 0.0,
+          "Normal": 0.7640449438202247,
+          "Probe": 0.0,
+          "U2R": 0.0,
+          "WebAttack": 1.0
+        }
+      },
+      "zero_shot": {
+        "macro_f1": 0.6121817930271167,
+        "accuracy": 0.875,
+        "binary_f1": 0.3320754716981132,
+        "binary_roc_auc": 0.7764794168096055,
+        "tpr_at_fpr_1pct": 0.18181818181818182,
+        "n_windows": 256,
+        "per_class_f1": {
+          "Botnet": 0.8333333333333334,
+          "BruteForce": 1.0,
+          "DDoS": 0.5384615384615384,
+          "DoS": 0.0,
+          "Normal": 0.9256594724220624,
+          "Probe": 0.6,
+          "U2R": 0.0,
+          "WebAttack": 1.0
+        }
+      },
+      "n_train_rows": 131,
+      "n_train_windows": 131,
+      "train_seconds": 5.3
+    },
+    "dr_D5_multi_matched": {
+      "fold": "D5",
+      "setting": "multi_matched",
+      "in_domain": {
+        "macro_f1": 0.14779874213836477,
+        "accuracy": 0.7966101694915254,
+        "binary_f1": 0.2898550724637681,
+        "binary_roc_auc": 0.6612244897959184,
+        "tpr_at_fpr_1pct": 0.0,
+        "n_windows": 59,
+        "per_class_f1": {
+          "Botnet": 0.0,
+          "BruteForce": 0.0,
+          "DDoS": 0.0,
+          "DoS": 0.0,
+          "Normal": 0.8867924528301887,
+          "Probe": 0.0,
+          "U2R": 0.0,
+          "WebAttack": 0.0
+        }
+      },
+      "zero_shot": {
+        "macro_f1": 0.1552037845705968,
+        "accuracy": 0.8203125,
+        "binary_f1": 0.29333333333333333,
+        "binary_roc_auc": 0.45368782161234994,
+        "tpr_at_fpr_1pct": 0.09090909090909091,
+        "n_windows": 256,
+        "per_class_f1": {
+          "Botnet": 0.0,
+          "BruteForce": 0.0,
+          "DDoS": 0.0,
+          "DoS": 0.0,
+          "Normal": 0.9082969432314411,
+          "Probe": 0.3333333333333333,
+          "U2R": 0.0,
+          "WebAttack": 0.0
+        }
+      },
+      "n_train_rows": 146,
+      "n_train_windows": 146,
+      "train_seconds": 3.9
+    },
+    "dr_D6_multi": {
+      "fold": "D6",
+      "setting": "multi",
+      "in_domain": {
+        "macro_f1": 0.8113783110093945,
+        "accuracy": 0.87,
+        "binary_f1": 0.4142857142857143,
+        "binary_roc_auc": 0.9913080649757765,
+        "tpr_at_fpr_1pct": 0.6896551724137931,
+        "n_windows": 300,
+        "per_class_f1": {
+          "Botnet": 0.8,
+          "BruteForce": 0.9230769230769231,
+          "DDoS": 0.9565217391304348,
+          "DoS": 0.9411764705882353,
+          "Normal": 0.9147982062780269,
+          "Probe": 0.1935483870967742,
+          "U2R": 1.0,
+          "WebAttack": 0.7619047619047619
+        }
+      },
+      "zero_shot": {
+        "macro_f1": 0.5179542050663516,
+        "accuracy": 0.728744939271255,
+        "binary_f1": 0.3247863247863248,
+        "binary_roc_auc": 0.967640392848149,
+        "tpr_at_fpr_1pct": 0.8157894736842105,
+        "n_windows": 247,
+        "per_class_f1": {
+          "Botnet": 0.6363636363636364,
+          "BruteForce": 0.18181818181818182,
+          "DDoS": 0.8421052631578947,
+          "DoS": 0.5714285714285714,
+          "Normal": 0.8225352112676056,
+          "Probe": 0.0,
+          "U2R": 0.0,
+          "WebAttack": 0.5714285714285714
+        }
+      },
+      "n_train_rows": 704,
+      "n_train_windows": 704,
+      "train_seconds": 6.9
+    },
+    "dr_D6_single": {
+      "fold": "D6",
+      "setting": "single",
+      "in_domain": {
+        "macro_f1": 0.5143690579083838,
+        "accuracy": 0.671875,
+        "binary_f1": 0.3188405797101449,
+        "binary_roc_auc": 0.6861063464837049,
+        "tpr_at_fpr_1pct": 0.2727272727272727,
+        "n_windows": 64,
+        "per_class_f1": {
+          "Botnet": 0.46153846153846156,
+          "BruteForce": 1.0,
+          "DDoS": 0.375,
+          "DoS": 0.0,
+          "Normal": 0.7640449438202247,
+          "Probe": 0.0,
+          "U2R": 0.0,
+          "WebAttack": 1.0
+        }
+      },
+      "zero_shot": {
+        "macro_f1": 0.5082633112189762,
+        "accuracy": 0.7813765182186235,
+        "binary_f1": 0.2857142857142857,
+        "binary_roc_auc": 0.7500629564341476,
+        "tpr_at_fpr_1pct": 0.3684210526315789,
+        "n_windows": 247,
+        "per_class_f1": {
+          "Botnet": 0.5185185185185185,
+          "BruteForce": 0.6666666666666666,
+          "DDoS": 0.5079365079365079,
+          "DoS": 0.0,
+          "Normal": 0.8647214854111406,
+          "Probe": 0.0,
+          "U2R": 0.0,
+          "WebAttack": 1.0
+        }
+      },
+      "n_train_rows": 131,
+      "n_train_windows": 131,
+      "train_seconds": 5.8
+    },
+    "dr_D6_multi_matched": {
+      "fold": "D6",
+      "setting": "multi_matched",
+      "in_domain": {
+        "macro_f1": 0.3142857142857143,
+        "accuracy": 0.8813559322033898,
+        "binary_f1": 0.21212121212121213,
+        "binary_roc_auc": 0.14285714285714285,
+        "tpr_at_fpr_1pct": 0.0,
+        "n_windows": 59,
+        "per_class_f1": {
+          "Botnet": 0.0,
+          "BruteForce": 0.0,
+          "DDoS": 0.0,
+          "DoS": 0.0,
+          "Normal": 0.9714285714285714,
+          "Probe": 0.2857142857142857,
+          "U2R": 0.0,
+          "WebAttack": 0.0
+        }
+      },
+      "zero_shot": {
+        "macro_f1": 0.1288265306122449,
+        "accuracy": 0.8178137651821862,
+        "binary_f1": 0.26666666666666666,
+        "binary_roc_auc": 0.58108788718207,
+        "tpr_at_fpr_1pct": 0.23684210526315788,
+        "n_windows": 247,
+        "per_class_f1": {
+          "Botnet": 0.0,
+          "BruteForce": 0.0,
+          "DDoS": 0.0,
+          "DoS": 0.0,
+          "Normal": 0.9017857142857143,
+          "Probe": 0.0,
+          "U2R": 0.0,
+          "WebAttack": 0.0
+        }
+      },
+      "n_train_rows": 146,
+      "n_train_windows": 146,
+      "train_seconds": 4.4
+    }
+  },
+  "judgement": {
+    "J1_diversity_helps": {
+      "pass": false,
+      "detail": {
+        "n": 6,
+        "n_positive": 3,
+        "n_negative": 3,
+        "mean": 0.006318566950037842,
+        "deltas": [
+          -0.014333378272781472,
+          -0.24806040524020462,
+          0.10410224195784312,
+          -0.028876171340671775,
+          0.21538822074866637,
+          0.009690893847375426
+        ],
+        "sign_test_p_two_sided": 1.0
+      },
+      "rule": "multi 零样本宏 F1 均值 > single，且符号检验 p < 0.05"
+    },
+    "J2_gain_beyond_volume": {
+      "pass": false,
+      "detail": {
+        "n": 6,
+        "n_positive": 5,
+        "n_negative": 1,
+        "mean": 0.29193245103969007,
+        "deltas": [
+          -0.051241226128006745,
+          0.1100190969093785,
+          0.417969161762785,
+          0.21335377003469053,
+          0.6723662292051863,
+          0.3891276744541067
+        ],
+        "sign_test_p_two_sided": 0.21875
+      },
+      "rule": "multi 优于同数据量的单域（multi_matched），排除「只是数据变多」"
+    },
+    "J3_in_domain_cost": {
+      "detail": {
+        "n": 6,
+        "n_positive": 3,
+        "n_negative": 3,
+        "mean": -0.029172549431065276,
+        "deltas": [
+          -0.1803980474794527,
+          -0.27418067486285796,
+          0.08428724482699312,
+          -0.12134452223798703,
+          0.01959145006590224,
+          0.2970092531010107
+        ],
+        "sign_test_p_two_sided": 1.0
+      },
+      "rule": "multi 相对 single 的域内精度变化（负值 = 有代价）"
+    }
+  },
+  "verdict": "not_supported",
+  "elapsed_s": 132.2
+}

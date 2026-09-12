@@ -206,31 +206,36 @@ def render(d: dict, out: Path) -> Path | None:
            f"live demo: {d['camp_detected']}/{d['camp_n']} detected"),
         _L("逐窗口核对：227/227 与离线评估一致（最大 |Δp| 4.9e-05）",
            "227/227 windows match offline"),
-        _L("pcap 零依赖解析：17 特征 × 800 条流逐位一致",
-           "pcap round-trip exact"),
-        _L("未知攻击：不拒识时 100% 被自信错判 → 加拒识 U2R 检出 69.8%",
-           "open-set: 100% confident mislabel → 69.8% at 1% FPR"),
+        _L("控制器原生字段：只加 OpenFlow 可推导量，17 列 0.82 → 30 列 0.996（追平完整口径）",
+           "controller-native fields: 0.82 -> 0.996 with derivable aggregates only"),
+        _L("未知攻击：不拒识时 100% 被自信错判 → 马氏距离拒识 U2R/Botnet 检出 100%",
+           "open-set: 100% confident mislabel -> 100% UDR with Mahalanobis"),
+        _L("对抗鲁棒性：定向扰动逃逸率 73%（随机扰动无效）→ 对抗训练收益 > 代价",
+           "adversarial: 73% evasion under optimized perturbation; adversarial training pays off"),
         _L("困难基准复测：难度拉满后卷积仍无增益（6/6 配对为负，召回仍 100%）",
            "hard benchmark: no gain for CNN even when data is made much harder"),
         _L(f"逐类时延：最快 {d['fast_cls']} {_fmt(d['fast_ms'], 1)} ms，最慢 {d['slow_cls']} {_fmt(d['slow_ms'], 0)} ms",
            f"per-class delay: fastest {d['fast_cls']}, slowest {d['slow_cls']}"),
         _L("错误分析：3,513 个测试窗口漏报 0（错误率 0.48%）",
            "error analysis: zero misses on 3,513 windows"),
-        _L("89 项交付自检 + 10/25/58 项测试 + CI 全过",
-           "89-item acceptance + tests + CI"),
+        _L("102 项交付自检 + 10/25/58 项测试 + CI 全过",
+           "102-item acceptance + tests + CI"),
+        _L("包序列复研：卷积落后最好单分支 0.1354 → 0.0071（缩小 19 倍）",
+           "packet-level input: CNN gap shrinks 19x"),
     ]
+    # 2 列 × 5 行排布（10 条，占满最后一行的一半）：证据链共 10 条
     for i, txt in enumerate(ev):
         col, row = i % 2, i // 2
         x = 5.5 + col * 46
-        y = 26.0 - row * 5.0
+        y = 26.5 - row * 4.1
         ax.text(x, y, "▪", color=ACC, fontsize=11, va="center")
-        ax.text(x + 1.6, y, txt, color=FG, fontsize=10.4, va="center")
+        ax.text(x + 1.6, y, txt, color=FG, fontsize=9.9, va="center")
 
     # ---------------- 诚实边界（放在最下面，主动交代） ----------------
-    ax.plot([4, 96], [8.2, 8.2], color="#2a3a4a", lw=1.2)
-    ax.text(4, 4.6, _L("主动交代的边界", "Disclosed limits"), color=WARN, fontsize=12,
+    ax.plot([4, 96], [6.6, 6.6], color="#2a3a4a", lw=1.2)
+    ax.text(4, 3.4, _L("主动交代的边界", "Disclosed limits"), color=WARN, fontsize=12,
             fontweight="bold", va="center")
-    ax.text(19, 4.6,
+    ax.text(19, 3.4,
             _L("Ryu 适配层未在真实交换机实跑（接口与下发路径已用桩件测 25 项）｜"
                "控制器原生 17 列字段精度降至宏 F1 0.844（召回仍 100%，代价是时延 18→41 ms）｜"
                "零样本跨域不可用，且只重定标会让 AUC 从 0.67 掉到 0.47（AUROC 好 ≠ 能上线）",

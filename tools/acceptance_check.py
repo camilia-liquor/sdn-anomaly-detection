@@ -88,7 +88,9 @@ def check_files(r: Report) -> None:
         "tools/cross_dataset.py", "tools/live_demo.py", "tools/live_demo_campaign.py",
         "tools/openset_eval.py", "tools/openset_calibrate.py", "tools/pcap_to_flows.py",
         "tools/per_class_online.py", "tools/window_ablation.py",
-        "tools/hard_ablation.py",
+        "tools/hard_ablation.py", "tools/packet_seq.py", "tools/adversarial_eval.py",
+        "tools/calibrate_online.py", "tools/soak_test.py", "tools/domain_randomization.py",
+        "tools/controller_fields.py", "tools/openset_ood_plus.py",
         "tools/make_onepager.py", "tools/make_ops_card.py",
         "docs/01_原始代码问题清单.md", "docs/02_实验报告.md", "docs/03_答辩要点与配置清单.md",
         "competition/README.md", "competition/01_开源及第三方资源使用清单.md",
@@ -676,6 +678,155 @@ def check_self_consistency(r: Report, n_passed: int) -> None:
           f" → 请改 tools/make_onepager.py 后重跑 python tools/make_onepager.py")
 
 
+def check_supplementary_experiments(r: Report) -> None:
+    """P0+P1 六项补充实验：工具产物是否齐全、结论是否可复算（只读 JSON，不重跑）。"""
+    section("9) 补充实验（P0+P1）：包序列 / 对抗 / 标定 / 长稳 / 域随机化 / 控制器字段 / 开集")
+
+    def _load(name: str):
+        p = RESULT_DIR / name
+        if not p.exists():
+            return None
+        try:
+            c = json.loads(p.read_text(encoding="utf-8"))
+            return c, p
+        except Exception as exc:  # noqa: BLE001
+            LOGGER.warning("读取 %s 失败：%s", p, exc)
+            return None
+
+    # ---- P0-1 包序列复研 ----
+    got = _load("packet_seq.json")
+    if got:
+        c, p = got
+        jud = c.get("judgement") or {}
+        rows = c.get("packet_lengths") or []
+        r.check(bool(jud.get("overall")) and len(rows) >= 2,
+                "包序列复研：给了明确判定且覆盖 ≥2 个序列长度",
+                f"判定 {jud.get('overall')}；T={[x.get('n_pkt') for x in rows]}；"
+                f"参照 {list((jud.get('references') or {}).keys())}")
+        ctrl = (c.get("flow_control") or {}).get("gap_cnn_behind_best")
+        pkt_gap = min([x.get("gap_cnn_behind_best") for x in rows
+                       if x.get("gap_cnn_behind_best") is not None] or [None])
+        if ctrl and pkt_gap is not None:
+            r.check(pkt_gap < ctrl,
+                    "包序列复研：包级表示上「卷积落后最好单分支」确实小于流级（核心结论可复算）",
+                    f"包级最小 GAP {pkt_gap:.4f} < 流级 GAP {ctrl:.4f}（同数据对照）")
+    else:
+        r.warn(False, "包序列复研结果（可选）", "未生成 results/packet_seq.json：跑 python tools/packet_seq.py")
+
+    # ---- P0-2 对抗鲁棒性 ----
+    got = _load("adversarial_eval.json")
+    if got:
+        c, p = got
+        grid = [g for g in (c.get("grid") or []) if g.get("objective") == "evade_binary"]
+        if grid:
+            worst = min(grid, key=lambda g: g["pgd"]["macro_f1"])
+            rand_best = min(g["random"]["macro_f1"] for g in grid)
+            r.check(float(worst["pgd"]["attack_evasion_rate"] or 0) > 0.1,
+                    "对抗实验：定向扰动确实能显著逃逸（不是「加噪声就崩」）",
+                    f"最差档 ε={worst['eps']}：PGD 宏F1 {worst['pgd']['macro_f1']:.4f}、"
+                    f"逃逸率 {100 * (worst['pgd']['attack_evasion_rate'] or 0):.1f}%")
+            r.check(rand_best > float(worst["pgd"]["macro_f1"]) + 0.1,
+                    "对抗实验：同范数随机扰动对照明显更轻（退化来自定向优化）",
+                    f"随机扰动最低宏F1 {rand_best:.4f} vs PGD 最差 {worst['pgd']['macro_f1']:.4f}")
+        adv = c.get("adv_train") or {}
+        if adv.get("criterion"):
+            cr = adv["criterion"]
+            r.check(cr.get("f1_robust_gain") is not None,
+                    "对抗实验：对抗训练的「收益 vs 代价」按事前判据给出结论",
+                    f"收益 {cr.get('f1_robust_gain')}、代价 {cr.get('f1_clean_cost')}、"
+                    f"划算={cr.get('worthwhile')}")
+    else:
+        r.warn(False, "对抗鲁棒性结果（可选）",
+               "未生成 results/adversarial_eval.json：跑 python tools/adversarial_eval.py")
+
+    # ---- P0-3 现场标定 + 长稳 ----
+    got = _load("calibration.json")
+    if got:
+        c, p = got
+        params = c.get("params") or {}
+        slices = c.get("calibration_slices") or {}
+        r.check(bool(slices.get("quiet")) and "quiet_enough" in params,
+                "现场标定：给出了安静时段标定 + 样本充足性判据",
+                f"安静时段 {params.get('quiet_hours')} h / 所需 {params.get('required_quiet_hours')} h；"
+                f"样本充足={params.get('quiet_enough')}")
+        head = (slices.get("head") or {}).get("attack_rows_inside")
+        r.check(head is not None and int(head) > 0,
+                "现场标定：保留了「用含攻击时段标定」的反例对照（量化假设被破坏的代价）",
+                f"反例标定段内含攻击行 {head}")
+    else:
+        r.warn(False, "现场标定结果（可选）",
+               "未生成 results/calibration.json：跑 python tools/calibrate_online.py")
+
+    got = _load("soak_test.json")
+    if got:
+        c, p = got
+        checks = c.get("checks") or {}
+        r.check(len(checks) >= 3 and all(v.get("pass") for v in checks.values()),
+                "长稳回放：内存/时延/告警漂移三项判定全部通过",
+                f"等价回放 {c.get('virtual_hours_replayed')} h；"
+                f"内存 {checks.get('memory', {}).get('growth_mb')} MB、"
+                f"时延比 {checks.get('latency', {}).get('ratio')}、"
+                f"告警比 {checks.get('alarm_drift', {}).get('ratio')}")
+    else:
+        r.warn(False, "长稳回放结果（可选）",
+               "未生成 results/soak_test.json：跑 python tools/soak_test.py")
+
+    # ---- P1-4 域随机化 ----
+    got = _load("domain_randomization.json")
+    if got:
+        c, p = got
+        folds = c.get("folds") or []
+        jud = c.get("judgement") or {}
+        r.check(bool(folds) and bool(c.get("verdict")),
+                "域随机化跨域：留一域零样本实验完成并给出明确判定（含等预算对照）",
+                f"{len(folds)} 折；判定 {c.get('verdict')}；"
+                f"J1 {jud.get('J1_diversity_helps', {}).get('pass')}、"
+                f"J2 {jud.get('J2_gain_beyond_volume', {}).get('pass')}")
+    else:
+        r.warn(False, "域随机化结果（可选）",
+               "未生成 results/domain_randomization.json：跑 python tools/domain_randomization.py")
+
+    # ---- P1-5 控制器字段扩展 ----
+    got = _load("ctrl_field_extension.json")
+    if got:
+        c, p = got
+        sm = c.get("summary") or {}
+        n17 = (sm.get("ctrl17") or {}).get("n_features")
+        nex = (sm.get("ctrl_ext") or {}).get("n_features")
+        r.check(n17 and nex and nex > n17,
+                "控制器字段扩展：扩展口径的特征数确实多于 17 列基线（且来源可推导）",
+                f"{n17} 列 → {nex} 列；不可得字段清单 {len(c.get('unavailable_fields') or [])} 条")
+        d = (c.get("judgement") or {}).get("J1_accuracy") or {}
+        r.check(d.get("delta") is not None,
+                "控制器字段扩展：给出了「精度提升是否超过种子噪声」的判定",
+                f"Δ={d.get('delta')}、σ={d.get('sigma')}、通过={d.get('pass')}")
+    else:
+        r.warn(False, "控制器字段扩展结果（可选）",
+               "未生成 results/ctrl_field_extension.json：跑 python tools/controller_fields.py")
+
+    # ---- P1-6 开集拒识改进 ----
+    got = _load("openset_ood_plus.json")
+    if got:
+        c, p = got
+        sc = c.get("scenarios") or {}
+        ok = True
+        detail = []
+        for name, rec in sc.items():
+            agg = rec.get("aggregate") or {}
+            new = (agg.get("mahalanobis") or {}).get("udr_at_1pct", {}).get("mean")
+            base = max(((agg.get(s) or {}).get("udr_at_1pct", {}).get("mean") or -1)
+                       for s in ("msp", "entropy", "energy"))
+            detail.append(f"{name}: 基线 {base:.3f} → 马氏 {new if new is None else round(new, 3)}")
+            ok = ok and new is not None and new > base
+        r.check(ok and bool(sc), "开集拒识改进：特征空间分数在 1% 预算下优于三种基线分数",
+                "；".join(detail))
+        r.check(bool((c.get("verdict") or "").strip()),
+                "开集拒识改进：给出了明确判定（含已知类代价）", str(c.get("verdict")))
+    else:
+        r.warn(False, "开集拒识改进结果（可选）",
+               "未生成 results/openset_ood_plus.json：跑 python tools/openset_ood_plus.py")
+
+
 def main() -> int:
     print("=" * 74)
     print("交付验收自检 · CNN + BiLSTM SDN 异常检测工程")
@@ -688,6 +839,7 @@ def main() -> int:
     check_demo(r)
     check_unit_tests(r)
     check_deployable(r)
+    check_supplementary_experiments(r)
     check_self_consistency(r, len(r.rows) - r.failed - r.warned)
 
     section("结论")
