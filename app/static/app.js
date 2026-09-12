@@ -16,6 +16,8 @@ const S = {
   decided: 0,
   correct: 0,
   lastAlarmWin: -1,
+  alarmRun: 0,
+  confirm: 1,
   segments: [],
   timer: null,
 };
@@ -34,6 +36,7 @@ async function boot() {
   }
   S.n = ov.n_rows;
   S.thr = ov.threshold || 0.5;
+  S.confirm = ov.confirm_windows || 1;
   S.segments = ov.segments || [];
   $("threshold").value = S.thr;
   $("threshold-val").textContent = S.thr.toFixed(2);
@@ -90,8 +93,11 @@ function applyBatch(data) {
       if (S.buf.length > MAXBUF) S.buf.shift();
       S.decided++;
       if (r.win.pred === r.true) S.correct++;
-      // 告警沿：只在"由不告警变为告警"时记一次；误报判定用**窗口级真值**
-      if (r.win.alarm && r.win.idx !== S.lastAlarmWin) {
+      // 告警确认（与后端在线评估同一口径）：要求连续 N 个窗口都超阈值才真正告警。
+      // N 来自后端 metrics 的 online.confirm_windows，因此界面统计与报告数字一致。
+      const needConfirm = S.confirm || 1;
+      S.alarmRun = r.win.alarm ? (S.alarmRun || 0) + 1 : 0;
+      if (S.alarmRun >= needConfirm && r.win.idx !== S.lastAlarmWin) {
         S.lastAlarmWin = r.win.idx;
         S.alarms++;
         if (r.win.true_attack === false) S.falseAlarms++;

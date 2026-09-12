@@ -193,6 +193,8 @@ class DemoState:
             "n_features": len(self.feature_names),
             "feature_names": self.feature_names,
             "threshold": self.threshold,
+            # 告警确认窗口数：与后端在线评估保持同一口径（连续 N 个窗口都超阈值才算告警）
+            "confirm_windows": int((self.metrics or {}).get("online", {}).get("confirm_windows", 1) or 1),
             "has_predictions": self.pred is not None,
             "tag": getattr(self, "tag", ""),
             "pred_file": str(self.pred_file.name) if self.pred is not None else None,
