@@ -1,0 +1,27 @@
+# 行尾与编码约定（Windows 批处理与文本文件的坑，写清楚免得后人踩）
+#
+# 为什么必须钉死这几条：
+#   1) .bat/.cmd 由 cmd.exe 解析，**按系统 OEM 代码页**（中文 Windows 为 GBK）读文件。
+#      UTF-8 的中文会被拆成乱码，并把紧随其后的 ASCII 字符一起吃掉
+#      （`python.exe` 的 p、`report.py` 的 r 就是这么丢的），于是碎片被当成命令执行。
+#      因此 *.bat 一律保持纯 ASCII（详见 README「快速开始」与验收自检第 11 节）。
+#   2) .bat/.cmd 用 LF 行尾时，cmd 对 `goto`/标签/末行的处理可能出问题，因此强制 CRLF。
+#      否则在 Linux/macOS 上克隆再拷回 Windows 也可能拿到 LF。
+#   3) .ps1 用 CRLF 更稳妥（PowerShell 两种都认，但 Windows 原生工具链期望 CRLF）。
+#   4) 其余文本文件统一 LF，避免整文件行尾抖动造成"改一行、diff 全文件"。
+
+* text=auto eol=lf
+
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# 二进制/数据文件不要做行尾或编码转换
+*.png binary
+*.jpg binary
+*.pdf binary
+*.npz binary
+*.joblib binary
+*.keras binary
+*.h5 binary
+*.pcap binary
