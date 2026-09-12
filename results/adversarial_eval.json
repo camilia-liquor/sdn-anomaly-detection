@@ -1,0 +1,891 @@
+{
+  "experiment": "adversarial_robustness",
+  "model": {
+    "tag": "cnn_bilstm_main_s0",
+    "n_params": 151434,
+    "input_shape": [
+      16,
+      71
+    ]
+  },
+  "threat_model": {
+    "type": "white-box, feature-space, L-infinity bounded",
+    "objectives": [
+      "evade_binary",
+      "target_normal"
+    ],
+    "physical_projection": "扰动后投影回训练集逐特征取值范围（原始量纲的物理可行域）",
+    "baseline": "同范数随机扰动（证明 FGSM 的破坏力不是随便加噪声能达到的）",
+    "out_of_scope": [
+      "改标签",
+      "改模型",
+      "黑盒查询攻击",
+      "报文层实现"
+    ]
+  },
+  "threshold": 0.5,
+  "confirm": 3,
+  "pgd_steps": 10,
+  "eps_list": [
+    0.05,
+    0.1,
+    0.2,
+    0.3,
+    0.5
+  ],
+  "clean": {
+    "macro_f1": 0.9929572299559781,
+    "accuracy": 0.9951608311984059,
+    "binary_f1": 0.9907090464547678,
+    "roc_auc": 0.9999640671273445,
+    "tpr_at_fpr_1pct": 1.0,
+    "attack_evasion_rate": 0.0,
+    "normal_call_rate": 0.0076,
+    "mean_p_attack_on_attacks": 0.999237596988678,
+    "mean_entropy": 0.017691023647785187,
+    "n_windows": 3513
+  },
+  "grid": [
+    {
+      "objective": "evade_binary",
+      "eps": 0.05,
+      "fgsm": {
+        "macro_f1": 0.980126690084304,
+        "accuracy": 0.9886137204668375,
+        "binary_f1": 0.9808853118712274,
+        "roc_auc": 0.9998961500493583,
+        "tpr_at_fpr_1pct": 0.998025666337611,
+        "attack_evasion_rate": 0.03751233958538993,
+        "normal_call_rate": 0.0,
+        "mean_p_attack_on_attacks": 0.9611425399780273,
+        "mean_entropy": 0.012560419738292694,
+        "n_windows": 3513
+      },
+      "pgd": {
+        "macro_f1": 0.9748404574464813,
+        "accuracy": 0.9857671505835468,
+        "binary_f1": 0.9741772151898734,
+        "roc_auc": 0.999777690029615,
+        "tpr_at_fpr_1pct": 0.9940769990128332,
+        "attack_evasion_rate": 0.050345508390918066,
+        "normal_call_rate": 0.0,
+        "mean_p_attack_on_attacks": 0.9503283500671387,
+        "mean_entropy": 0.012695317156612873,
+        "n_windows": 3513
+      },
+      "random": {
+        "macro_f1": 0.9926486370738372,
+        "accuracy": 0.9948761742100769,
+        "binary_f1": 0.9902248289345064,
+        "roc_auc": 0.9999648568608095,
+        "tpr_at_fpr_1pct": 1.0,
+        "attack_evasion_rate": 0.0,
+        "normal_call_rate": 0.008,
+        "mean_p_attack_on_attacks": 0.9992421269416809,
+        "mean_entropy": 0.017841294407844543,
+        "n_windows": 3513
+      },
+      "raw_space": {
+        "median_abs_scaled_change": 0.04999999701976776,
+        "p95_abs_scaled_change": 0.050000011920928955,
+        "top_features": [
+          {
+            "feature": "Min Packet Length",
+            "median_abs_change_raw_units": 12.838126939891666,
+            "mean_abs_scaled_change": 0.04750529557461416
+          },
+          {
+            "feature": "Max Packet Length",
+            "median_abs_change_raw_units": 23.735803158609997,
+            "mean_abs_scaled_change": 0.046413881627940023
+          },
+          {
+            "feature": "Bwd Packet Length Std",
+            "median_abs_change_raw_units": 4.231945697295465,
+            "mean_abs_scaled_change": 0.045892150050715896
+          },
+          {
+            "feature": "Avg Bwd Segment Size",
+            "median_abs_change_raw_units": 18.616538313894182,
+            "mean_abs_scaled_change": 0.045861515270416604
+          },
+          {
+            "feature": "Bwd Packet Length Min",
+            "median_abs_change_raw_units": 10.239096072642013,
+            "mean_abs_scaled_change": 0.04579291641324179
+          }
+        ]
+      },
+      "seconds": 5.2
+    },
+    {
+      "objective": "evade_binary",
+      "eps": 0.1,
+      "fgsm": {
+        "macro_f1": 0.9464212675109708,
+        "accuracy": 0.9706803302021064,
+        "binary_f1": 0.9447916666666667,
+        "roc_auc": 0.9993930898321817,
+        "tpr_at_fpr_1pct": 0.9901283316880553,
+        "attack_evasion_rate": 0.10463968410661402,
+        "normal_call_rate": 0.0,
+        "mean_p_attack_on_attacks": 0.8905615210533142,
+        "mean_entropy": 0.022317979484796524,
+        "n_windows": 3513
+      },
+      "pgd": {
+        "macro_f1": 0.8710919714541662,
+        "accuracy": 0.9373754625676061,
+        "binary_f1": 0.8744444444444445,
+        "roc_auc": 0.9969891411648568,
+        "tpr_at_fpr_1pct": 0.9723593287265548,
+        "attack_evasion_rate": 0.22309970384995065,
+        "normal_call_rate": 0.0,
+        "mean_p_attack_on_attacks": 0.7782595157623291,
+        "mean_entropy": 0.03236670792102814,
+        "n_windows": 3513
+      },
+      "random": {
+        "macro_f1": 0.993067836449423,
+        "accuracy": 0.9951608311984059,
+        "binary_f1": 0.9902248289345064,
+        "roc_auc": 0.9999648568608095,
+        "tpr_at_fpr_1pct": 1.0,
+        "attack_evasion_rate": 0.0,
+        "normal_call_rate": 0.008,
+        "mean_p_attack_on_attacks": 0.999232828617096,
+        "mean_entropy": 0.018106656149029732,
+        "n_windows": 3513
+      },
+      "raw_space": {
+        "median_abs_scaled_change": 0.09871609508991241,
+        "p95_abs_scaled_change": 0.10000002384185791,
+        "top_features": [
+          {
+            "feature": "Min Packet Length",
+            "median_abs_change_raw_units": 25.67624622766523,
+            "mean_abs_scaled_change": 0.09045354363077304
+          },
+          {
+            "feature": "Max Packet Length",
+            "median_abs_change_raw_units": 47.47159216958232,
+            "mean_abs_scaled_change": 0.08851221045796334
+          },
+          {
+            "feature": "Avg Bwd Segment Size",
+            "median_abs_change_raw_units": 37.23306553146955,
+            "mean_abs_scaled_change": 0.08769876160375563
+          },
+          {
+            "feature": "Bwd Packet Length Std",
+            "median_abs_change_raw_units": 8.463888872155344,
+            "mean_abs_scaled_change": 0.0873858009671249
+          },
+          {
+            "feature": "Bwd Packet Length Min",
+            "median_abs_change_raw_units": 20.478186042308664,
+            "mean_abs_scaled_change": 0.08711666195935959
+          }
+        ]
+      },
+      "seconds": 5.1
+    },
+    {
+      "objective": "evade_binary",
+      "eps": 0.2,
+      "fgsm": {
+        "macro_f1": 0.7852240057818896,
+        "accuracy": 0.9052092228864219,
+        "binary_f1": 0.806831566548881,
+        "roc_auc": 0.9984169792694965,
+        "tpr_at_fpr_1pct": 0.9674234945705824,
+        "attack_evasion_rate": 0.32379072063178677,
+        "normal_call_rate": 0.0,
+        "mean_p_attack_on_attacks": 0.6734044551849365,
+        "mean_entropy": 0.03637976944446564,
+        "n_windows": 3513
+      },
+      "pgd": {
+        "macro_f1": 0.6083488637145348,
+        "accuracy": 0.8388841446057501,
+        "binary_f1": 0.6017943409247757,
+        "roc_auc": 0.9840288252714708,
+        "tpr_at_fpr_1pct": 0.8933859822309971,
+        "attack_evasion_rate": 0.5695952615992103,
+        "normal_call_rate": 0.0,
+        "mean_p_attack_on_attacks": 0.4347379207611084,
+        "mean_entropy": 0.0319424606859684,
+        "n_windows": 3513
+      },
+      "random": {
+        "macro_f1": 0.9916014854868213,
+        "accuracy": 0.9940222032450897,
+        "binary_f1": 0.9887750122010737,
+        "roc_auc": 0.9999656465942743,
+        "tpr_at_fpr_1pct": 1.0,
+        "attack_evasion_rate": 0.0,
+        "normal_call_rate": 0.0092,
+        "mean_p_attack_on_attacks": 0.9991865754127502,
+        "mean_entropy": 0.01817026175558567,
+        "n_windows": 3513
+      },
+      "raw_space": {
+        "median_abs_scaled_change": 0.10000002384185791,
+        "p95_abs_scaled_change": 0.20000001043081284,
+        "top_features": [
+          {
+            "feature": "Max Packet Length",
+            "median_abs_change_raw_units": 94.94318433916459,
+            "mean_abs_scaled_change": 0.16331652859121754
+          },
+          {
+            "feature": "Bwd Packets/s",
+            "median_abs_change_raw_units": 51.79579657310849,
+            "mean_abs_scaled_change": 0.1632028663946712
+          },
+          {
+            "feature": "Avg Bwd Segment Size",
+            "median_abs_change_raw_units": 74.46613106293904,
+            "mean_abs_scaled_change": 0.16268343322651657
+          },
+          {
+            "feature": "Bwd Packet Length Min",
+            "median_abs_change_raw_units": 40.95637208461733,
+            "mean_abs_scaled_change": 0.16059976625534644
+          },
+          {
+            "feature": "Bwd Packet Length Mean",
+            "median_abs_change_raw_units": 74.46613106293904,
+            "mean_abs_scaled_change": 0.1604468619036545
+          }
+        ]
+      },
+      "seconds": 5.0
+    },
+    {
+      "objective": "evade_binary",
+      "eps": 0.3,
+      "fgsm": {
+        "macro_f1": 0.6543516684363646,
+        "accuracy": 0.8562482208938229,
+        "binary_f1": 0.6714754098360656,
+        "roc_auc": 0.9975911154985193,
+        "tpr_at_fpr_1pct": 0.9516288252714709,
+        "attack_evasion_rate": 0.4945705824284304,
+        "normal_call_rate": 0.0,
+        "mean_p_attack_on_attacks": 0.5105733275413513,
+        "mean_entropy": 0.04322483390569687,
+        "n_windows": 3513
+      },
+      "pgd": {
+        "macro_f1": 0.48022894885717526,
+        "accuracy": 0.7927697124964418,
+        "binary_f1": 0.4257964257964258,
+        "roc_auc": 0.9706069101678183,
+        "tpr_at_fpr_1pct": 0.7235932872655478,
+        "attack_evasion_rate": 0.7295162882527148,
+        "normal_call_rate": 0.0,
+        "mean_p_attack_on_attacks": 0.27680280804634094,
+        "mean_entropy": 0.024461016058921814,
+        "n_windows": 3513
+      },
+      "random": {
+        "macro_f1": 0.989408593842788,
+        "accuracy": 0.9925989183034444,
+        "binary_f1": 0.9878108239882983,
+        "roc_auc": 0.9999589338598223,
+        "tpr_at_fpr_1pct": 1.0,
+        "attack_evasion_rate": 0.0,
+        "normal_call_rate": 0.01,
+        "mean_p_attack_on_attacks": 0.9990738034248352,
+        "mean_entropy": 0.018347200006246567,
+        "n_windows": 3513
+      },
+      "raw_space": {
+        "median_abs_scaled_change": 0.1499999761581421,
+        "p95_abs_scaled_change": 0.30000001192092896,
+        "top_features": [
+          {
+            "feature": "Bwd Packets/s",
+            "median_abs_change_raw_units": 77.69369678920648,
+            "mean_abs_scaled_change": 0.2345302209629291
+          },
+          {
+            "feature": "Max Packet Length",
+            "median_abs_change_raw_units": 142.41476236110913,
+            "mean_abs_scaled_change": 0.22879393930440287
+          },
+          {
+            "feature": "Avg Bwd Segment Size",
+            "median_abs_change_raw_units": 111.69918549808969,
+            "mean_abs_scaled_change": 0.22629667541221918
+          },
+          {
+            "feature": "Bwd Packet Length Mean",
+            "median_abs_change_raw_units": 111.6991854980896,
+            "mean_abs_scaled_change": 0.22195693451290988
+          },
+          {
+            "feature": "Bwd Packet Length Min",
+            "median_abs_change_raw_units": 61.43455202395057,
+            "mean_abs_scaled_change": 0.22034515948936645
+          }
+        ]
+      },
+      "seconds": 4.9
+    },
+    {
+      "objective": "evade_binary",
+      "eps": 0.5,
+      "fgsm": {
+        "macro_f1": 0.49310782179789814,
+        "accuracy": 0.7964702533447197,
+        "binary_f1": 0.49556213017751477,
+        "roc_auc": 0.9904059230009872,
+        "tpr_at_fpr_1pct": 0.6594274432379073,
+        "attack_evasion_rate": 0.6692991115498519,
+        "normal_call_rate": 0.0016,
+        "mean_p_attack_on_attacks": 0.355855792760849,
+        "mean_entropy": 0.06681347638368607,
+        "n_windows": 3513
+      },
+      "pgd": {
+        "macro_f1": 0.373148054952107,
+        "accuracy": 0.7554796470253344,
+        "binary_f1": 0.2713310580204778,
+        "roc_auc": 0.9444456071076012,
+        "tpr_at_fpr_1pct": 0.581441263573544,
+        "attack_evasion_rate": 0.843040473840079,
+        "normal_call_rate": 0.0,
+        "mean_p_attack_on_attacks": 0.15617868304252625,
+        "mean_entropy": 0.02575942873954773,
+        "n_windows": 3513
+      },
+      "random": {
+        "macro_f1": 0.9886908728702268,
+        "accuracy": 0.9920296043267862,
+        "binary_f1": 0.985874330248417,
+        "roc_auc": 0.999904047384008,
+        "tpr_at_fpr_1pct": 0.9990128331688055,
+        "attack_evasion_rate": 0.0009871668311944718,
+        "normal_call_rate": 0.0112,
+        "mean_p_attack_on_attacks": 0.9986383318901062,
+        "mean_entropy": 0.021305551752448082,
+        "n_windows": 3513
+      },
+      "raw_space": {
+        "median_abs_scaled_change": 0.1861109733581543,
+        "p95_abs_scaled_change": 0.5,
+        "top_features": [
+          {
+            "feature": "Bwd Packets/s",
+            "median_abs_change_raw_units": 129.48948564413996,
+            "mean_abs_scaled_change": 0.3679521553432587
+          },
+          {
+            "feature": "Max Packet Length",
+            "median_abs_change_raw_units": 178.01849539429975,
+            "mean_abs_scaled_change": 0.3463840323408163
+          },
+          {
+            "feature": "Avg Bwd Segment Size",
+            "median_abs_change_raw_units": 139.62400406524986,
+            "mean_abs_scaled_change": 0.3328040579948147
+          },
+          {
+            "feature": "Avg Fwd Segment Size",
+            "median_abs_change_raw_units": 161.2250130658332,
+            "mean_abs_scaled_change": 0.32567468615631123
+          },
+          {
+            "feature": "Down/Up Ratio",
+            "median_abs_change_raw_units": 0.46856610964965917,
+            "mean_abs_scaled_change": 0.32530209341857264
+          }
+        ]
+      },
+      "seconds": 5.0
+    },
+    {
+      "objective": "target_normal",
+      "eps": 0.05,
+      "fgsm": {
+        "macro_f1": 0.9791187655442508,
+        "accuracy": 0.9880444064901793,
+        "binary_f1": 0.9808853118712274,
+        "roc_auc": 0.9999072063178678,
+        "tpr_at_fpr_1pct": 0.9990128331688055,
+        "attack_evasion_rate": 0.03751233958538993,
+        "normal_call_rate": 0.0,
+        "mean_p_attack_on_attacks": 0.9620198607444763,
+        "mean_entropy": 0.013034166768193245,
+        "n_windows": 3513
+      },
+      "pgd": {
+        "macro_f1": 0.9734301461945871,
+        "accuracy": 0.9851978366068886,
+        "binary_f1": 0.9741772151898734,
+        "roc_auc": 0.999734649555775,
+        "tpr_at_fpr_1pct": 0.9930898321816387,
+        "attack_evasion_rate": 0.050345508390918066,
+        "normal_call_rate": 0.0,
+        "mean_p_attack_on_attacks": 0.9507753252983093,
+        "mean_entropy": 0.013022891245782375,
+        "n_windows": 3513
+      },
+      "random": {
+        "macro_f1": 0.9926486370738372,
+        "accuracy": 0.9948761742100769,
+        "binary_f1": 0.9902248289345064,
+        "roc_auc": 0.9999648568608095,
+        "tpr_at_fpr_1pct": 1.0,
+        "attack_evasion_rate": 0.0,
+        "normal_call_rate": 0.008,
+        "mean_p_attack_on_attacks": 0.9992421269416809,
+        "mean_entropy": 0.017841294407844543,
+        "n_windows": 3513
+      },
+      "raw_space": {
+        "median_abs_scaled_change": 0.04999999701976776,
+        "p95_abs_scaled_change": 0.050000011920928955,
+        "top_features": [
+          {
+            "feature": "Min Packet Length",
+            "median_abs_change_raw_units": 12.838126939891666,
+            "mean_abs_scaled_change": 0.04779484647825149
+          },
+          {
+            "feature": "Max Packet Length",
+            "median_abs_change_raw_units": 23.735803158609997,
+            "mean_abs_scaled_change": 0.04584017228948141
+          },
+          {
+            "feature": "Avg Bwd Segment Size",
+            "median_abs_change_raw_units": 18.616538313894125,
+            "mean_abs_scaled_change": 0.04543925574763951
+          },
+          {
+            "feature": "Bwd Packet Length Min",
+            "median_abs_change_raw_units": 10.239096072641985,
+            "mean_abs_scaled_change": 0.04535199977870006
+          },
+          {
+            "feature": "Bwd Packet Length Std",
+            "median_abs_change_raw_units": 4.231945697295458,
+            "mean_abs_scaled_change": 0.04534169881291358
+          }
+        ]
+      },
+      "seconds": 5.0
+    },
+    {
+      "objective": "target_normal",
+      "eps": 0.1,
+      "fgsm": {
+        "macro_f1": 0.9384853996379227,
+        "accuracy": 0.9672644463421577,
+        "binary_f1": 0.9431403234220136,
+        "roc_auc": 0.9992995064165845,
+        "tpr_at_fpr_1pct": 0.9891411648568608,
+        "attack_evasion_rate": 0.10760118460019744,
+        "normal_call_rate": 0.0,
+        "mean_p_attack_on_attacks": 0.8900435566902161,
+        "mean_entropy": 0.025623638182878494,
+        "n_windows": 3513
+      },
+      "pgd": {
+        "macro_f1": 0.8700692291607427,
+        "accuracy": 0.9370908055792769,
+        "binary_f1": 0.8756936736958935,
+        "roc_auc": 0.9955715695952616,
+        "tpr_at_fpr_1pct": 0.9713721618953604,
+        "attack_evasion_rate": 0.2211253701875617,
+        "normal_call_rate": 0.0,
+        "mean_p_attack_on_attacks": 0.7802406549453735,
+        "mean_entropy": 0.035791996866464615,
+        "n_windows": 3513
+      },
+      "random": {
+        "macro_f1": 0.993067836449423,
+        "accuracy": 0.9951608311984059,
+        "binary_f1": 0.9902248289345064,
+        "roc_auc": 0.9999648568608095,
+        "tpr_at_fpr_1pct": 1.0,
+        "attack_evasion_rate": 0.0,
+        "normal_call_rate": 0.008,
+        "mean_p_attack_on_attacks": 0.999232828617096,
+        "mean_entropy": 0.018106656149029732,
+        "n_windows": 3513
+      },
+      "raw_space": {
+        "median_abs_scaled_change": 0.09052258729934692,
+        "p95_abs_scaled_change": 0.10000002384185791,
+        "top_features": [
+          {
+            "feature": "Min Packet Length",
+            "median_abs_change_raw_units": 25.67624622766523,
+            "mean_abs_scaled_change": 0.09137929892709076
+          },
+          {
+            "feature": "Max Packet Length",
+            "median_abs_change_raw_units": 47.47159216958232,
+            "mean_abs_scaled_change": 0.08671456802857655
+          },
+          {
+            "feature": "Avg Bwd Segment Size",
+            "median_abs_change_raw_units": 37.23306553146952,
+            "mean_abs_scaled_change": 0.08652637101628206
+          },
+          {
+            "feature": "Bwd Packet Length Min",
+            "median_abs_change_raw_units": 20.478186042308664,
+            "mean_abs_scaled_change": 0.08630867208585241
+          },
+          {
+            "feature": "Bwd Packet Length Std",
+            "median_abs_change_raw_units": 8.463888872155344,
+            "mean_abs_scaled_change": 0.08601533025985758
+          }
+        ]
+      },
+      "seconds": 4.9
+    },
+    {
+      "objective": "target_normal",
+      "eps": 0.2,
+      "fgsm": {
+        "macro_f1": 0.7560761475768362,
+        "accuracy": 0.89666951323655,
+        "binary_f1": 0.8040141676505312,
+        "roc_auc": 0.9974471865745311,
+        "tpr_at_fpr_1pct": 0.9713721618953604,
+        "attack_evasion_rate": 0.32773938795656465,
+        "normal_call_rate": 0.0,
+        "mean_p_attack_on_attacks": 0.6797074675559998,
+        "mean_entropy": 0.044723477214574814,
+        "n_windows": 3513
+      },
+      "pgd": {
+        "macro_f1": 0.6074056899313289,
+        "accuracy": 0.8380301736407629,
+        "binary_f1": 0.6066024759284732,
+        "roc_auc": 0.9725279368213228,
+        "tpr_at_fpr_1pct": 0.8608094768015795,
+        "attack_evasion_rate": 0.5646594274432379,
+        "normal_call_rate": 0.0,
+        "mean_p_attack_on_attacks": 0.44034895300865173,
+        "mean_entropy": 0.03272679075598717,
+        "n_windows": 3513
+      },
+      "random": {
+        "macro_f1": 0.9916014854868213,
+        "accuracy": 0.9940222032450897,
+        "binary_f1": 0.9887750122010737,
+        "roc_auc": 0.9999656465942743,
+        "tpr_at_fpr_1pct": 1.0,
+        "attack_evasion_rate": 0.0,
+        "normal_call_rate": 0.0092,
+        "mean_p_attack_on_attacks": 0.9991865754127502,
+        "mean_entropy": 0.01817026175558567,
+        "n_windows": 3513
+      },
+      "raw_space": {
+        "median_abs_scaled_change": 0.10000002384185791,
+        "p95_abs_scaled_change": 0.20000001043081284,
+        "top_features": [
+          {
+            "feature": "Min Packet Length",
+            "median_abs_change_raw_units": 51.352492455330434,
+            "mean_abs_scaled_change": 0.1609559060828684
+          },
+          {
+            "feature": "Avg Bwd Segment Size",
+            "median_abs_change_raw_units": 74.46613106293904,
+            "mean_abs_scaled_change": 0.16022555029644853
+          },
+          {
+            "feature": "Max Packet Length",
+            "median_abs_change_raw_units": 94.94318433916459,
+            "mean_abs_scaled_change": 0.16008758713382454
+          },
+          {
+            "feature": "Bwd Packet Length Min",
+            "median_abs_change_raw_units": 40.95637208461733,
+            "mean_abs_scaled_change": 0.1593163432750812
+          },
+          {
+            "feature": "Bwd Packets/s",
+            "median_abs_change_raw_units": 51.79579657310849,
+            "mean_abs_scaled_change": 0.1586084981692844
+          }
+        ]
+      },
+      "seconds": 4.9
+    },
+    {
+      "objective": "target_normal",
+      "eps": 0.3,
+      "fgsm": {
+        "macro_f1": 0.6416987199403553,
+        "accuracy": 0.8525476800455452,
+        "binary_f1": 0.7037747920665387,
+        "roc_auc": 0.9968876604146101,
+        "tpr_at_fpr_1pct": 0.9693978282329714,
+        "attack_evasion_rate": 0.4570582428430405,
+        "normal_call_rate": 0.0,
+        "mean_p_attack_on_attacks": 0.5450416803359985,
+        "mean_entropy": 0.06082448735833168,
+        "n_windows": 3513
+      },
+      "pgd": {
+        "macro_f1": 0.4780574213342417,
+        "accuracy": 0.7916310845431256,
+        "binary_f1": 0.43067389620449265,
+        "roc_auc": 0.9378467917077986,
+        "tpr_at_fpr_1pct": 0.6771964461994077,
+        "attack_evasion_rate": 0.7255676209279368,
+        "normal_call_rate": 0.0,
+        "mean_p_attack_on_attacks": 0.28089746832847595,
+        "mean_entropy": 0.024911783635616302,
+        "n_windows": 3513
+      },
+      "random": {
+        "macro_f1": 0.989408593842788,
+        "accuracy": 0.9925989183034444,
+        "binary_f1": 0.9878108239882983,
+        "roc_auc": 0.9999589338598223,
+        "tpr_at_fpr_1pct": 1.0,
+        "attack_evasion_rate": 0.0,
+        "normal_call_rate": 0.01,
+        "mean_p_attack_on_attacks": 0.9990738034248352,
+        "mean_entropy": 0.018347200006246567,
+        "n_windows": 3513
+      },
+      "raw_space": {
+        "median_abs_scaled_change": 0.1499999761581421,
+        "p95_abs_scaled_change": 0.30000001192092896,
+        "top_features": [
+          {
+            "feature": "Bwd Packets/s",
+            "median_abs_change_raw_units": 77.69369678920648,
+            "mean_abs_scaled_change": 0.23018366984911276
+          },
+          {
+            "feature": "Max Packet Length",
+            "median_abs_change_raw_units": 142.41476236110907,
+            "mean_abs_scaled_change": 0.22295528940881895
+          },
+          {
+            "feature": "Avg Bwd Segment Size",
+            "median_abs_change_raw_units": 111.69918549808969,
+            "mean_abs_scaled_change": 0.22241698825842837
+          },
+          {
+            "feature": "Bwd Packet Length Min",
+            "median_abs_change_raw_units": 54.634323904661926,
+            "mean_abs_scaled_change": 0.21805257112854198
+          },
+          {
+            "feature": "Bwd Packet Length Mean",
+            "median_abs_change_raw_units": 98.96402908329043,
+            "mean_abs_scaled_change": 0.21751128759445776
+          }
+        ]
+      },
+      "seconds": 5.0
+    },
+    {
+      "objective": "target_normal",
+      "eps": 0.5,
+      "fgsm": {
+        "macro_f1": 0.4771120332112933,
+        "accuracy": 0.7941929974380871,
+        "binary_f1": 0.6335570469798658,
+        "roc_auc": 0.9870523198420533,
+        "tpr_at_fpr_1pct": 0.7285291214215203,
+        "attack_evasion_rate": 0.5340572556762093,
+        "normal_call_rate": 0.002,
+        "mean_p_attack_on_attacks": 0.4845402240753174,
+        "mean_entropy": 0.1230560839176178,
+        "n_windows": 3513
+      },
+      "pgd": {
+        "macro_f1": 0.368324283599581,
+        "accuracy": 0.7546256760603473,
+        "binary_f1": 0.27427597955706984,
+        "roc_auc": 0.8706217176702862,
+        "tpr_at_fpr_1pct": 0.5212240868706811,
+        "attack_evasion_rate": 0.84106614017769,
+        "normal_call_rate": 0.0,
+        "mean_p_attack_on_attacks": 0.16004271805286407,
+        "mean_entropy": 0.02630029246211052,
+        "n_windows": 3513
+      },
+      "random": {
+        "macro_f1": 0.9886908728702268,
+        "accuracy": 0.9920296043267862,
+        "binary_f1": 0.985874330248417,
+        "roc_auc": 0.999904047384008,
+        "tpr_at_fpr_1pct": 0.9990128331688055,
+        "attack_evasion_rate": 0.0009871668311944718,
+        "normal_call_rate": 0.0112,
+        "mean_p_attack_on_attacks": 0.9986383318901062,
+        "mean_entropy": 0.021305551752448082,
+        "n_windows": 3513
+      },
+      "raw_space": {
+        "median_abs_scaled_change": 0.19151470065116882,
+        "p95_abs_scaled_change": 0.5,
+        "top_features": [
+          {
+            "feature": "Bwd Packets/s",
+            "median_abs_change_raw_units": 129.48948564413996,
+            "mean_abs_scaled_change": 0.3694719655311518
+          },
+          {
+            "feature": "Max Packet Length",
+            "median_abs_change_raw_units": 178.01848124666196,
+            "mean_abs_scaled_change": 0.33431709004955174
+          },
+          {
+            "feature": "Avg Bwd Segment Size",
+            "median_abs_change_raw_units": 139.62400406524966,
+            "mean_abs_scaled_change": 0.3264563545710472
+          },
+          {
+            "feature": "Avg Fwd Segment Size",
+            "median_abs_change_raw_units": 161.22498743980748,
+            "mean_abs_scaled_change": 0.3149008642589888
+          },
+          {
+            "feature": "Bwd Packet Length Mean",
+            "median_abs_change_raw_units": 102.89035055787818,
+            "mean_abs_scaled_change": 0.30988610156345137
+          }
+        ]
+      },
+      "seconds": 4.9
+    }
+  ],
+  "online": {
+    "clean": {
+      "segment_recall": 1.0,
+      "n_segments": 24,
+      "n_detected": 24,
+      "mean_delay_ms": 18.1346337000529,
+      "false_alarms_per_hour": 0.6583050301123599,
+      "n_stream_windows": 7155
+    },
+    "pgd_evade_binary_eps0.2": {
+      "segment_recall": 0.5833333333333334,
+      "n_segments": 24,
+      "n_detected": 14,
+      "mean_delay_ms": 10271.7787197658,
+      "false_alarms_per_hour": 0.0,
+      "eps": 0.2
+    },
+    "pgd_evade_binary_eps0.5": {
+      "segment_recall": 0.3333333333333333,
+      "n_segments": 24,
+      "n_detected": 8,
+      "mean_delay_ms": 45514.34409618378,
+      "false_alarms_per_hour": 0.0,
+      "eps": 0.5
+    }
+  },
+  "adv_train": {
+    "train_seconds": 35.5,
+    "n_params": 151434,
+    "n_clean": 8506,
+    "n_adv": 8506,
+    "eps_train": 0.2,
+    "epochs": 40,
+    "clean": {
+      "macro_f1": 0.9860787268834559,
+      "accuracy": 0.99089097637347,
+      "binary_f1": 0.9815891472868217,
+      "roc_auc": 0.9999530108588351,
+      "tpr_at_fpr_1pct": 1.0,
+      "attack_evasion_rate": 0.0,
+      "normal_call_rate": 0.0152,
+      "mean_p_attack_on_attacks": 0.999584972858429,
+      "mean_entropy": 0.027009911835193634,
+      "n_windows": 3513
+    },
+    "grid": [
+      {
+        "eps": 0.05,
+        "macro_f1": 0.9812904732038201,
+        "accuracy": 0.9894676914318247,
+        "binary_f1": 0.9844767150726089,
+        "roc_auc": 0.9998187561697928,
+        "tpr_at_fpr_1pct": 0.9970384995064165,
+        "attack_evasion_rate": 0.029615004935834157,
+        "normal_call_rate": 0.0004,
+        "mean_p_attack_on_attacks": 0.9680831432342529,
+        "mean_entropy": 0.01705867610871792,
+        "n_windows": 3513
+      },
+      {
+        "eps": 0.1,
+        "macro_f1": 0.8934339960849745,
+        "accuracy": 0.9533162539140336,
+        "binary_f1": 0.9486248053969901,
+        "roc_auc": 0.9980418558736427,
+        "tpr_at_fpr_1pct": 0.9782823297137216,
+        "attack_evasion_rate": 0.09772951628825272,
+        "normal_call_rate": 0.0,
+        "mean_p_attack_on_attacks": 0.8944127559661865,
+        "mean_entropy": 0.03551496937870979,
+        "n_windows": 3513
+      },
+      {
+        "eps": 0.2,
+        "macro_f1": 0.7311539303628988,
+        "accuracy": 0.8798747509251352,
+        "binary_f1": 0.7668898356664637,
+        "roc_auc": 0.986366238894373,
+        "tpr_at_fpr_1pct": 0.9012833168805529,
+        "attack_evasion_rate": 0.3780848963474827,
+        "normal_call_rate": 0.0,
+        "mean_p_attack_on_attacks": 0.6262062191963196,
+        "mean_entropy": 0.0416710190474987,
+        "n_windows": 3513
+      },
+      {
+        "eps": 0.3,
+        "macro_f1": 0.5624987734748844,
+        "accuracy": 0.8212354113293482,
+        "binary_f1": 0.5641389085754784,
+        "roc_auc": 0.9619765054294176,
+        "tpr_at_fpr_1pct": 0.7759131293188549,
+        "attack_evasion_rate": 0.6071076011846002,
+        "normal_call_rate": 0.0,
+        "mean_p_attack_on_attacks": 0.4011091887950897,
+        "mean_entropy": 0.028143569827079773,
+        "n_windows": 3513
+      },
+      {
+        "eps": 0.5,
+        "macro_f1": 0.4595560305688023,
+        "accuracy": 0.7865072587532024,
+        "binary_f1": 0.42823894491854153,
+        "roc_auc": 0.9002556762092794,
+        "tpr_at_fpr_1pct": 0.5824284304047384,
+        "attack_evasion_rate": 0.7275419545903258,
+        "normal_call_rate": 0.0,
+        "mean_p_attack_on_attacks": 0.2767490744590759,
+        "mean_entropy": 0.019170373678207397,
+        "n_windows": 3513
+      }
+    ],
+    "criterion": {
+      "eps_ref": 0.2,
+      "f1_robust_gain": 0.12374824043156984,
+      "f1_clean_cost": 0.006878503072522246,
+      "worthwhile": true,
+      "rule": "只有 F1_robust_gain > F1_clean_cost 才算「划算的缓解」（事前写死）"
+    }
+  },
+  "elapsed_s": 123.6
+}

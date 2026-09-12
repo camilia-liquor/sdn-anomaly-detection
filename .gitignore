@@ -50,6 +50,8 @@ artifacts/predictions_windows_ws*.csv
 artifacts/predictions_ws*.csv
 artifacts/predictions_*_hard*.csv
 artifacts/predictions_hard*.csv
+# 工具自己的子目录产物（如 artifacts/pktseq_control/）里的窗口级预测缓存同样是可再生的
+artifacts/*/predictions_*.csv
 artifacts/_smoke/
 results/_smoke/
 # `run_all.py --smoke` 会用 `<tag>_smoke` 后缀把产物写在正式目录里（数据目录已隔离，

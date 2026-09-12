@@ -1,0 +1,373 @@
+{
+  "experiment": "on_site_calibration",
+  "model_tag": "cnn_bilstm_main_s0",
+  "params": {
+    "budget": 1.0,
+    "calib_frac": 0.4,
+    "prefer": "latency",
+    "robust_quantile": 0.98,
+    "assume_clean": true,
+    "quiet_segments": [
+      [
+        11753,
+        12106
+      ],
+      [
+        17802,
+        18155
+      ],
+      [
+        842,
+        1155
+      ],
+      [
+        3797,
+        4110
+      ],
+      [
+        21137,
+        21435
+      ],
+      [
+        13036,
+        13292
+      ],
+      [
+        6511,
+        6764
+      ],
+      [
+        8563,
+        8812
+      ],
+      [
+        6123,
+        6361
+      ],
+      [
+        7434,
+        7671
+      ],
+      [
+        17564,
+        17801
+      ],
+      [
+        20178,
+        20410
+      ],
+      [
+        5886,
+        6111
+      ],
+      [
+        13563,
+        13787
+      ],
+      [
+        8876,
+        9099
+      ],
+      [
+        15771,
+        15993
+      ],
+      [
+        13293,
+        13512
+      ],
+      [
+        4869,
+        5079
+      ],
+      [
+        4111,
+        4314
+      ],
+      [
+        5249,
+        5451
+      ],
+      [
+        7067,
+        7269
+      ],
+      [
+        12819,
+        13015
+      ],
+      [
+        18517,
+        18710
+      ],
+      [
+        0,
+        191
+      ],
+      [
+        1807,
+        1990
+      ],
+      [
+        14367,
+        14548
+      ],
+      [
+        2372,
+        2539
+      ],
+      [
+        3499,
+        3666
+      ],
+      [
+        16928,
+        17090
+      ],
+      [
+        5726,
+        5885
+      ],
+      [
+        15344,
+        15501
+      ],
+      [
+        20980,
+        21136
+      ],
+      [
+        13971,
+        14113
+      ],
+      [
+        19780,
+        19920
+      ],
+      [
+        18875,
+        19014
+      ],
+      [
+        5452,
+        5586
+      ],
+      [
+        18382,
+        18516
+      ],
+      [
+        18711,
+        18845
+      ],
+      [
+        1660,
+        1793
+      ],
+      [
+        4400,
+        4533
+      ],
+      [
+        6765,
+        6896
+      ],
+      [
+        1529,
+        1659
+      ],
+      [
+        8272,
+        8339
+      ]
+    ],
+    "quiet_hours": 0.8324,
+    "min_quiet_hours": 0.2,
+    "required_quiet_hours": 3.0,
+    "quiet_enough": false
+  },
+  "calibration": {
+    "budget": 1.0,
+    "robust_quantile": 0.98,
+    "grid": [
+      {
+        "confirm": 1,
+        "feasible": true,
+        "threshold": 0.9949874686716791,
+        "implied_fa_per_hour": 0.0,
+        "note": "阈值需收紧到 0.9950"
+      },
+      {
+        "confirm": 2,
+        "feasible": true,
+        "threshold": 0.9523809523809523,
+        "implied_fa_per_hour": 0.0,
+        "note": "阈值需收紧到 0.9524"
+      },
+      {
+        "confirm": 3,
+        "feasible": true,
+        "threshold": 0.8571428571428571,
+        "implied_fa_per_hour": 0.0,
+        "note": "阈值需收紧到 0.8571"
+      },
+      {
+        "confirm": 5,
+        "feasible": true,
+        "threshold": 0.10025062656641603,
+        "implied_fa_per_hour": 0.0,
+        "note": "阈值需收紧到 0.1003"
+      }
+    ],
+    "n_segments": 43,
+    "hours": 0.8324,
+    "n_windows": 2666,
+    "score_max": 0.9940218925476074,
+    "score_p50": 0.006439322838559747
+  },
+  "calibration_slices": {
+    "quiet": {
+      "label": "43 段安静时段（最长 353 行）",
+      "rows": 8591,
+      "hours": 0.8324,
+      "attack_rows_inside": 0,
+      "result": {
+        "budget": 1.0,
+        "robust_quantile": 0.98,
+        "grid": [
+          {
+            "confirm": 1,
+            "feasible": true,
+            "threshold": 0.9949874686716791,
+            "implied_fa_per_hour": 0.0,
+            "note": "阈值需收紧到 0.9950"
+          },
+          {
+            "confirm": 2,
+            "feasible": true,
+            "threshold": 0.9523809523809523,
+            "implied_fa_per_hour": 0.0,
+            "note": "阈值需收紧到 0.9524"
+          },
+          {
+            "confirm": 3,
+            "feasible": true,
+            "threshold": 0.8571428571428571,
+            "implied_fa_per_hour": 0.0,
+            "note": "阈值需收紧到 0.8571"
+          },
+          {
+            "confirm": 5,
+            "feasible": true,
+            "threshold": 0.10025062656641603,
+            "implied_fa_per_hour": 0.0,
+            "note": "阈值需收紧到 0.1003"
+          }
+        ],
+        "n_segments": 43,
+        "hours": 0.8324,
+        "n_windows": 2666,
+        "score_max": 0.9940218925476074,
+        "score_p50": 0.006439322838559747
+      }
+    },
+    "head": {
+      "label": "流开头 40%（含攻击，反例）",
+      "rows": 8591,
+      "hours": 1.2823,
+      "attack_rows_inside": 1777,
+      "result": {
+        "budget": 1.0,
+        "robust_quantile": 0.98,
+        "grid": [
+          {
+            "confirm": 1,
+            "feasible": true,
+            "threshold": 0.999999463558197,
+            "implied_fa_per_hour": 0.7798506014576456,
+            "note": "阈值需收紧到 1.0000"
+          },
+          {
+            "confirm": 2,
+            "feasible": true,
+            "threshold": 0.9999987191723702,
+            "implied_fa_per_hour": 0.7798506014576456,
+            "note": "阈值需收紧到 1.0000"
+          },
+          {
+            "confirm": 3,
+            "feasible": true,
+            "threshold": 0.9999987191723702,
+            "implied_fa_per_hour": 0.0,
+            "note": "阈值需收紧到 1.0000"
+          },
+          {
+            "confirm": 5,
+            "feasible": true,
+            "threshold": 0.9999938773033314,
+            "implied_fa_per_hour": 0.7798506014576456,
+            "note": "阈值需收紧到 1.0000"
+          }
+        ],
+        "n_segments": 1,
+        "hours": 1.2823,
+        "n_windows": 2859,
+        "score_max": 0.999999463558197,
+        "score_p50": 0.007351569831371307
+      }
+    }
+  },
+  "recommended": {
+    "confirm": 1,
+    "feasible": true,
+    "threshold": 0.9949874686716791,
+    "implied_fa_per_hour": 0.0,
+    "note": "阈值需收紧到 0.9950"
+  },
+  "verification": [
+    {
+      "name": "标定点（安静时段 + latency）",
+      "threshold": 0.9949874686716791,
+      "confirm": 1,
+      "segment_recall": 1.0,
+      "n_segments": 24,
+      "n_detected": 24,
+      "missed": 0,
+      "mean_delay_ms": 15.796591838200886,
+      "p95_delay_ms": 60.38897037506103,
+      "false_alarms_per_hour": 0.0,
+      "stream_hours": 3.0381,
+      "n_windows": 7155
+    },
+    {
+      "name": "工程默认（0.5+确认3）",
+      "threshold": 0.5,
+      "confirm": 3,
+      "segment_recall": 1.0,
+      "n_segments": 24,
+      "n_detected": 24,
+      "missed": 0,
+      "mean_delay_ms": 18.1346337000529,
+      "p95_delay_ms": 71.21692895889282,
+      "false_alarms_per_hour": 0.6583050301123599,
+      "stream_hours": 3.0381,
+      "n_windows": 7155
+    },
+    {
+      "name": "反例：用「含攻击的开头段」标定出的点",
+      "threshold": 0.999999463558197,
+      "confirm": 1,
+      "segment_recall": 0.041666666666666664,
+      "n_segments": 24,
+      "n_detected": 1,
+      "missed": 23,
+      "mean_delay_ms": 2952.6724815368652,
+      "p95_delay_ms": 2952.6724815368652,
+      "false_alarms_per_hour": 0.0,
+      "stream_hours": 3.0381,
+      "n_windows": 7155
+    }
+  ],
+  "push": null,
+  "elapsed_s": 8.2
+}

@@ -1,0 +1,7 @@
+{
+  "threshold": 0.9949874686716791,
+  "confirm": 1,
+  "budget_fa_per_hour": 1.0,
+  "model_tag": "cnn_bilstm_main_s0",
+  "note": "由 tools/calibrate_online.py 生成，可用 POST /api/policy 热更新"
+}

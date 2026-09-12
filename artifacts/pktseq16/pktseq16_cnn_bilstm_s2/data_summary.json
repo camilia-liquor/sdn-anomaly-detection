@@ -1,0 +1,53 @@
+{
+  "input_mode": "sequence",
+  "input_shape": [
+    16,
+    8
+  ],
+  "window_size": 16,
+  "n_features": 8,
+  "n_classes": 8,
+  "class_names": [
+    "Botnet",
+    "BruteForce",
+    "DDoS",
+    "DoS",
+    "Normal",
+    "Probe",
+    "U2R",
+    "WebAttack"
+  ],
+  "train": 14368,
+  "val": 3536,
+  "test": 5968,
+  "class_weight": {
+    "0": 2.543909348441926,
+    "1": 3.150877192982456,
+    "2": 1.8382804503582395,
+    "3": 2.1612515042117932,
+    "4": 0.19104350600999895,
+    "5": 2.8150470219435735,
+    "6": 3.93859649122807,
+    "7": 2.276299112801014
+  },
+  "train_class_counts": {
+    "Botnet": 706,
+    "BruteForce": 570,
+    "DDoS": 977,
+    "DoS": 831,
+    "Normal": 9401,
+    "Probe": 638,
+    "U2R": 456,
+    "WebAttack": 789
+  },
+  "split": {
+    "train": 14368,
+    "val": 3536,
+    "test": 5968,
+    "purge_flows": 32,
+    "split_mode": "time",
+    "time_ordered_split": true,
+    "unit": "flow（每条流 = 一条包序列样本）",
+    "n_pkt": 16
+  }
+}

@@ -1,0 +1,68 @@
+Model: "cnn_bilstm_cnn_bilstm"
+__________________________________________________________________________________________________
+ Layer (type)                Output Shape                 Param #   Connected to                  
+==================================================================================================
+ flow_window (InputLayer)    [(None, 32, 8)]              0         []                            
+                                                                                                  
+ conv1d_0 (Conv1D)           (None, 32, 64)               1600      ['flow_window[0][0]']         
+                                                                                                  
+ bn_conv_0 (BatchNormalizat  (None, 32, 64)               256       ['conv1d_0[0][0]']            
+ ion)                                                                                             
+                                                                                                  
+ relu_conv_0 (Activation)    (None, 32, 64)               0         ['bn_conv_0[0][0]']           
+                                                                                                  
+ drop_conv_0 (Dropout)       (None, 32, 64)               0         ['relu_conv_0[0][0]']         
+                                                                                                  
+ conv1d_1 (Conv1D)           (None, 32, 128)              24704     ['drop_conv_0[0][0]']         
+                                                                                                  
+ bi_lstm (Bidirectional)     (None, 32, 128)              37376     ['flow_window[0][0]']         
+                                                                                                  
+ bn_conv_1 (BatchNormalizat  (None, 32, 128)              512       ['conv1d_1[0][0]']            
+ ion)                                                                                             
+                                                                                                  
+ attn_score (Dense)          (None, 32, 1)                129       ['bi_lstm[0][0]']             
+                                                                                                  
+ relu_conv_1 (Activation)    (None, 32, 128)              0         ['bn_conv_1[0][0]']           
+                                                                                                  
+ attn_weights (Softmax)      (None, 32, 1)                0         ['attn_score[0][0]']          
+                                                                                                  
+ drop_conv_1 (Dropout)       (None, 32, 128)              0         ['relu_conv_1[0][0]']         
+                                                                                                  
+ attn_weighted (Multiply)    (None, 32, 128)              0         ['bi_lstm[0][0]',             
+                                                                     'attn_weights[0][0]']        
+                                                                                                  
+ cnn_pool (GlobalMaxPooling  (None, 128)                  0         ['drop_conv_1[0][0]']         
+ 1D)                                                                                              
+                                                                                                  
+ attn_pool (SumPooling1D)    (None, 128)                  0         ['attn_weighted[0][0]']       
+                                                                                                  
+ fuse (Concatenate)          (None, 256)                  0         ['cnn_pool[0][0]',            
+                                                                     'attn_pool[0][0]']           
+                                                                                                  
+ clf_dense_0 (Dense)         (None, 128)                  32896     ['fuse[0][0]']                
+                                                                                                  
+ clf_bn_0 (BatchNormalizati  (None, 128)                  512       ['clf_dense_0[0][0]']         
+ on)                                                                                              
+                                                                                                  
+ clf_relu_0 (Activation)     (None, 128)                  0         ['clf_bn_0[0][0]']            
+                                                                                                  
+ clf_drop_0 (Dropout)        (None, 128)                  0         ['clf_relu_0[0][0]']          
+                                                                                                  
+ clf_dense_1 (Dense)         (None, 64)                   8256      ['clf_drop_0[0][0]']          
+                                                                                                  
+ clf_bn_1 (BatchNormalizati  (None, 64)                   256       ['clf_dense_1[0][0]']         
+ on)                                                                                              
+                                                                                                  
+ clf_relu_1 (Activation)     (None, 64)                   0         ['clf_bn_1[0][0]']            
+                                                                                                  
+ clf_drop_1 (Dropout)        (None, 64)                   0         ['clf_relu_1[0][0]']          
+                                                                                                  
+ bin (Dense)                 (None, 1)                    65        ['clf_drop_1[0][0]']          
+                                                                                                  
+ mc (Dense)                  (None, 8)                    520       ['clf_drop_1[0][0]']          
+                                                                                                  
+==================================================================================================
+Total params: 107082 (418.29 KB)
+Trainable params: 106314 (415.29 KB)
+Non-trainable params: 768 (3.00 KB)
+__________________________________________________________________________________________________

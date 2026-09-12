@@ -1,0 +1,110 @@
+{
+ "runs": {
+  "cnn_bilstm|0": {
+   "variant": "cnn_bilstm",
+   "seed": 0,
+   "macro_f1": 0.933709223220518,
+   "accuracy": 0.9618406285072951,
+   "binary_roc_auc": 0.9986667395971502,
+   "online": {
+    "threshold": 0.5,
+    "confirm_windows": 3,
+    "stream_rows": 5968,
+    "stream_hours": 3.1153,
+    "min_segment_rows": 16,
+    "n_raw_attack_segments": 66,
+    "n_ignored_short_segments": 47,
+    "n_attack_segments": 19,
+    "n_segments_detected": 19,
+    "segment_recall": 1.0,
+    "n_segments_missed": 0,
+    "mean_detection_delay_rows": 10.052631578947368,
+    "median_detection_delay_rows": 10.0,
+    "mean_detection_delay_sec": 0.07248898556357936,
+    "p95_detection_delay_sec": 0.1980779886245725,
+    "false_alarms": 29,
+    "false_alarms_per_hour": 9.308909288398313,
+    "n_windows": 1985,
+    "n_alarmed_windows": 599,
+    "n_raw_alarmed_windows": 726,
+    "alarm_rate": 0.3017632241813602
+   },
+   "n_params": 151434
+  },
+  "cnn|0": {
+   "variant": "cnn",
+   "seed": 0,
+   "macro_f1": 0.8325053180552457,
+   "accuracy": 0.856341189674523,
+   "binary_roc_auc": 0.9887117285892053,
+   "online": {
+    "threshold": 0.5,
+    "confirm_windows": 3,
+    "stream_rows": 5968,
+    "stream_hours": 3.1153,
+    "min_segment_rows": 16,
+    "n_raw_attack_segments": 66,
+    "n_ignored_short_segments": 47,
+    "n_attack_segments": 19,
+    "n_segments_detected": 19,
+    "segment_recall": 1.0,
+    "n_segments_missed": 0,
+    "mean_detection_delay_rows": 5.631578947368421,
+    "median_detection_delay_rows": 2.0,
+    "mean_detection_delay_sec": 0.04341618638289602,
+    "p95_detection_delay_sec": 0.17103569507598873,
+    "false_alarms": 509,
+    "false_alarms_per_hour": 163.38740785499107,
+    "n_windows": 1985,
+    "n_alarmed_windows": 1231,
+    "n_raw_alarmed_windows": 1500,
+    "alarm_rate": 0.6201511335012595
+   },
+   "n_params": 65289
+  },
+  "bilstm|0": {
+   "variant": "bilstm",
+   "seed": 0,
+   "macro_f1": 0.9678951224585703,
+   "accuracy": 0.978675645342312,
+   "binary_roc_auc": 0.9990017640060714,
+   "online": {
+    "threshold": 0.5,
+    "confirm_windows": 3,
+    "stream_rows": 5968,
+    "stream_hours": 3.1153,
+    "min_segment_rows": 16,
+    "n_raw_attack_segments": 66,
+    "n_ignored_short_segments": 47,
+    "n_attack_segments": 19,
+    "n_segments_detected": 19,
+    "segment_recall": 1.0,
+    "n_segments_missed": 0,
+    "mean_detection_delay_rows": 13.842105263157896,
+    "median_detection_delay_rows": 14.0,
+    "mean_detection_delay_sec": 0.13719836034272848,
+    "p95_detection_delay_sec": 0.37329330444335806,
+    "false_alarms": 3,
+    "false_alarms_per_hour": 0.9629906160412047,
+    "n_windows": 1985,
+    "n_alarmed_windows": 511,
+    "n_raw_alarmed_windows": 578,
+    "alarm_rate": 0.25743073047858944
+   },
+   "n_params": 95882
+  }
+ },
+ "window": 16,
+ "stride": 5,
+ "seeds": [
+  0
+ ],
+ "n_flows": 24000,
+ "best_single": {
+  "variant": "bilstm",
+  "mean": 0.9678951224585703
+ },
+ "gap_cnn_behind_best": 0.1353898044033246,
+ "delta_hybrid_minus_best": -0.034185899238052375,
+ "note": "由 results/pktseq_control/metrics_pktctl_*.json 重建（首次运行时的原始产物）"
+}

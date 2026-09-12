@@ -1,0 +1,1440 @@
+{
+  "experiment": "packet_sequence_representation",
+  "question": "把输入从「流级聚合量的时间窗」换成「流内的有序包序列」后，卷积分支是否终于有增益？",
+  "params": {
+    "lengths": [
+      16,
+      32,
+      64
+    ],
+    "variants": [
+      "cnn_bilstm",
+      "cnn",
+      "bilstm"
+    ],
+    "seeds": [
+      0,
+      1,
+      2
+    ],
+    "epochs": 25,
+    "n_flows": 24000,
+    "max_pkt": 64,
+    "activation_ratio": 0.5,
+    "batch_size": 512,
+    "pkt_features": [
+      "pkt_len",
+      "direction",
+      "gap_us",
+      "rel_time",
+      "rel_pos",
+      "tcp_flags",
+      "is_first",
+      "valid"
+    ],
+    "flow_budget": "按类别比例抽样的子集；包级与流级对照共用同一份数据"
+  },
+  "gap_reference": {
+    "source": "same_flows_control",
+    "gap": 0.1353898044033246,
+    "delta": -0.034185899238052375,
+    "references": {
+      "same_flows_control": 0.1353898044033246,
+      "full_main_experiment": 0.023872246890347393
+    },
+    "note": "同数据对照（同一批流、流级滑窗 T=16）优先；同时给出全量主实验口径，两者都指向同一结论才算稳健"
+  },
+  "flow_baseline_full": {
+    "cnn_bilstm": {
+      "n": 3,
+      "mean": 0.9939843796573745,
+      "std": 0.0013911824767336583,
+      "values": [
+        0.9929572299559781,
+        0.9955675858940005,
+        0.993428323122145
+      ]
+    },
+    "cnn": {
+      "n": 3,
+      "mean": 0.972747043657049,
+      "std": 0.005886613875906388,
+      "values": [
+        0.9670111103410393,
+        0.9787735740186588,
+        0.9724564466114487
+      ]
+    },
+    "bilstm": {
+      "n": 3,
+      "mean": 0.9966192905473964,
+      "std": 0.00042023120287913805,
+      "values": [
+        0.9963906755512779,
+        0.9971042672396646,
+        0.9963629288512466
+      ]
+    },
+    "best_single": {
+      "variant": "bilstm",
+      "mean": 0.9966192905473964
+    },
+    "gap_cnn_behind_best": 0.023872246890347393
+  },
+  "flow_control": {
+    "runs": {
+      "cnn_bilstm|0": {
+        "variant": "cnn_bilstm",
+        "seed": 0,
+        "macro_f1": 0.933709223220518,
+        "accuracy": 0.9618406285072951,
+        "binary_roc_auc": 0.9986667395971502,
+        "online": {
+          "threshold": 0.5,
+          "confirm_windows": 3,
+          "stream_rows": 5968,
+          "stream_hours": 3.1153,
+          "min_segment_rows": 16,
+          "n_raw_attack_segments": 66,
+          "n_ignored_short_segments": 47,
+          "n_attack_segments": 19,
+          "n_segments_detected": 19,
+          "segment_recall": 1.0,
+          "n_segments_missed": 0,
+          "mean_detection_delay_rows": 10.052631578947368,
+          "median_detection_delay_rows": 10.0,
+          "mean_detection_delay_sec": 0.07248898556357936,
+          "p95_detection_delay_sec": 0.1980779886245725,
+          "false_alarms": 29,
+          "false_alarms_per_hour": 9.308909288398313,
+          "n_windows": 1985,
+          "n_alarmed_windows": 599,
+          "n_raw_alarmed_windows": 726,
+          "alarm_rate": 0.3017632241813602
+        },
+        "n_params": 151434
+      },
+      "cnn|0": {
+        "variant": "cnn",
+        "seed": 0,
+        "macro_f1": 0.8325053180552457,
+        "accuracy": 0.856341189674523,
+        "binary_roc_auc": 0.9887117285892053,
+        "online": {
+          "threshold": 0.5,
+          "confirm_windows": 3,
+          "stream_rows": 5968,
+          "stream_hours": 3.1153,
+          "min_segment_rows": 16,
+          "n_raw_attack_segments": 66,
+          "n_ignored_short_segments": 47,
+          "n_attack_segments": 19,
+          "n_segments_detected": 19,
+          "segment_recall": 1.0,
+          "n_segments_missed": 0,
+          "mean_detection_delay_rows": 5.631578947368421,
+          "median_detection_delay_rows": 2.0,
+          "mean_detection_delay_sec": 0.04341618638289602,
+          "p95_detection_delay_sec": 0.17103569507598873,
+          "false_alarms": 509,
+          "false_alarms_per_hour": 163.38740785499107,
+          "n_windows": 1985,
+          "n_alarmed_windows": 1231,
+          "n_raw_alarmed_windows": 1500,
+          "alarm_rate": 0.6201511335012595
+        },
+        "n_params": 65289
+      },
+      "bilstm|0": {
+        "variant": "bilstm",
+        "seed": 0,
+        "macro_f1": 0.9678951224585703,
+        "accuracy": 0.978675645342312,
+        "binary_roc_auc": 0.9990017640060714,
+        "online": {
+          "threshold": 0.5,
+          "confirm_windows": 3,
+          "stream_rows": 5968,
+          "stream_hours": 3.1153,
+          "min_segment_rows": 16,
+          "n_raw_attack_segments": 66,
+          "n_ignored_short_segments": 47,
+          "n_attack_segments": 19,
+          "n_segments_detected": 19,
+          "segment_recall": 1.0,
+          "n_segments_missed": 0,
+          "mean_detection_delay_rows": 13.842105263157896,
+          "median_detection_delay_rows": 14.0,
+          "mean_detection_delay_sec": 0.13719836034272848,
+          "p95_detection_delay_sec": 0.37329330444335806,
+          "false_alarms": 3,
+          "false_alarms_per_hour": 0.9629906160412047,
+          "n_windows": 1985,
+          "n_alarmed_windows": 511,
+          "n_raw_alarmed_windows": 578,
+          "alarm_rate": 0.25743073047858944
+        },
+        "n_params": 95882
+      }
+    },
+    "window": 16,
+    "stride": 5,
+    "seeds": [
+      0
+    ],
+    "n_flows": 24000,
+    "best_single": {
+      "variant": "bilstm",
+      "mean": 0.9678951224585703
+    },
+    "gap_cnn_behind_best": 0.1353898044033246,
+    "delta_hybrid_minus_best": -0.034185899238052375,
+    "note": "由 results/pktseq_control/metrics_pktctl_*.json 重建（首次运行时的原始产物）"
+  },
+  "packet_lengths": [
+    {
+      "n_pkt": 16,
+      "n_seeds": 3,
+      "cnn_bilstm_mean": 0.3136657293490636,
+      "cnn_bilstm_std": 0.004780542851382236,
+      "cnn_bilstm_values": [
+        0.3103611097573125,
+        0.311488782432565,
+        0.3191472958573134
+      ],
+      "n_params": 107082,
+      "online_segment_recall": 1.0,
+      "online_n_detected": 19,
+      "online_n_segments": 19,
+      "online_mean_delay_ms": 0.3741791373804996,
+      "online_false_alarms_per_hour": 1070.203571293792,
+      "online_stream_hours": 3.1153,
+      "binary_roc_auc": 0.7682540792506044,
+      "per_class_f1": {
+        "Botnet": 0.3587140439932318,
+        "BruteForce": 0.3609865470852018,
+        "DDoS": 0.3922918100481762,
+        "DoS": 0.25693160813308685,
+        "Normal": 0.2624564281320484,
+        "Probe": 0.1819277108433735,
+        "U2R": 0.33707865168539325,
+        "WebAttack": 0.3325020781379884
+      },
+      "cnn_mean": 0.3003745322220971,
+      "cnn_std": 0.0045129749534116945,
+      "cnn_values": [
+        0.2952765415739215,
+        0.30198821399263337,
+        0.3038588410997364
+      ],
+      "bilstm_mean": 0.3518088589032718,
+      "bilstm_std": 0.00285364727685373,
+      "bilstm_values": [
+        0.34906051888582457,
+        0.3516087757106113,
+        0.3547572821133796
+      ],
+      "best_single_variant": "BiLSTM",
+      "best_single_mean": 0.3518088589032718,
+      "gap_cnn_behind_best": 0.0514343266811747,
+      "delta_hybrid_minus_best": -0.03814312955420818,
+      "delta_sigma": 0.004780542851382236,
+      "delta_within_noise": false,
+      "paired": {
+        "n": 3,
+        "n_negative": 3,
+        "n_positive": 0,
+        "deltas": [
+          -0.03869940912851205,
+          -0.04011999327804627,
+          -0.035609986256066206
+        ],
+        "mean": -0.03814312955420818,
+        "std": 0.002305889428868642,
+        "all_negative": true,
+        "all_positive": false,
+        "sign_test_p_two_sided": 0.25
+      }
+    },
+    {
+      "n_pkt": 32,
+      "n_seeds": 3,
+      "cnn_bilstm_mean": 0.37604259320252326,
+      "cnn_bilstm_std": 0.008188818389239627,
+      "cnn_bilstm_values": [
+        0.3679692932401285,
+        0.38434223713162236,
+        0.3758162492358188
+      ],
+      "n_params": 107082,
+      "online_segment_recall": 1.0,
+      "online_n_detected": 19,
+      "online_n_segments": 19,
+      "online_mean_delay_ms": 3.834155567905359,
+      "online_false_alarms_per_hour": 764.293552264703,
+      "online_stream_hours": 3.1153,
+      "binary_roc_auc": 0.7902609434761828,
+      "per_class_f1": {
+        "Botnet": 0.39918533604887985,
+        "BruteForce": 0.3723150357995227,
+        "DDoS": 0.3903133903133903,
+        "DoS": 0.2853628536285363,
+        "Normal": 0.3722264728385616,
+        "Probe": 0.1662774404483886,
+        "U2R": 0.5594405594405595,
+        "WebAttack": 0.39863325740318906
+      },
+      "cnn_mean": 0.3534627718016366,
+      "cnn_std": 0.008547512503998735,
+      "cnn_values": [
+        0.3510274873676774,
+        0.34639717719353985,
+        0.36296365084369264
+      ],
+      "bilstm_mean": 0.36058464318019956,
+      "bilstm_std": 0.0038570343647488063,
+      "bilstm_values": [
+        0.3649929130821997,
+        0.35783088886619174,
+        0.3589301275922073
+      ],
+      "best_single_variant": "BiLSTM",
+      "best_single_mean": 0.36058464318019956,
+      "gap_cnn_behind_best": 0.007121871378562961,
+      "delta_hybrid_minus_best": 0.015457950022323697,
+      "delta_sigma": 0.008188818389239627,
+      "delta_within_noise": false,
+      "paired": {
+        "n": 3,
+        "n_negative": 0,
+        "n_positive": 3,
+        "deltas": [
+          0.002976380157928782,
+          0.026511348265430612,
+          0.016886121643611474
+        ],
+        "mean": 0.015457950022323622,
+        "std": 0.011832304787748287,
+        "all_negative": false,
+        "all_positive": true,
+        "sign_test_p_two_sided": 0.25
+      }
+    },
+    {
+      "n_pkt": 64,
+      "n_seeds": 3,
+      "cnn_bilstm_mean": 0.39050221768566606,
+      "cnn_bilstm_std": 0.0062617240685333055,
+      "cnn_bilstm_values": [
+        0.39692982865621806,
+        0.38442073871498783,
+        0.39015608568579235
+      ],
+      "n_params": 107082,
+      "online_segment_recall": 1.0,
+      "online_n_detected": 19,
+      "online_n_segments": 19,
+      "online_mean_delay_ms": 4.008293151855469,
+      "online_false_alarms_per_hour": 710.9010725530849,
+      "online_stream_hours": 3.1153,
+      "binary_roc_auc": 0.7840465322163123,
+      "per_class_f1": {
+        "Botnet": 0.3905325443786982,
+        "BruteForce": 0.418426103646833,
+        "DDoS": 0.4332298136645963,
+        "DoS": 0.32941176470588235,
+        "Normal": 0.44823828550671996,
+        "Probe": 0.15206611570247933,
+        "U2R": 0.5616438356164384,
+        "WebAttack": 0.44189016602809705
+      },
+      "cnn_mean": 0.3065951801045107,
+      "cnn_std": 0.13529901711706255,
+      "cnn_values": [
+        0.37682759631645846,
+        0.39233582872423933,
+        0.1506221152728343
+      ],
+      "bilstm_mean": 0.3622526402999444,
+      "bilstm_std": 0.0092636018974036,
+      "bilstm_values": [
+        0.36839847360019623,
+        0.36676166732526977,
+        0.35159777997436714
+      ],
+      "best_single_variant": "BiLSTM",
+      "best_single_mean": 0.3622526402999444,
+      "gap_cnn_behind_best": 0.05565746019543372,
+      "delta_hybrid_minus_best": 0.028249577385721647,
+      "delta_sigma": 0.0092636018974036,
+      "delta_within_noise": false,
+      "paired": {
+        "n": 3,
+        "n_negative": 0,
+        "n_positive": 3,
+        "deltas": [
+          0.028531355056021834,
+          0.017659071389718062,
+          0.03855830571142521
+        ],
+        "mean": 0.028249577385721703,
+        "std": 0.010452466110924033,
+        "all_negative": false,
+        "all_positive": true,
+        "sign_test_p_two_sided": 0.25
+      }
+    }
+  ],
+  "packet_runs": {
+    "16|cnn_bilstm|0": {
+      "tag": "pktseq16_cnn_bilstm_s0",
+      "macro_f1": 0.3103611097573125,
+      "accuracy": 0.2868632707774799,
+      "per_class_f1": {
+        "Botnet": 0.3587140439932318,
+        "BruteForce": 0.3609865470852018,
+        "DDoS": 0.3922918100481762,
+        "DoS": 0.25693160813308685,
+        "Normal": 0.2624564281320484,
+        "Probe": 0.1819277108433735,
+        "U2R": 0.33707865168539325,
+        "WebAttack": 0.3325020781379884
+      },
+      "binary_f1": 0.4638874137015401,
+      "binary_roc_auc": 0.7691873092822079,
+      "tpr_at_fpr_1pct": 0.08919382504288165,
+      "best_threshold": 0.8878273963928223,
+      "best_threshold_f1": 0.5814228314819192,
+      "online": {
+        "segment_recall": 1.0,
+        "n_attack_segments": 19,
+        "n_segments_detected": 19,
+        "mean_delay_ms": 0.2055293635318154,
+        "false_alarms_per_hour": 1188.0094233228328,
+        "stream_hours": 3.1153
+      },
+      "n_params": 107082,
+      "n_test": 5968,
+      "seed": 0,
+      "variant": "cnn_bilstm",
+      "n_pkt": 16,
+      "train_seconds": 25.301068782806396,
+      "best_epoch": 23
+    },
+    "16|cnn_bilstm|1": {
+      "tag": "pktseq16_cnn_bilstm_s1",
+      "macro_f1": 0.311488782432565,
+      "accuracy": 0.3019436997319035,
+      "per_class_f1": {
+        "Botnet": 0.34824281150159747,
+        "BruteForce": 0.3434125269978402,
+        "DDoS": 0.3720626631853786,
+        "DoS": 0.2530009233610342,
+        "Normal": 0.3048951048951049,
+        "Probe": 0.18433179723502305,
+        "U2R": 0.35294117647058826,
+        "WebAttack": 0.3330232558139535
+      },
+      "binary_f1": 0.4745301007899755,
+      "binary_roc_auc": 0.7560227758902218,
+      "tpr_at_fpr_1pct": 0.06518010291595197,
+      "best_threshold": 0.8611132502555847,
+      "best_threshold_f1": 0.5767129045817571,
+      "online": {
+        "segment_recall": 1.0,
+        "n_attack_segments": 19,
+        "n_segments_detected": 19,
+        "mean_delay_ms": 0.2055293635318154,
+        "false_alarms_per_hour": 1031.0419529081166,
+        "stream_hours": 3.1153
+      },
+      "n_params": 107082,
+      "n_test": 5968,
+      "seed": 1,
+      "variant": "cnn_bilstm",
+      "n_pkt": 16,
+      "train_seconds": 31.425553798675537,
+      "best_epoch": 22
+    },
+    "16|cnn_bilstm|2": {
+      "tag": "pktseq16_cnn_bilstm_s2",
+      "macro_f1": 0.3191472958573134,
+      "accuracy": 0.3242292225201072,
+      "per_class_f1": {
+        "Botnet": 0.353322528363047,
+        "BruteForce": 0.3389830508474576,
+        "DDoS": 0.34959349593495936,
+        "DoS": 0.2708994708994709,
+        "Normal": 0.343335931410756,
+        "Probe": 0.20709219858156028,
+        "U2R": 0.3188405797101449,
+        "WebAttack": 0.3711111111111111
+      },
+      "binary_f1": 0.4773007817857633,
+      "binary_roc_auc": 0.7795521525793834,
+      "tpr_at_fpr_1pct": 0.12006861063464837,
+      "best_threshold": 0.9091731309890747,
+      "best_threshold_f1": 0.5804627249357327,
+      "online": {
+        "segment_recall": 1.0,
+        "n_attack_segments": 19,
+        "n_segments_detected": 19,
+        "mean_delay_ms": 0.711478685077868,
+        "false_alarms_per_hour": 991.5593376504272,
+        "stream_hours": 3.1153
+      },
+      "n_params": 107082,
+      "n_test": 5968,
+      "seed": 2,
+      "variant": "cnn_bilstm",
+      "n_pkt": 16,
+      "train_seconds": 34.41547703742981,
+      "best_epoch": 24
+    },
+    "16|cnn|0": {
+      "tag": "pktseq16_cnn_s0",
+      "macro_f1": 0.2952765415739215,
+      "accuracy": 0.2851876675603217,
+      "per_class_f1": {
+        "Botnet": 0.40078585461689586,
+        "BruteForce": 0.31024930747922436,
+        "DDoS": 0.35462555066079293,
+        "DoS": 0.2652232746955345,
+        "Normal": 0.26625766871165646,
+        "Probe": 0.1893644617380026,
+        "U2R": 0.24858757062146894,
+        "WebAttack": 0.3271186440677966
+      },
+      "binary_f1": 0.45849180327868855,
+      "binary_roc_auc": 0.7646812975850081,
+      "tpr_at_fpr_1pct": 0.06518010291595197,
+      "best_threshold": 0.8754224181175232,
+      "best_threshold_f1": 0.5746920492721165,
+      "online": {
+        "segment_recall": 1.0,
+        "n_attack_segments": 19,
+        "n_segments_detected": 19,
+        "mean_delay_ms": 0.11225750571803043,
+        "false_alarms_per_hour": 1267.937644454253,
+        "stream_hours": 3.1153
+      },
+      "n_params": 53193,
+      "n_test": 5968,
+      "seed": 0,
+      "variant": "cnn",
+      "n_pkt": 16,
+      "train_seconds": 17.83574891090393,
+      "best_epoch": 16
+    },
+    "16|cnn|1": {
+      "tag": "pktseq16_cnn_s1",
+      "macro_f1": 0.30198821399263337,
+      "accuracy": 0.2937332439678284,
+      "per_class_f1": {
+        "Botnet": 0.3892100192678227,
+        "BruteForce": 0.3269961977186312,
+        "DDoS": 0.37225844694724364,
+        "DoS": 0.26246719160104987,
+        "Normal": 0.28374822910342035,
+        "Probe": 0.18836915297092288,
+        "U2R": 0.27941176470588236,
+        "WebAttack": 0.3134447096260939
+      },
+      "binary_f1": 0.47712955354697345,
+      "binary_roc_auc": 0.7511579094870315,
+      "tpr_at_fpr_1pct": 0.06174957118353345,
+      "best_threshold": 0.8363032341003418,
+      "best_threshold_f1": 0.5693918467364669,
+      "online": {
+        "segment_recall": 1.0,
+        "n_attack_segments": 19,
+        "n_segments_detected": 19,
+        "mean_delay_ms": 0.7101360120271382,
+        "false_alarms_per_hour": 996.3742907306332,
+        "stream_hours": 3.1153
+      },
+      "n_params": 53193,
+      "n_test": 5968,
+      "seed": 1,
+      "variant": "cnn",
+      "n_pkt": 16,
+      "train_seconds": 13.230382442474365,
+      "best_epoch": 19
+    },
+    "16|cnn|2": {
+      "tag": "pktseq16_cnn_s2",
+      "macro_f1": 0.3038588410997364,
+      "accuracy": 0.29892761394101874,
+      "per_class_f1": {
+        "Botnet": 0.3862332695984704,
+        "BruteForce": 0.32264150943396225,
+        "DDoS": 0.36460176991150445,
+        "DoS": 0.24517906336088155,
+        "Normal": 0.3004807692307692,
+        "Probe": 0.18064516129032257,
+        "U2R": 0.2822085889570552,
+        "WebAttack": 0.34888059701492535
+      },
+      "binary_f1": 0.47447937933850554,
+      "binary_roc_auc": 0.7620108249985669,
+      "tpr_at_fpr_1pct": 0.040022870211549454,
+      "best_threshold": 0.8936122059822083,
+      "best_threshold_f1": 0.5809842331581462,
+      "online": {
+        "segment_recall": 1.0,
+        "n_attack_segments": 19,
+        "n_segments_detected": 19,
+        "mean_delay_ms": 0.61798095703125,
+        "false_alarms_per_hour": 1030.0789622920754,
+        "stream_hours": 3.1153
+      },
+      "n_params": 53193,
+      "n_test": 5968,
+      "seed": 2,
+      "variant": "cnn",
+      "n_pkt": 16,
+      "train_seconds": 11.552829265594482,
+      "best_epoch": 24
+    },
+    "16|bilstm|0": {
+      "tag": "pktseq16_bilstm_s0",
+      "macro_f1": 0.34906051888582457,
+      "accuracy": 0.4183981233243968,
+      "per_class_f1": {
+        "Botnet": 0.34683954619124796,
+        "BruteForce": 0.3480083857442348,
+        "DDoS": 0.3674267100977199,
+        "DoS": 0.2860169491525424,
+        "Normal": 0.5103065996882037,
+        "Probe": 0.25976768743400214,
+        "U2R": 0.291044776119403,
+        "WebAttack": 0.3830734966592428
+      },
+      "binary_f1": 0.5203351104341203,
+      "binary_roc_auc": 0.7842995238805746,
+      "tpr_at_fpr_1pct": 0.08118925100057175,
+      "best_threshold": 0.8479778170585632,
+      "best_threshold_f1": 0.5897810218978102,
+      "online": {
+        "segment_recall": 1.0,
+        "n_attack_segments": 19,
+        "n_segments_detected": 19,
+        "mean_delay_ms": 4.104965611508018,
+        "false_alarms_per_hour": 547.9416605274455,
+        "stream_hours": 3.1153
+      },
+      "n_params": 63626,
+      "n_test": 5968,
+      "seed": 0,
+      "variant": "bilstm",
+      "n_pkt": 16,
+      "train_seconds": 22.976936101913452,
+      "best_epoch": 23
+    },
+    "16|bilstm|1": {
+      "tag": "pktseq16_bilstm_s1",
+      "macro_f1": 0.3516087757106113,
+      "accuracy": 0.42091152815013405,
+      "per_class_f1": {
+        "Botnet": 0.38461538461538464,
+        "BruteForce": 0.37305699481865284,
+        "DDoS": 0.37475083056478403,
+        "DoS": 0.23874755381604695,
+        "Normal": 0.5146016934508381,
+        "Probe": 0.2898876404494382,
+        "U2R": 0.28699551569506726,
+        "WebAttack": 0.3502145922746781
+      },
+      "binary_f1": 0.4986960301361924,
+      "binary_roc_auc": 0.7766272427910927,
+      "tpr_at_fpr_1pct": 0.037164093767867355,
+      "best_threshold": 0.7579343914985657,
+      "best_threshold_f1": 0.5964842189372753,
+      "online": {
+        "segment_recall": 1.0,
+        "n_attack_segments": 19,
+        "n_segments_detected": 19,
+        "mean_delay_ms": 3.9648633254201786,
+        "false_alarms_per_hour": 727.3789119831233,
+        "stream_hours": 3.1153
+      },
+      "n_params": 63626,
+      "n_test": 5968,
+      "seed": 1,
+      "variant": "bilstm",
+      "n_pkt": 16,
+      "train_seconds": 21.17483615875244,
+      "best_epoch": 15
+    },
+    "16|bilstm|2": {
+      "tag": "pktseq16_bilstm_s2",
+      "macro_f1": 0.3547572821133796,
+      "accuracy": 0.4344839142091153,
+      "per_class_f1": {
+        "Botnet": 0.35218093699515346,
+        "BruteForce": 0.34055727554179566,
+        "DDoS": 0.35924932975871315,
+        "DoS": 0.28968713789107764,
+        "Normal": 0.5353071294878339,
+        "Probe": 0.25688073394495414,
+        "U2R": 0.2534246575342466,
+        "WebAttack": 0.45077105575326215
+      },
+      "binary_f1": 0.5170907995783768,
+      "binary_roc_auc": 0.7835732767622199,
+      "tpr_at_fpr_1pct": 0.07947398513436249,
+      "best_threshold": 0.8343654870986938,
+      "best_threshold_f1": 0.596005447117567,
+      "online": {
+        "segment_recall": 1.0,
+        "n_attack_segments": 19,
+        "n_segments_detected": 19,
+        "mean_delay_ms": 4.104965611508018,
+        "false_alarms_per_hour": 575.226394648613,
+        "stream_hours": 3.1153
+      },
+      "n_params": 63626,
+      "n_test": 5968,
+      "seed": 2,
+      "variant": "bilstm",
+      "n_pkt": 16,
+      "train_seconds": 22.399269342422485,
+      "best_epoch": 22
+    },
+    "32|cnn_bilstm|0": {
+      "tag": "pktseq32_cnn_bilstm_s0",
+      "macro_f1": 0.3679692932401285,
+      "accuracy": 0.33679624664879354,
+      "per_class_f1": {
+        "Botnet": 0.39918533604887985,
+        "BruteForce": 0.3723150357995227,
+        "DDoS": 0.3903133903133903,
+        "DoS": 0.2853628536285363,
+        "Normal": 0.3722264728385616,
+        "Probe": 0.1662774404483886,
+        "U2R": 0.5594405594405595,
+        "WebAttack": 0.39863325740318906
+      },
+      "binary_f1": 0.4905820705282538,
+      "binary_roc_auc": 0.7896440603109001,
+      "tpr_at_fpr_1pct": 0.13264722698684964,
+      "best_threshold": 0.8394167423248291,
+      "best_threshold_f1": 0.5930138099106418,
+      "online": {
+        "segment_recall": 1.0,
+        "n_attack_segments": 19,
+        "n_segments_detected": 19,
+        "mean_delay_ms": 3.4842616633365027,
+        "false_alarms_per_hour": 826.8879423073812,
+        "stream_hours": 3.1153
+      },
+      "n_params": 107082,
+      "n_test": 5968,
+      "seed": 0,
+      "variant": "cnn_bilstm",
+      "n_pkt": 32,
+      "train_seconds": 43.6815710067749,
+      "best_epoch": 24
+    },
+    "32|cnn_bilstm|1": {
+      "tag": "pktseq32_cnn_bilstm_s1",
+      "macro_f1": 0.38434223713162236,
+      "accuracy": 0.37868632707774796,
+      "per_class_f1": {
+        "Botnet": 0.3984375,
+        "BruteForce": 0.38095238095238093,
+        "DDoS": 0.3969849246231156,
+        "DoS": 0.2891046386192017,
+        "Normal": 0.43784378437843785,
+        "Probe": 0.186681844052362,
+        "U2R": 0.5648854961832062,
+        "WebAttack": 0.4198473282442748
+      },
+      "binary_f1": 0.5051154633148203,
+      "binary_roc_auc": 0.7871389888455543,
+      "tpr_at_fpr_1pct": 0.115494568324757,
+      "best_threshold": 0.858008086681366,
+      "best_threshold_f1": 0.6029929577464789,
+      "online": {
+        "segment_recall": 1.0,
+        "n_attack_segments": 19,
+        "n_segments_detected": 19,
+        "mean_delay_ms": 4.029336728547749,
+        "false_alarms_per_hour": 688.2172935974477,
+        "stream_hours": 3.1153
+      },
+      "n_params": 107082,
+      "n_test": 5968,
+      "seed": 1,
+      "variant": "cnn_bilstm",
+      "n_pkt": 32,
+      "train_seconds": 45.19593095779419,
+      "best_epoch": 24
+    },
+    "32|cnn_bilstm|2": {
+      "tag": "pktseq32_cnn_bilstm_s2",
+      "macro_f1": 0.3758162492358188,
+      "accuracy": 0.36427613941018766,
+      "per_class_f1": {
+        "Botnet": 0.39926062846580407,
+        "BruteForce": 0.35355648535564854,
+        "DDoS": 0.3947939262472885,
+        "DoS": 0.2725,
+        "Normal": 0.4187256176853056,
+        "Probe": 0.18299945858148348,
+        "U2R": 0.5833333333333334,
+        "WebAttack": 0.4013605442176871
+      },
+      "binary_f1": 0.49541547277936965,
+      "binary_roc_auc": 0.7939997812720939,
+      "tpr_at_fpr_1pct": 0.10348770726129217,
+      "best_threshold": 0.8824257850646973,
+      "best_threshold_f1": 0.6055130877924485,
+      "online": {
+        "segment_recall": 1.0,
+        "n_attack_segments": 19,
+        "n_segments_detected": 19,
+        "mean_delay_ms": 3.9888683118318258,
+        "false_alarms_per_hour": 777.7754208892798,
+        "stream_hours": 3.1153
+      },
+      "n_params": 107082,
+      "n_test": 5968,
+      "seed": 2,
+      "variant": "cnn_bilstm",
+      "n_pkt": 32,
+      "train_seconds": 44.518230676651,
+      "best_epoch": 24
+    },
+    "32|cnn|0": {
+      "tag": "pktseq32_cnn_s0",
+      "macro_f1": 0.3510274873676774,
+      "accuracy": 0.29473860589812334,
+      "per_class_f1": {
+        "Botnet": 0.4104803493449782,
+        "BruteForce": 0.38095238095238093,
+        "DDoS": 0.3763109191856878,
+        "DoS": 0.30105017502917153,
+        "Normal": 0.2815474984808588,
+        "Probe": 0.15896980461811722,
+        "U2R": 0.5109489051094891,
+        "WebAttack": 0.3879598662207358
+      },
+      "binary_f1": 0.47212047212047215,
+      "binary_roc_auc": 0.7780947118937432,
+      "tpr_at_fpr_1pct": 0.06689536878216124,
+      "best_threshold": 0.8806935548782349,
+      "best_threshold_f1": 0.5832005463236968,
+      "online": {
+        "segment_recall": 1.0,
+        "n_attack_segments": 19,
+        "n_segments_detected": 19,
+        "mean_delay_ms": 0.2990270915784334,
+        "false_alarms_per_hour": 1057.6846932852566,
+        "stream_hours": 3.1153
+      },
+      "n_params": 53193,
+      "n_test": 5968,
+      "seed": 0,
+      "variant": "cnn",
+      "n_pkt": 32,
+      "train_seconds": 16.625473022460938,
+      "best_epoch": 24
+    },
+    "32|cnn|1": {
+      "tag": "pktseq32_cnn_s1",
+      "macro_f1": 0.34639717719353985,
+      "accuracy": 0.32523458445040215,
+      "per_class_f1": {
+        "Botnet": 0.3873684210526316,
+        "BruteForce": 0.3868421052631579,
+        "DDoS": 0.36649803260258573,
+        "DoS": 0.2675496688741722,
+        "Normal": 0.35093167701863354,
+        "Probe": 0.16683316683316685,
+        "U2R": 0.4482758620689655,
+        "WebAttack": 0.39687848383500557
+      },
+      "binary_f1": 0.4751501911523758,
+      "binary_roc_auc": 0.7547192849576049,
+      "tpr_at_fpr_1pct": 0.04516866781017725,
+      "best_threshold": 0.8394908905029297,
+      "best_threshold_f1": 0.584857605927298,
+      "online": {
+        "segment_recall": 1.0,
+        "n_attack_segments": 19,
+        "n_segments_detected": 19,
+        "mean_delay_ms": 0.7506044287430612,
+        "false_alarms_per_hour": 1019.8070623876358,
+        "stream_hours": 3.1153
+      },
+      "n_params": 53193,
+      "n_test": 5968,
+      "seed": 1,
+      "variant": "cnn",
+      "n_pkt": 32,
+      "train_seconds": 15.028130292892456,
+      "best_epoch": 14
+    },
+    "32|cnn|2": {
+      "tag": "pktseq32_cnn_s2",
+      "macro_f1": 0.36296365084369264,
+      "accuracy": 0.34031501340482573,
+      "per_class_f1": {
+        "Botnet": 0.39591836734693875,
+        "BruteForce": 0.3847072879330944,
+        "DDoS": 0.4184168012924071,
+        "DoS": 0.23911187019641333,
+        "Normal": 0.3726803137555003,
+        "Probe": 0.18240690771721532,
+        "U2R": 0.5112781954887218,
+        "WebAttack": 0.39918946301925023
+      },
+      "binary_f1": 0.47339049952361506,
+      "binary_roc_auc": 0.7832396963774784,
+      "tpr_at_fpr_1pct": 0.08347627215551744,
+      "best_threshold": 0.8793439269065857,
+      "best_threshold_f1": 0.5904493060456363,
+      "online": {
+        "segment_recall": 1.0,
+        "n_attack_segments": 19,
+        "n_segments_detected": 19,
+        "mean_delay_ms": 3.8032155287893197,
+        "false_alarms_per_hour": 1038.4248809644325,
+        "stream_hours": 3.1153
+      },
+      "n_params": 53193,
+      "n_test": 5968,
+      "seed": 2,
+      "variant": "cnn",
+      "n_pkt": 32,
+      "train_seconds": 16.10549759864807,
+      "best_epoch": 20
+    },
+    "32|bilstm|0": {
+      "tag": "pktseq32_bilstm_s0",
+      "macro_f1": 0.3649929130821997,
+      "accuracy": 0.42744638069705093,
+      "per_class_f1": {
+        "Botnet": 0.3602693602693603,
+        "BruteForce": 0.3544575725026853,
+        "DDoS": 0.37623762376237624,
+        "DoS": 0.2817182817182817,
+        "Normal": 0.51644167532018,
+        "Probe": 0.27518959913326113,
+        "U2R": 0.3564356435643564,
+        "WebAttack": 0.39919354838709675
+      },
+      "binary_f1": 0.5160126296797474,
+      "binary_roc_auc": 0.7961493860101686,
+      "tpr_at_fpr_1pct": 0.12407089765580331,
+      "best_threshold": 0.8127520084381104,
+      "best_threshold_f1": 0.608965823346649,
+      "online": {
+        "segment_recall": 1.0,
+        "n_attack_segments": 19,
+        "n_segments_detected": 19,
+        "mean_delay_ms": 4.09882947018272,
+        "false_alarms_per_hour": 590.3132476332585,
+        "stream_hours": 3.1153
+      },
+      "n_params": 63626,
+      "n_test": 5968,
+      "seed": 0,
+      "variant": "bilstm",
+      "n_pkt": 32,
+      "train_seconds": 37.29694151878357,
+      "best_epoch": 21
+    },
+    "32|bilstm|1": {
+      "tag": "pktseq32_bilstm_s1",
+      "macro_f1": 0.35783088886619174,
+      "accuracy": 0.44906166219839144,
+      "per_class_f1": {
+        "Botnet": 0.3765541740674956,
+        "BruteForce": 0.3731513083048919,
+        "DDoS": 0.38885112168592795,
+        "DoS": 0.281786941580756,
+        "Normal": 0.554531747361367,
+        "Probe": 0.2773393461104848,
+        "U2R": 0.2077922077922078,
+        "WebAttack": 0.40264026402640263
+      },
+      "binary_f1": 0.5086705202312138,
+      "binary_roc_auc": 0.7933215079324102,
+      "tpr_at_fpr_1pct": 0.10806174957118353,
+      "best_threshold": 0.8316808938980103,
+      "best_threshold_f1": 0.5967228038233955,
+      "online": {
+        "segment_recall": 1.0,
+        "n_attack_segments": 19,
+        "n_segments_detected": 19,
+        "mean_delay_ms": 4.104965611508018,
+        "false_alarms_per_hour": 633.0058316110852,
+        "stream_hours": 3.1153
+      },
+      "n_params": 63626,
+      "n_test": 5968,
+      "seed": 1,
+      "variant": "bilstm",
+      "n_pkt": 32,
+      "train_seconds": 37.567588329315186,
+      "best_epoch": 23
+    },
+    "32|bilstm|2": {
+      "tag": "pktseq32_bilstm_s2",
+      "macro_f1": 0.3589301275922073,
+      "accuracy": 0.40365281501340483,
+      "per_class_f1": {
+        "Botnet": 0.3771626297577855,
+        "BruteForce": 0.37037037037037035,
+        "DDoS": 0.3682409308692676,
+        "DoS": 0.2822822822822823,
+        "Normal": 0.48107534488857445,
+        "Probe": 0.2247191011235955,
+        "U2R": 0.37,
+        "WebAttack": 0.39759036144578314
+      },
+      "binary_f1": 0.49272882805816937,
+      "binary_roc_auc": 0.7951563016878503,
+      "tpr_at_fpr_1pct": 0.12464265294453973,
+      "best_threshold": 0.8153933882713318,
+      "best_threshold_f1": 0.6033163265306123,
+      "online": {
+        "segment_recall": 1.0,
+        "n_attack_segments": 19,
+        "n_segments_detected": 19,
+        "mean_delay_ms": 3.9461035477487667,
+        "false_alarms_per_hour": 802.4921800343373,
+        "stream_hours": 3.1153
+      },
+      "n_params": 63626,
+      "n_test": 5968,
+      "seed": 2,
+      "variant": "bilstm",
+      "n_pkt": 32,
+      "train_seconds": 37.989187479019165,
+      "best_epoch": 24
+    },
+    "64|cnn_bilstm|0": {
+      "tag": "pktseq64_cnn_bilstm_s0",
+      "macro_f1": 0.39692982865621806,
+      "accuracy": 0.3761729222520107,
+      "per_class_f1": {
+        "Botnet": 0.3905325443786982,
+        "BruteForce": 0.418426103646833,
+        "DDoS": 0.4332298136645963,
+        "DoS": 0.32941176470588235,
+        "Normal": 0.44823828550671996,
+        "Probe": 0.15206611570247933,
+        "U2R": 0.5616438356164384,
+        "WebAttack": 0.44189016602809705
+      },
+      "binary_f1": 0.4987012987012987,
+      "binary_roc_auc": 0.8003397736098412,
+      "tpr_at_fpr_1pct": 0.10291595197255575,
+      "best_threshold": 0.8738617300987244,
+      "best_threshold_f1": 0.6104229960271091,
+      "online": {
+        "segment_recall": 1.0,
+        "n_attack_segments": 19,
+        "n_segments_detected": 19,
+        "mean_delay_ms": 3.8967132568359375,
+        "false_alarms_per_hour": 755.3056398483183,
+        "stream_hours": 3.1153
+      },
+      "n_params": 107082,
+      "n_test": 5968,
+      "seed": 0,
+      "variant": "cnn_bilstm",
+      "n_pkt": 64,
+      "train_seconds": 86.62218832969666,
+      "best_epoch": 23
+    },
+    "64|cnn_bilstm|1": {
+      "tag": "pktseq64_cnn_bilstm_s1",
+      "macro_f1": 0.38442073871498783,
+      "accuracy": 0.3827077747989276,
+      "per_class_f1": {
+        "Botnet": 0.37478108581436076,
+        "BruteForce": 0.3968042609853529,
+        "DDoS": 0.40156965336821454,
+        "DoS": 0.3220338983050847,
+        "Normal": 0.4418943533697632,
+        "Probe": 0.18512396694214875,
+        "U2R": 0.5611510791366906,
+        "WebAttack": 0.39200761179828736
+      },
+      "binary_f1": 0.49549420683736234,
+      "binary_roc_auc": 0.7841053249403614,
+      "tpr_at_fpr_1pct": 0.1017724413950829,
+      "best_threshold": 0.8542671203613281,
+      "best_threshold_f1": 0.6003691739732349,
+      "online": {
+        "segment_recall": 1.0,
+        "n_attack_segments": 19,
+        "n_segments_detected": 19,
+        "mean_delay_ms": 4.029336728547749,
+        "false_alarms_per_hour": 778.4174146333072,
+        "stream_hours": 3.1153
+      },
+      "n_params": 107082,
+      "n_test": 5968,
+      "seed": 1,
+      "variant": "cnn_bilstm",
+      "n_pkt": 64,
+      "train_seconds": 85.35060143470764,
+      "best_epoch": 22
+    },
+    "64|cnn_bilstm|2": {
+      "tag": "pktseq64_cnn_bilstm_s2",
+      "macro_f1": 0.39015608568579235,
+      "accuracy": 0.3788538873994638,
+      "per_class_f1": {
+        "Botnet": 0.398422090729783,
+        "BruteForce": 0.39334341906202724,
+        "DDoS": 0.39575530586766544,
+        "DoS": 0.3232810615199035,
+        "Normal": 0.4432294514306543,
+        "Probe": 0.16920806689621248,
+        "U2R": 0.5454545454545454,
+        "WebAttack": 0.45255474452554745
+      },
+      "binary_f1": 0.5153927016068479,
+      "binary_roc_auc": 0.7676944980987341,
+      "tpr_at_fpr_1pct": 0.07547169811320754,
+      "best_threshold": 0.8094093799591064,
+      "best_threshold_f1": 0.5799241668329674,
+      "online": {
+        "segment_recall": 1.0,
+        "n_attack_segments": 19,
+        "n_segments_detected": 19,
+        "mean_delay_ms": 4.09882947018272,
+        "false_alarms_per_hour": 598.9801631776294,
+        "stream_hours": 3.1153
+      },
+      "n_params": 107082,
+      "n_test": 5968,
+      "seed": 2,
+      "variant": "cnn_bilstm",
+      "n_pkt": 64,
+      "train_seconds": 85.71599650382996,
+      "best_epoch": 19
+    },
+    "64|cnn|0": {
+      "tag": "pktseq64_cnn_s0",
+      "macro_f1": 0.37682759631645846,
+      "accuracy": 0.35556300268096513,
+      "per_class_f1": {
+        "Botnet": 0.4,
+        "BruteForce": 0.3903281519861831,
+        "DDoS": 0.37661538461538463,
+        "DoS": 0.32362459546925565,
+        "Normal": 0.40680501028229576,
+        "Probe": 0.16321009918845808,
+        "U2R": 0.5161290322580645,
+        "WebAttack": 0.43790849673202614
+      },
+      "binary_f1": 0.48950260673524026,
+      "binary_roc_auc": 0.8015671705404139,
+      "tpr_at_fpr_1pct": 0.08919382504288165,
+      "best_threshold": 0.8426564335823059,
+      "best_threshold_f1": 0.6124831612034126,
+      "online": {
+        "segment_recall": 1.0,
+        "n_attack_segments": 19,
+        "n_segments_detected": 19,
+        "mean_delay_ms": 3.9371816735518608,
+        "false_alarms_per_hour": 844.8637671401503,
+        "stream_hours": 3.1153
+      },
+      "n_params": 53193,
+      "n_test": 5968,
+      "seed": 0,
+      "variant": "cnn",
+      "n_pkt": 64,
+      "train_seconds": 26.526775360107422,
+      "best_epoch": 24
+    },
+    "64|cnn|1": {
+      "tag": "pktseq64_cnn_s1",
+      "macro_f1": 0.39233582872423933,
+      "accuracy": 0.3941018766756032,
+      "per_class_f1": {
+        "Botnet": 0.39543726235741444,
+        "BruteForce": 0.4299363057324841,
+        "DDoS": 0.4332344213649852,
+        "DoS": 0.29780033840947545,
+        "Normal": 0.4715939447907391,
+        "Probe": 0.16582220175034545,
+        "U2R": 0.5238095238095238,
+        "WebAttack": 0.42105263157894735
+      },
+      "binary_f1": 0.4860178970917226,
+      "binary_roc_auc": 0.7558720785967697,
+      "tpr_at_fpr_1pct": 0.0686106346483705,
+      "best_threshold": 0.7771119475364685,
+      "best_threshold_f1": 0.5667776544580096,
+      "online": {
+        "segment_recall": 1.0,
+        "n_attack_segments": 19,
+        "n_segments_detected": 19,
+        "mean_delay_ms": 4.080433594553094,
+        "false_alarms_per_hour": 886.9143573739495,
+        "stream_hours": 3.1153
+      },
+      "n_params": 53193,
+      "n_test": 5968,
+      "seed": 1,
+      "variant": "cnn",
+      "n_pkt": 64,
+      "train_seconds": 26.020278692245483,
+      "best_epoch": 22
+    },
+    "64|cnn|2": {
+      "tag": "pktseq64_cnn_s2",
+      "macro_f1": 0.1506221152728343,
+      "accuracy": 0.21363941018766755,
+      "per_class_f1": {
+        "Botnet": 0.29042904290429045,
+        "BruteForce": 0.0,
+        "DDoS": 0.35808466342817485,
+        "DoS": 0.1448692152917505,
+        "Normal": 0.27787307032590053,
+        "Probe": 0.10714285714285714,
+        "U2R": 0.0,
+        "WebAttack": 0.026578073089700997
+      },
+      "binary_f1": 0.4532849552935078,
+      "binary_roc_auc": 0.6814850079908866,
+      "tpr_at_fpr_1pct": 0.015437392795883362,
+      "best_threshold": 0.6848878264427185,
+      "best_threshold_f1": 0.5104712041884817,
+      "online": {
+        "segment_recall": 1.0,
+        "n_attack_segments": 19,
+        "n_segments_detected": 19,
+        "mean_delay_ms": 0.0,
+        "false_alarms_per_hour": 1353.64380928192,
+        "stream_hours": 3.1153
+      },
+      "n_params": 53193,
+      "n_test": 5968,
+      "seed": 2,
+      "variant": "cnn",
+      "n_pkt": 64,
+      "train_seconds": 15.035104274749756,
+      "best_epoch": 1
+    },
+    "64|bilstm|0": {
+      "tag": "pktseq64_bilstm_s0",
+      "macro_f1": 0.36839847360019623,
+      "accuracy": 0.43331099195710454,
+      "per_class_f1": {
+        "Botnet": 0.3889908256880734,
+        "BruteForce": 0.34065934065934067,
+        "DDoS": 0.373421926910299,
+        "DoS": 0.3133208255159475,
+        "Normal": 0.5216942148760331,
+        "Probe": 0.32,
+        "U2R": 0.32608695652173914,
+        "WebAttack": 0.363013698630137
+      },
+      "binary_f1": 0.49526270456503013,
+      "binary_roc_auc": 0.8019429651400027,
+      "tpr_at_fpr_1pct": 0.1126357918810749,
+      "best_threshold": 0.8011206984519958,
+      "best_threshold_f1": 0.6071590394200271,
+      "online": {
+        "segment_recall": 1.0,
+        "n_attack_segments": 19,
+        "n_segments_detected": 19,
+        "mean_delay_ms": 3.7500481856496712,
+        "false_alarms_per_hour": 778.7384115053209,
+        "stream_hours": 3.1153
+      },
+      "n_params": 63626,
+      "n_test": 5968,
+      "seed": 0,
+      "variant": "bilstm",
+      "n_pkt": 64,
+      "train_seconds": 82.21008896827698,
+      "best_epoch": 19
+    },
+    "64|bilstm|1": {
+      "tag": "pktseq64_bilstm_s1",
+      "macro_f1": 0.36676166732526977,
+      "accuracy": 0.44671581769436997,
+      "per_class_f1": {
+        "Botnet": 0.3616,
+        "BruteForce": 0.38106796116504854,
+        "DDoS": 0.3880597014925373,
+        "DoS": 0.30564102564102563,
+        "Normal": 0.5493692178301094,
+        "Probe": 0.24516129032258063,
+        "U2R": 0.2792207792207792,
+        "WebAttack": 0.4239733629300777
+      },
+      "binary_f1": 0.5095768374164811,
+      "binary_roc_auc": 0.7999952839336222,
+      "tpr_at_fpr_1pct": 0.13379073756432247,
+      "best_threshold": 0.8148773908615112,
+      "best_threshold_f1": 0.6083716852947623,
+      "online": {
+        "segment_recall": 1.0,
+        "n_attack_segments": 19,
+        "n_segments_detected": 19,
+        "mean_delay_ms": 4.09882947018272,
+        "false_alarms_per_hour": 639.1047721793462,
+        "stream_hours": 3.1153
+      },
+      "n_params": 63626,
+      "n_test": 5968,
+      "seed": 1,
+      "variant": "bilstm",
+      "n_pkt": 64,
+      "train_seconds": 66.19290208816528,
+      "best_epoch": 24
+    },
+    "64|bilstm|2": {
+      "tag": "pktseq64_bilstm_s2",
+      "macro_f1": 0.35159777997436714,
+      "accuracy": 0.39343163538873993,
+      "per_class_f1": {
+        "Botnet": 0.36304700162074555,
+        "BruteForce": 0.3417190775681342,
+        "DDoS": 0.3577749683944374,
+        "DoS": 0.304635761589404,
+        "Normal": 0.4616492617933021,
+        "Probe": 0.2319634703196347,
+        "U2R": 0.3473684210526316,
+        "WebAttack": 0.4046242774566474
+      },
+      "binary_f1": 0.4822971842765542,
+      "binary_roc_auc": 0.7966311565841097,
+      "tpr_at_fpr_1pct": 0.13836477987421383,
+      "best_threshold": 0.8228790760040283,
+      "best_threshold_f1": 0.6082870568133276,
+      "online": {
+        "segment_recall": 1.0,
+        "n_attack_segments": 19,
+        "n_segments_detected": 19,
+        "mean_delay_ms": 0.5243451971756784,
+        "false_alarms_per_hour": 909.7051352869247,
+        "stream_hours": 3.1153
+      },
+      "n_params": 63626,
+      "n_test": 5968,
+      "seed": 2,
+      "variant": "bilstm",
+      "n_pkt": 64,
+      "train_seconds": 62.68457746505737,
+      "best_epoch": 22
+    }
+  },
+  "judgement": {
+    "criteria": {
+      "activation_ratio": 0.5,
+      "rule": "GAP_pkt ≤ 0.5×GAP_flow → activated；≥ 1.0×GAP_flow → not_activated；其余 → partial",
+      "note": "参照基准有两个：同数据对照（同一批流、流级滑窗 T=16）与全量主实验（86,037 条流）。两者都指向同一结论时才写「稳健」。"
+    },
+    "references": {
+      "same_flows_control": 0.1353898044033246,
+      "full_main_experiment": 0.023872246890347393
+    },
+    "per_length": [
+      {
+        "n_pkt": 16,
+        "gap_pkt": 0.0514343266811747,
+        "delta_hybrid_minus_best": -0.03814312955420818,
+        "delta_sigma": 0.004780542851382236,
+        "delta_within_noise": false,
+        "paired": {
+          "n": 3,
+          "n_negative": 3,
+          "n_positive": 0,
+          "deltas": [
+            -0.03869940912851205,
+            -0.04011999327804627,
+            -0.035609986256066206
+          ],
+          "mean": -0.03814312955420818,
+          "std": 0.002305889428868642,
+          "all_negative": true,
+          "all_positive": false,
+          "sign_test_p_two_sided": 0.25
+        },
+        "ratio_same_flows_control": 0.3798980795330235,
+        "ratio_full_main_experiment": 2.154565798411371,
+        "verdicts": {
+          "same_flows_control": "activated",
+          "full_main_experiment": "not_activated"
+        },
+        "verdict": "mixed",
+        "robust_across_references": false
+      },
+      {
+        "n_pkt": 32,
+        "gap_pkt": 0.007121871378562961,
+        "delta_hybrid_minus_best": 0.015457950022323697,
+        "delta_sigma": 0.008188818389239627,
+        "delta_within_noise": false,
+        "paired": {
+          "n": 3,
+          "n_negative": 0,
+          "n_positive": 3,
+          "deltas": [
+            0.002976380157928782,
+            0.026511348265430612,
+            0.016886121643611474
+          ],
+          "mean": 0.015457950022323622,
+          "std": 0.011832304787748287,
+          "all_negative": false,
+          "all_positive": true,
+          "sign_test_p_two_sided": 0.25
+        },
+        "ratio_same_flows_control": 0.0526027156176915,
+        "ratio_full_main_experiment": 0.29833267941957525,
+        "verdicts": {
+          "same_flows_control": "activated",
+          "full_main_experiment": "activated"
+        },
+        "verdict": "activated",
+        "robust_across_references": true
+      },
+      {
+        "n_pkt": 64,
+        "gap_pkt": 0.05565746019543372,
+        "delta_hybrid_minus_best": 0.028249577385721647,
+        "delta_sigma": 0.0092636018974036,
+        "delta_within_noise": false,
+        "paired": {
+          "n": 3,
+          "n_negative": 0,
+          "n_positive": 3,
+          "deltas": [
+            0.028531355056021834,
+            0.017659071389718062,
+            0.03855830571142521
+          ],
+          "mean": 0.028249577385721703,
+          "std": 0.010452466110924033,
+          "all_negative": false,
+          "all_positive": true,
+          "sign_test_p_two_sided": 0.25
+        },
+        "ratio_same_flows_control": 0.41109048381243546,
+        "ratio_full_main_experiment": 2.3314713713830804,
+        "verdicts": {
+          "same_flows_control": "activated",
+          "full_main_experiment": "not_activated"
+        },
+        "verdict": "mixed",
+        "robust_across_references": false
+      }
+    ],
+    "overall": "mixed"
+  },
+  "elapsed_s": 6.1
+}
