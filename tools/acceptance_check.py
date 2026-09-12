@@ -466,6 +466,36 @@ def check_deployable(r: Report) -> None:
         r.warn(False, "pcap 往返一致性报告（可选）",
                f"未生成 {pc}：运行 python tests/test_pcap_tools.py 与 tools/pcap_to_flows.py")
 
+    # ---- 未知标记（把开集结论落成运行时旋钮）：阈值可配、能生效、能关闭 ----
+    thr_file = RESULT_DIR / "openset_thresholds.json"
+    if thr_file.exists():
+        th = json.loads(thr_file.read_text(encoding="utf-8"))
+        rec = th.get("recommended") or {}
+        r.check(bool(rec) and rec.get("threshold"), "未知标记阈值已标定（在正常窗口上按误报预算）",
+                f"{th.get('score')} 阈值 {rec.get('threshold'):.4f}（预算 {float(rec.get('budget', 0)) * 100:g}%："
+                f"正常被判未知 {float(rec.get('normal_flagged', 0)) * 100:.2f}%、"
+                f"已知攻击被判未知 {float(rec.get('known_attack_flagged', 0)) * 100:.2f}%）" if rec else "结构待核")
+        pol = client.get("/api/policy").get_json() or {}
+        r.check("unknown_threshold" in pol, "策略接口暴露 unknown_threshold（默认 0 = 关闭）",
+                f"当前 {pol.get('unknown_threshold')}")
+        back = client.post("/api/policy", json={"unknown_threshold": float(rec["threshold"])}).get_json() or {}
+        r.check(abs(float(back.get("unknown_threshold", -1)) - float(rec["threshold"])) < 1e-6,
+                "未知阈值可运行时热更新", f"→ {back.get('unknown_threshold')}")
+        # 真的推一批流记录，确认窗口里带上了 unknown / novelty 字段
+        resp2 = client.post("/api/detect", json={"rows": rows[:120], "meta": {"src_ip": "10.0.0.5"}})
+        det2 = resp2.get_json() or {}
+        wins = [x["window"] for x in (det2.get("rows") or []) if isinstance(x, dict) and x.get("window")]
+        r.check(bool(wins) and "unknown" in wins[0] and "novelty" in wins[0],
+                "窗口级判定输出带 unknown / novelty 字段（可观测、可审计）",
+                f"{len(wins)} 个窗口，示例 novelty={wins[0].get('novelty') if wins else None}")
+        r.check(float(client.post("/api/policy", json={"unknown_threshold": -5}).get_json()
+                      .get("unknown_threshold", -1)) == 0.0,
+                "非法（负）阈值被夹到 0（不会误配成「把所有窗口标成未知」）")
+        client.post("/api/policy", json={"unknown_threshold": 0})
+    else:
+        r.warn(False, "未知标记阈值标定（可选）",
+               f"未生成 {thr_file}：运行 python tools/openset_calibrate.py（不需要重训）")
+
     # ---- 部署样例：环境变量驱动的初始策略必须真的生效（否则 systemd/服务化配置就是摆设）
     env = dict(os.environ)
     try:

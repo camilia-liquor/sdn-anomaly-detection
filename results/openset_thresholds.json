@@ -1,0 +1,60 @@
+{
+  "tag": "cnn_bilstm_main_s0",
+  "source": "predictions_windows_cnn_bilstm_main_s0.csv",
+  "score": "entropy",
+  "prob_columns": [
+    "p_Botnet",
+    "p_BruteForce",
+    "p_DDoS",
+    "p_DoS",
+    "p_Normal",
+    "p_Probe",
+    "p_U2R",
+    "p_WebAttack"
+  ],
+  "n_windows": 3513,
+  "n_normal": 2500,
+  "n_attack": 1013,
+  "score_stats": {
+    "normal_mean": 0.02282877097773098,
+    "normal_p50": 0.009948662666951666,
+    "normal_p99": 0.3914498928826001,
+    "attack_mean": 0.005011483950055674,
+    "attack_p50": 8.686908783740332e-05
+  },
+  "levels": [
+    {
+      "budget": 0.1,
+      "threshold": 0.02364016208825881,
+      "normal_flagged": 0.1,
+      "known_attack_flagged": 0.022704837117472853,
+      "normal_flagged_count": 250,
+      "known_attack_flagged_count": 23
+    },
+    {
+      "budget": 0.01,
+      "threshold": 0.3914498928826001,
+      "normal_flagged": 0.01,
+      "known_attack_flagged": 0.0029615004935834156,
+      "normal_flagged_count": 25,
+      "known_attack_flagged_count": 3
+    },
+    {
+      "budget": 0.001,
+      "threshold": 1.1984673164041066,
+      "normal_flagged": 0.0012,
+      "known_attack_flagged": 0.0009871668311944718,
+      "normal_flagged_count": 3,
+      "known_attack_flagged_count": 1
+    }
+  ],
+  "recommended": {
+    "budget": 0.01,
+    "threshold": 0.3914498928826001,
+    "normal_flagged": 0.01,
+    "known_attack_flagged": 0.0029615004935834156,
+    "normal_flagged_count": 25,
+    "known_attack_flagged_count": 3
+  },
+  "semantics": "生产模型见过全部 8 类，因此本阈值标记的是「模型没见过这种形态」（新颖性/低置信），不是已被验证的未知攻击检测器；后者只在 tools/openset_eval.py 的留出整类实验中验证过。"
+}

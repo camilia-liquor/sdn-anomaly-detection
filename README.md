@@ -57,7 +57,7 @@ then `python app/app.py` for the live dashboard. See sections below for details.
 | 10 | **未知攻击（开集）检测：直面"新型攻击"这个真问题** | 把整类攻击从训练中拿掉再评估：**不做拒识时 100% 的未知攻击被自信地错判成已知类**（U2R→WebAttack 84%、Botnet→Normal 96%，后者连告警都不触发）；加入 OOD 拒识后 U2R 在 1% 误报预算下可检出 **70%**、Botnet **44%**，且已知类精度几乎不受损。诚实指出 **AUROC 会骗人**（三者都在 0.978，但低误报预算下的尾部表现差一个数量级） |
 | 11 | **一条命令看一场攻防 + 直接吃真实抓包** | `python tools/live_demo.py`：一条命令在屏幕上演完"安静→攻击爆发→告警→处置→恢复"，自动出事件报告，**检测时延 0.4 毫秒（8 条流记录）、227/227 个窗口与离线评估逐窗口一致（最大 Δp 4.94e-05）**；`python tools/pcap_to_flows.py`：**零依赖**解析 pcap/pcapng（含 VLAN/SLL/分片/纳秒时基），往返 **17 个特征 × 800 条流逐位一致** |
 | 12 | **可核验的方法学** | 错误分析（**漏报 0**、误报集中在 4 组混淆对、错例特征画像）、性能基准（单窗口 **p50 0.92 ms**）、泄漏诊断（公开数据集 **85% 近似重复**）、多种子均值±标准差、分布漂移测试 |
-| 13 | **一键复现 + 现场演示 + 工程规范** | `python run_all.py` 一条命令跑完全流程；**64 项交付验收自检 + 10 项单元测试 + 25 项 Ryu 行为测试 + 58 项 pcap 测试 + CI**；`python app/app.py` 起一个离线可用的实时大屏（迷你 SOC 控制台：攻击拓扑动画 + 处置控制台 + 审计台账 + 服务状态条） |
+| 13 | **一键复现 + 现场演示 + 工程规范** | `python run_all.py` 一条命令跑完全流程；**69 项交付验收自检 + 10 项单元测试 + 25 项 Ryu 行为测试 + 58 项 pcap 测试 + CI**；`python app/app.py` 起一个离线可用的实时大屏（迷你 SOC 控制台：攻击拓扑动画 + 处置控制台 + 审计台账 + 服务状态条） |
 
 ---
 
@@ -104,7 +104,7 @@ python tools/make_report.py
 python tests/test_core.py                 # 单元测试（10 项，不依赖 TensorFlow）
 python tests/test_ryu_guard.py            # Ryu 适配层行为测试（25 项，不需要安装 Ryu）
 python tests/test_pcap_tools.py           # pcap 往返一致性测试（58 项，不需要真实抓包）
-python tools/acceptance_check.py          # 64 项全过 = 可以直接提交
+python tools/acceptance_check.py          # 69 项全过 = 可以直接提交
 
 # 7) 启动演示大屏
 python app/app.py            # 浏览器打开 http://127.0.0.1:5000
@@ -127,7 +127,7 @@ python app/app.py            # 浏览器打开 http://127.0.0.1:5000
 > 行号泄漏回归测试、滑窗纯窗口/多数投票、类别逆频加权、评估口径边界），无需 pytest；
 > `python tests/test_ryu_guard.py` 再跑 25 项 **Ryu 适配层行为测试**（桩件替代 Ryu，验证接口契约、
 > 演练默认、白名单与规则下发路径），**同样不需要安装 Ryu**；
-> `acceptance_check.py` 会把两者一并纳入 64 项验收。
+> `acceptance_check.py` 会把两者一并纳入 69 项验收。
 
 ---
 
@@ -429,6 +429,12 @@ CPU 单进程实测（`python tools/benchmark_latency.py`）：
    二分类头负责"是不是攻击"，OOD 分数负责"是不是已知类型"，未知告警进人工研判队列，
    确认后回流训练集，形成「未知 → 已知」的闭环。
 
+**这条结论已经落成可用的运行时旋钮**：`tools/openset_calibrate.py` 在**正常窗口**上按误报预算标定阈值
+（默认 `entropy`，1% 预算 → 0.3914；此时正常被判未知 1.00%、已知攻击被判未知 0.30%），
+再把 `unknown_threshold` 通过 `/api/policy` 热更新进服务——开启后熵超阈值的窗口显示为
+`Unknown（未知形态）`，**照常告警与处置**，只是不再声称具体类别；`/metrics` 同步暴露
+`sdn_ids_unknown_windows_total`（未知占比本身就是一条免费的漂移指标）。
+
 > 部署建议（报告 8.1 节）：优先用能量分数 `-logsumexp(logits)`；阈值在生产环境的正常流量上取分位数
 > （1% 预算取 99 分位）；**未知告警比例本身就是一条免费的漂移指标**，突然升高通常意味着新攻击出现。
 > 诚实边界：留出类样本量小（42 / 73 个窗口），且"未知"来自同一生成器，与真实新型攻击仍有差距。
@@ -507,7 +513,7 @@ generate_normal_traffic/
 ├─ deploy/                     ★ 部署样例（systemd 单元 / 环境变量模板 / nginx 反代 / Windows 服务脚本）
 ├─ tools/
 │  ├─ check_env.py             环境自检
-│  ├─ acceptance_check.py      ★ 交付验收自检（提交前跑这个：64 项全过才算完整）
+│  ├─ acceptance_check.py      ★ 交付验收自检（提交前跑这个：69 项全过才算完整）
 │  ├─ smoke_test.py            无 TF 依赖的全链路自检（独立目录，不污染正式结果）
 │  ├─ reevaluate.py            改口径/阈值后重新评估（不用重训）
 │  ├─ operating_point.py       ★ 检测工作点选择器（阈值×窗口×确认次数的 Pareto 表与图）
@@ -787,7 +793,7 @@ python app/app.py --processed-dir data/processed_sdn --model-tag sdn_ctrl
 - [x] 可现场演示的实时大屏（**迷你 SOC 控制台**：攻击拓扑动画 + 处置控制台 + 审计台账 + 服务状态条；离线可用）
 - [x] 文档：README、**部署与对接指南 DEPLOYMENT.md**、原代码问题清单、实验报告（自动生成）、答辩要点、配置速查
 - [x] 工具：环境自检、无 TF 自检、重新评估、漂移测试、工作点选择、运维换算、跨域诊断、开集评估、实况演示、pcap 转换、报告生成、命令行推理、大文件下载器
-- [x] 测试：10 项单元测试 + 25 项 Ryu 行为测试 + **58 项 pcap 测试** + **64 项交付验收自检** + CI
+- [x] 测试：10 项单元测试 + 25 项 Ryu 行为测试 + **58 项 pcap 测试** + **69 项交付验收自检** + CI
 
 > **目录体积提示**：`data/`（原始 CSV + 预处理张量，约 200MB）、`artifacts/`（模型，约 190MB，
 > 其中未剪枝的 ET/RF 基线占了 140MB）、`.venv/`（依赖，约 1.8GB）都是**可再生成的**，

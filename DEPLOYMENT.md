@@ -81,7 +81,7 @@ python tools/smoke_test.py        # 冒烟：小样本全链路跑通（约 1 �
 python tests/test_core.py         # 单元测试：10 个用例，覆盖数据切分/窗口/泄漏防护
 python tests/test_ryu_guard.py    # Ryu 适配层行为测试：25 个用例，无需安装 Ryu（见 3.5）
 python tests/test_pcap_tools.py   # pcap 解析往返一致性：58 个用例，无需真实抓包
-python tools/acceptance_check.py  # 交付验收：文件齐全性 + 指标复算 + 在线接口真实调用（64 项）
+python tools/acceptance_check.py  # 交付验收：文件齐全性 + 指标复算 + 在线接口真实调用（69 项）
 ```
 
 ---
@@ -113,6 +113,7 @@ python app/app.py --host 0.0.0.0 --port 5000
 | `CIDA_THRESHOLD` | — | 0.5 | 初始判定阈值 |
 | `CIDA_CONFIRM_WINDOWS` | — | 3 | 初始连续确认窗口数 |
 | `CIDA_WHITELIST` | — | 空 | 永不处置的源 IP，空格分隔 |
+| `CIDA_UNKNOWN_THRESHOLD` | — | `0`（关闭） | 「未知形态」标记阈值（多分类概率熵），见 2.4 最后一节 |
 
 环境变量只决定**启动时的初始策略**，运行时仍可用 `POST /api/policy` 热更新。
 
@@ -216,7 +217,38 @@ curl -X POST http://127.0.0.1:5000/api/policy \
 | `confirm_windows` | 需要连续多少个窗口都超阈值才报警 | 误报↓↓、时延↑ | **默认 3**；这是把误报压到可用区间的关键旋钮 |
 | `action` | `observe` / `throttle` / `block` | — | 上线首周用 `observe` |
 | `dry_run` | `true` 时只记录不真改流表 | — | 演练必开 |
+| `unknown_threshold` | 多分类概率**熵**超过它就标记为「未知形态」（`Unknown`） | 越高越保守（越少被标未知） | **默认 0 = 关闭**；要用先按下面标定 |
 | `whitelist` | 永不处置的源 IP 列表 | — | **必须**含控制器管理口、网关、监控机 |
+
+#### 「未知形态」标记怎么开（可选能力）
+
+模型只在 8 类上训练过。当流量出现"模型没见过这种形态"时，如果什么都不做，它会**自信地把它归到某个已知类**
+（见 `results/openset_report.md`：留出整类攻击时 100% 被安上已知标签）。为把这条结论落成可用能力，
+服务提供了 `unknown_threshold` 旋钮：
+
+```bash
+# ① 先在**正常窗口**上按误报预算标定阈值（不需要重训，约 5 秒）
+python tools/openset_calibrate.py
+#    → results/openset_thresholds.md / .json（含代价表：正常被判未知 = 新增误报；
+#      已知攻击被判未知 = 细粒度标签丢失，但**告警仍然会发**）
+
+# ② 打开（用标定出来的阈值，例如 0.3914）
+curl -X POST http://127.0.0.1:5000/api/policy -H "Content-Type: application/json" \
+     -d "{\"unknown_threshold\": 0.3914}"
+
+# ③ 关闭：设回 0；负值会被自动夹到 0（不会误配成"把所有窗口标成未知"）
+```
+
+开启后：熵超阈值的窗口其判定类别显示为 `Unknown（未知形态）`，**照常告警与给出处置建议**，
+只是不再声称具体类别——运维据此把它送进"待研判"队列。同时在 `/metrics` 里新增
+`sdn_ids_unknown_windows_total` 与 `sdn_ids_unknown_threshold`：
+**未知占比本身就是一条免费的漂移指标**，突然升高通常意味着新攻击出现或流量分布变化。
+
+> ⚠️ 语义边界（不要误解成"未知攻击检测器"）：生产模型见过全部 8 类，所以这个标记的含义是
+> 「**模型没见过这种形态**」（新颖性/低置信）。它的能力边界由 `tools/openset_eval.py` 的留出实验给出：
+> 跨场景 AUROC ≈ 0.978，但**留出的攻击越像正常流量，低误报预算下越检不出**（留出 Botnet 时 1% 预算 44.3%、
+> 0.1% 预算 0.9%）。因此**不要用它替代二分类告警**，它是叠加在告警之上的一层"要不要人工研判"的提示；
+> 换网络/换采集口径后阈值必须重新标定。
 
 ### 2.5 持续运行建议
 

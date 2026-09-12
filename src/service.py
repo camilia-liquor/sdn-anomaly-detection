@@ -38,6 +38,9 @@ LOGGER = get_logger("cida.service")
 
 ACTIONS = ("observe", "throttle", "block")
 
+# 被标记为「未知形态」时对外显示的类别名（不参与训练，只用于告警与审计的可读性）
+UNKNOWN_CLASS_NAME = "Unknown（未知形态）"
+
 
 @dataclass
 class DetectorConfig:
@@ -48,6 +51,10 @@ class DetectorConfig:
     action: str = "observe"          # observe=只告警；throttle=建议限速；block=建议封禁
     whitelist: tuple = ()            # 永不处置的源 IP（例如控制器自身、管理网段）
     dry_run: bool = True             # True=只输出建议动作，不真正下发
+    # 「未知形态」标记阈值：多分类概率**熵**超过它就认为"模型没见过这种形态"，判定类别改为 Unknown。
+    # 0（默认）= 关闭。阈值由 `tools/openset_calibrate.py` 在**正常窗口**上按误报预算标定，
+    # 语义边界见该工具与 results/openset_report.md（它标记的是"新颖性"，不是已验证的未知攻击检测器）。
+    unknown_threshold: float = 0.0
 
     @classmethod
     def from_env(cls, cfg: Config | None = None, **overrides) -> "DetectorConfig":
@@ -71,6 +78,7 @@ class DetectorConfig:
             "action": action,
             "dry_run": dry_raw not in ("0", "false", "no", "off"),
             "whitelist": tuple(str(os.environ.get("CIDA_WHITELIST", "")).split()),
+            "unknown_threshold": float(os.environ.get("CIDA_UNKNOWN_THRESHOLD", 0.0) or 0.0),
         }
         params.update({k: v for k, v in overrides.items() if v is not None})
         conf = cls(**params)
@@ -96,6 +104,8 @@ class Alert:
     dst_port: int | None = None
     rows_covered: tuple = ()
     executed: bool = False
+    unknown: bool = False            # 是否为「未知形态」窗口（见 DetectorConfig.unknown_threshold）
+    novelty: float = 0.0             # 触发未知标记时的新颖性分数（熵），便于审计与调阈值
 
     def to_dict(self) -> dict:
         return {
@@ -110,6 +120,8 @@ class Alert:
             "dst_port": self.dst_port,
             "rows_covered": list(self.rows_covered),
             "ground_truth": self.true_class,
+            "unknown": bool(self.unknown),
+            "novelty": round(float(self.novelty), 4),
         }
 
 
@@ -358,11 +370,26 @@ class DetectionService:
                     p_attack = float(p_bin[k])
                     idx = int(np.argmax(p_mc[k]))
                     pred_class = self.class_names[idx]
+                    # 「未知形态」标记：多分类概率的熵超过阈值 → 模型没见过这种形态。
+                    # 注意它**不改变是否告警**（告警仍由二分类头 + 阈值 + 连续确认决定），
+                    # 只是把细分类别换成 Unknown，提示运维"这条要人工研判"。
+                    novelty = 0.0
+                    unknown = False
+                    thr_u = float(getattr(self.policy, "unknown_threshold", 0.0) or 0.0)
+                    if thr_u > 0:
+                        pk = np.clip(np.asarray(p_mc[k], dtype=np.float64), 1e-12, 1.0)
+                        pk = pk / pk.sum()
+                        novelty = float(-(pk * np.log(pk)).sum())
+                        unknown = novelty > thr_u
+                        if unknown:
+                            pred_class = UNKNOWN_CLASS_NAME
                     alarm = p_attack >= self.policy.threshold
                     self.stats["alarm_run"] = self.stats["alarm_run"] + 1 if alarm else 0
                     confirmed = self.stats["alarm_run"] >= int(self.policy.confirm_windows)
                     if alarm:
                         self.stats["alarms"] += 1
+                    if unknown:
+                        self.stats["unknown_windows"] = int(self.stats.get("unknown_windows", 0)) + 1
                     if confirmed:
                         src_ip = row.get("Src IP") or row.get("Source IP") or meta.get("src_ip")
                         dst_ip = row.get("Dst IP") or row.get("Destination IP") or meta.get("dst_ip")
@@ -380,6 +407,7 @@ class DetectionService:
                             dst_port=dst_port,
                             rows_covered=(self.stats["rows"] - self.cfg.window_size + 1, self.stats["rows"]),
                             executed=not self.policy.dry_run,
+                            unknown=bool(unknown), novelty=float(novelty),
                         )
                         self.alerts.append(alert)
                         self.stats["alarms_confirmed"] += 1
@@ -393,6 +421,7 @@ class DetectionService:
                     out_rows[row_pos]["window"] = {
                         "p_attack": round(p_attack, 4), "pred_class": pred_class,
                         "alarm": bool(alarm), "confirmed": bool(confirmed),
+                        "unknown": bool(unknown), "novelty": round(float(novelty), 4),
                         "probs": {c: float(p_mc[k][j]) for j, c in enumerate(self.class_names)},
                     }
             self.stats["batches"] = int(self.stats.get("batches", 0)) + 1
@@ -402,10 +431,18 @@ class DetectionService:
             "ok": True,
             "rows": out_rows,
             "alerts": new_alerts,
-            "policy": {"threshold": self.policy.threshold, "confirm_windows": self.policy.confirm_windows,
-                       "action": self.policy.action, "dry_run": self.policy.dry_run},
+            "policy": self._policy_dict(),
             "stats": self.snapshot(),
         }
+
+    def _policy_dict(self) -> dict:
+        """当前策略快照（供 /api/policy 与 /api/detect 回显，含未知标记阈值）。"""
+        return {"threshold": self.policy.threshold,
+                "confirm_windows": self.policy.confirm_windows,
+                "action": self.policy.action,
+                "dry_run": self.policy.dry_run,
+                "whitelist": list(self.policy.whitelist),
+                "unknown_threshold": float(getattr(self.policy, "unknown_threshold", 0.0) or 0.0)}
 
     def _append_audit(self, record: dict) -> None:
         """写审计台账（JSONL，追加）：出事可追溯，这是"可用系统"的基本要求。"""
@@ -426,6 +463,8 @@ class DetectionService:
             "alarms": int(self.stats["alarms"]),
             "alarms_confirmed": int(self.stats["alarms_confirmed"]),
             "by_class": dict(self.stats["by_class"]),
+            "unknown_windows": int(self.stats.get("unknown_windows", 0)),
+            "stream_resets": int(self.stats.get("stream_resets", 0)),
             "uptime_sec": round(time.time() - self.stats["started_at"], 1),
             "batches": int(self.stats.get("batches", 0)),
             "batches_per_sec": round(self.stats.get("batches", 0) / max(time.time() - self.stats["started_at"], 1e-9), 2),
@@ -436,8 +475,7 @@ class DetectionService:
                 "p95": round(float(np.percentile(lat, 95)), 3),
                 "p99": round(float(np.percentile(lat, 99)), 3),
             },
-            "policy": {"threshold": self.policy.threshold, "confirm_windows": self.policy.confirm_windows,
-                       "action": self.policy.action, "dry_run": self.policy.dry_run},
+            "policy": self._policy_dict(),
             "feature_names": self.feature_names,
             "class_names": self.class_names,
         }
@@ -462,6 +500,17 @@ class DetectionService:
             "# HELP sdn_ids_up 服务就绪状态",
             "# TYPE sdn_ids_up gauge",
             f"sdn_ids_up {1 if s['ready'] else 0}",
+            # 「未知形态」窗口数与当前阈值：**未知占比本身就是一条免费的漂移指标**——
+            # 它突然升高通常意味着新攻击出现或流量分布变化，值得立刻人工看一眼。
+            "# HELP sdn_ids_unknown_windows_total 被标记为「未知形态」的窗口数",
+            "# TYPE sdn_ids_unknown_windows_total counter",
+            f"sdn_ids_unknown_windows_total {s['unknown_windows']}",
+            "# HELP sdn_ids_unknown_threshold 当前未知标记阈值（0=关闭）",
+            "# TYPE sdn_ids_unknown_threshold gauge",
+            f"sdn_ids_unknown_threshold {s['policy']['unknown_threshold']}",
+            "# HELP sdn_ids_stream_resets_total 滑窗缓冲被重置的次数（上游数据中断）",
+            "# TYPE sdn_ids_stream_resets_total counter",
+            f"sdn_ids_stream_resets_total {s['stream_resets']}",
         ]
         for cls, n in s["by_class"].items():
             lines.append(f'sdn_ids_alarms_by_class_total{{class="{cls}"}} {n}')
@@ -473,13 +522,18 @@ class DetectionService:
                 continue
             if k == "whitelist" and isinstance(v, (list, tuple)):
                 setattr(self.policy, k, tuple(str(x) for x in v))
-            elif k in ("threshold", "confirm_windows"):
+            elif k in ("threshold", "confirm_windows", "unknown_threshold"):
                 cur = getattr(self.policy, k)
-                setattr(self.policy, k, type(cur)(v))
+                newv = type(cur)(v)
+                if k == "unknown_threshold":
+                    # 负值无意义；0 = 关闭。顺手夹到合法区间，避免误配把每个窗口都标成未知。
+                    newv = max(0.0, float(newv))
+                setattr(self.policy, k, newv)
             elif k in ("action", "dry_run"):
                 if k == "action" and str(v) not in ACTIONS:
                     continue
                 setattr(self.policy, k, bool(v) if k == "dry_run" else str(v))
-        LOGGER.info("策略已更新：threshold=%.2f confirm=%d action=%s dry_run=%s",
-                    self.policy.threshold, self.policy.confirm_windows, self.policy.action, self.policy.dry_run)
+        LOGGER.info("策略已更新：threshold=%.2f confirm=%d action=%s dry_run=%s unknown_threshold=%.4f",
+                    self.policy.threshold, self.policy.confirm_windows, self.policy.action,
+                    self.policy.dry_run, float(getattr(self.policy, "unknown_threshold", 0.0) or 0.0))
         return self.snapshot()["policy"]
