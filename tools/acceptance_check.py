@@ -851,6 +851,27 @@ def check_ryu_harness(r: Report) -> None:
         r.check(False, "OF1.3 线协议编解码离线自检", f"执行失败：{type(exc).__name__}: {exc}")
 
 
+def check_launchers(r: Report) -> None:
+    """双击启动脚本：.bat 必须是**纯 ASCII**（否则 cmd 按 GBK 解析 UTF-8 会把中文当命令执行）。"""
+    section("11) 一键启动脚本（.bat 编码约束）")
+    bats = [p for p in ROOT.glob("*.bat")]
+    if not bats:
+        r.warn(False, "启动脚本存在（可选）", "仓库根目录没有 .bat")
+        return
+    bad: list[str] = []
+    for p in bats:
+        raw = p.read_bytes()
+        non_ascii = sum(1 for b in raw if b > 127)
+        bom = raw[:3] == b"\xef\xbb\xbf"
+        if non_ascii or bom:
+            bad.append(f"{p.name}（非 ASCII {non_ascii} 字节{'，有 BOM' if bom else ''}）")
+    r.check(not bad, f"启动脚本为纯 ASCII（{len(bats)} 个），不会被 cmd 的 GBK 解析拆坏",
+            "；".join(bad) if bad else "、".join(p.name for p in bats))
+    r.check(all(p.read_bytes().startswith(b"@echo off") for p in bats),
+            "启动脚本以 @echo off 开头且无 BOM（避免首行被当成命令）",
+            "、".join(p.name for p in bats))
+
+
 def main() -> int:
     print("=" * 74)
     print("交付验收自检 · CNN + BiLSTM SDN 异常检测工程")
@@ -865,6 +886,7 @@ def main() -> int:
     check_deployable(r)
     check_supplementary_experiments(r)
     check_ryu_harness(r)
+    check_launchers(r)
     check_self_consistency(r, len(r.rows) - r.failed - r.warned)
 
     section("结论")

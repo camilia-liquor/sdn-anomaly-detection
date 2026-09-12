@@ -218,8 +218,8 @@ def render(d: dict, out: Path) -> Path | None:
            f"per-class delay: fastest {d['fast_cls']}, slowest {d['slow_cls']}"),
         _L("错误分析：3,513 个测试窗口漏报 0（错误率 0.48%）",
            "error analysis: zero misses on 3,513 windows"),
-        _L("104 项交付自检 + 10/25/58 项测试 + CI 全过",
-           "104-item acceptance + tests + CI"),
+        _L("106 项交付自检 + 10/25/58 项测试 + CI 全过",
+           "106-item acceptance + tests + CI"),
         _L("包序列复研：卷积落后最好单分支 0.1354 → 0.0071（缩小 19 倍）",
            "packet-level input: CNN gap shrinks 19x"),
     ]
