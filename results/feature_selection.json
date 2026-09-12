@@ -1,0 +1,4570 @@
+{
+  "experiment": "feature_selection",
+  "reference_paper": {
+    "title": "基于 PLO-BiLSTM 的网络异常流量检测方法",
+    "authors": "曹鲍垒, 孙知信, 付虹蕾",
+    "venue": "通信技术, 2026, 59(8): 950-960",
+    "doi": "10.3969/j.issn.1002-0802.2026.08.013"
+  },
+  "args": {
+    "datasets": [
+      "processed",
+      "processed_ctrl17"
+    ],
+    "methods": [
+      "none",
+      "pca",
+      "pso",
+      "bplo"
+    ],
+    "variants": [
+      "cnn_bilstm",
+      "bilstm"
+    ],
+    "seeds": [
+      0,
+      1,
+      2
+    ],
+    "epochs": 25,
+    "particles": 12,
+    "iters": 25,
+    "surrogate": "logreg",
+    "surrogate_sample": 3000,
+    "plo_m": 100.0,
+    "m_sweep": "50,75,100,125"
+  },
+  "selections": {
+    "processed": {
+      "n_total": 71,
+      "n_eval_sample": 3000,
+      "methods": {
+        "bplo": {
+          "cols": [
+            0,
+            2,
+            3,
+            5,
+            6,
+            8,
+            9,
+            12,
+            13,
+            16,
+            17,
+            18,
+            19,
+            22,
+            27,
+            29,
+            30,
+            31,
+            32,
+            34,
+            35,
+            36,
+            37,
+            38,
+            39,
+            42,
+            43,
+            45,
+            46,
+            47,
+            48,
+            50,
+            51,
+            52,
+            55,
+            56,
+            57,
+            58,
+            59,
+            60,
+            61,
+            62,
+            63,
+            64,
+            66,
+            67,
+            68,
+            70
+          ],
+          "names": [
+            "Protocol",
+            "Total Fwd Packets",
+            "Total Backward Packets",
+            "Total Length of Bwd Packets",
+            "Fwd Packet Length Max",
+            "Fwd Packet Length Mean",
+            "Fwd Packet Length Std",
+            "Bwd Packet Length Mean",
+            "Bwd Packet Length Std",
+            "Flow IAT Mean",
+            "Flow IAT Std",
+            "Flow IAT Max",
+            "Flow IAT Min",
+            "Fwd IAT Std",
+            "Bwd IAT Std",
+            "Bwd IAT Min",
+            "Fwd PSH Flags",
+            "Bwd PSH Flags",
+            "Fwd URG Flags",
+            "Fwd Header Length",
+            "Bwd Header Length",
+            "Fwd Packets/s",
+            "Bwd Packets/s",
+            "Min Packet Length",
+            "Max Packet Length",
+            "Packet Length Variance",
+            "FIN Flag Count",
+            "RST Flag Count",
+            "PSH Flag Count",
+            "ACK Flag Count",
+            "URG Flag Count",
+            "ECE Flag Count",
+            "Down/Up Ratio",
+            "Average Packet Size",
+            "Subflow Fwd Packets",
+            "Subflow Fwd Bytes",
+            "Subflow Bwd Packets",
+            "Subflow Bwd Bytes",
+            "Init_Win_bytes_forward",
+            "Init_Win_bytes_backward",
+            "act_data_pkt_fwd",
+            "min_seg_size_forward",
+            "Active Mean",
+            "Active Std",
+            "Active Min",
+            "Idle Mean",
+            "Idle Std",
+            "Idle Min"
+          ],
+          "mask": [
+            1,
+            0,
+            1,
+            1,
+            0,
+            1,
+            1,
+            0,
+            1,
+            1,
+            0,
+            0,
+            1,
+            1,
+            0,
+            0,
+            1,
+            1,
+            1,
+            1,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            1,
+            1,
+            1,
+            1,
+            0,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            0,
+            0,
+            1,
+            1,
+            0,
+            1,
+            1,
+            1,
+            1,
+            0,
+            1,
+            1,
+            1,
+            0,
+            0,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            0,
+            1,
+            1,
+            1,
+            0,
+            1
+          ],
+          "history": [
+            {
+              "iter": 0,
+              "best_fitness": 0.01180718309859155,
+              "best_error": 0.005666666666666667,
+              "n_selected": 44
+            },
+            {
+              "iter": 1,
+              "best_fitness": 0.01180718309859155,
+              "best_error": 0.005666666666666667,
+              "n_selected": 44,
+              "decay": 0.9875,
+              "W1": 0.1371,
+              "W2": 0.9857
+            },
+            {
+              "iter": 2,
+              "best_fitness": 0.011666338028169014,
+              "best_error": 0.005666666666666667,
+              "n_selected": 43,
+              "decay": 0.9738,
+              "W1": 0.1571,
+              "W2": 0.944
+            },
+            {
+              "iter": 3,
+              "best_fitness": 0.011666338028169014,
+              "best_error": 0.005666666666666667,
+              "n_selected": 43,
+              "decay": 0.9676,
+              "W1": 0.1795,
+              "W2": 0.8784
+            },
+            {
+              "iter": 4,
+              "best_fitness": 0.011666338028169014,
+              "best_error": 0.005666666666666667,
+              "n_selected": 43,
+              "decay": 0.9475,
+              "W1": 0.2042,
+              "W2": 0.7942
+            },
+            {
+              "iter": 5,
+              "best_fitness": 0.011666338028169014,
+              "best_error": 0.005666666666666667,
+              "n_selected": 43,
+              "decay": 0.9493,
+              "W1": 0.2315,
+              "W2": 0.6977
+            },
+            {
+              "iter": 6,
+              "best_fitness": 0.011666338028169014,
+              "best_error": 0.005666666666666667,
+              "n_selected": 43,
+              "decay": 0.937,
+              "W1": 0.2611,
+              "W2": 0.5955
+            },
+            {
+              "iter": 7,
+              "best_fitness": 0.01142887323943662,
+              "best_error": 0.005,
+              "n_selected": 46,
+              "decay": 0.9081,
+              "W1": 0.2932,
+              "W2": 0.4938
+            },
+            {
+              "iter": 8,
+              "best_fitness": 0.01142887323943662,
+              "best_error": 0.005,
+              "n_selected": 46,
+              "decay": 0.9038,
+              "W1": 0.3274,
+              "W2": 0.3979
+            },
+            {
+              "iter": 9,
+              "best_fitness": 0.01039056338028169,
+              "best_error": 0.0036666666666666666,
+              "n_selected": 48,
+              "decay": 0.8925,
+              "W1": 0.3635,
+              "W2": 0.3115
+            },
+            {
+              "iter": 10,
+              "best_fitness": 0.01039056338028169,
+              "best_error": 0.0036666666666666666,
+              "n_selected": 48,
+              "decay": 0.8905,
+              "W1": 0.4013,
+              "W2": 0.2369
+            },
+            {
+              "iter": 11,
+              "best_fitness": 0.01039056338028169,
+              "best_error": 0.0036666666666666666,
+              "n_selected": 48,
+              "decay": 0.8896,
+              "W1": 0.4403,
+              "W2": 0.1751
+            },
+            {
+              "iter": 12,
+              "best_fitness": 0.01039056338028169,
+              "best_error": 0.0036666666666666666,
+              "n_selected": 48,
+              "decay": 0.8781,
+              "W1": 0.48,
+              "W2": 0.1257
+            },
+            {
+              "iter": 13,
+              "best_fitness": 0.01039056338028169,
+              "best_error": 0.0036666666666666666,
+              "n_selected": 48,
+              "decay": 0.8268,
+              "W1": 0.52,
+              "W2": 0.0877
+            },
+            {
+              "iter": 14,
+              "best_fitness": 0.01039056338028169,
+              "best_error": 0.0036666666666666666,
+              "n_selected": 48,
+              "decay": 0.8208,
+              "W1": 0.5597,
+              "W2": 0.0595
+            },
+            {
+              "iter": 15,
+              "best_fitness": 0.01039056338028169,
+              "best_error": 0.0036666666666666666,
+              "n_selected": 48,
+              "decay": 0.8192,
+              "W1": 0.5987,
+              "W2": 0.0392
+            },
+            {
+              "iter": 16,
+              "best_fitness": 0.01039056338028169,
+              "best_error": 0.0036666666666666666,
+              "n_selected": 48,
+              "decay": 0.8003,
+              "W1": 0.6365,
+              "W2": 0.0251
+            },
+            {
+              "iter": 17,
+              "best_fitness": 0.01039056338028169,
+              "best_error": 0.0036666666666666666,
+              "n_selected": 48,
+              "decay": 0.7995,
+              "W1": 0.6726,
+              "W2": 0.0156
+            },
+            {
+              "iter": 18,
+              "best_fitness": 0.01039056338028169,
+              "best_error": 0.0036666666666666666,
+              "n_selected": 48,
+              "decay": 0.7771,
+              "W1": 0.7068,
+              "W2": 0.0094
+            },
+            {
+              "iter": 19,
+              "best_fitness": 0.01039056338028169,
+              "best_error": 0.0036666666666666666,
+              "n_selected": 48,
+              "decay": 0.765,
+              "W1": 0.7389,
+              "W2": 0.0055
+            },
+            {
+              "iter": 20,
+              "best_fitness": 0.01039056338028169,
+              "best_error": 0.0036666666666666666,
+              "n_selected": 48,
+              "decay": 0.8129,
+              "W1": 0.7685,
+              "W2": 0.0032
+            },
+            {
+              "iter": 21,
+              "best_fitness": 0.01039056338028169,
+              "best_error": 0.0036666666666666666,
+              "n_selected": 48,
+              "decay": 0.7588,
+              "W1": 0.7958,
+              "W2": 0.0017
+            },
+            {
+              "iter": 22,
+              "best_fitness": 0.01039056338028169,
+              "best_error": 0.0036666666666666666,
+              "n_selected": 48,
+              "decay": 0.7789,
+              "W1": 0.8205,
+              "W2": 0.0009
+            },
+            {
+              "iter": 23,
+              "best_fitness": 0.01039056338028169,
+              "best_error": 0.0036666666666666666,
+              "n_selected": 48,
+              "decay": 0.7295,
+              "W1": 0.8429,
+              "W2": 0.0005
+            },
+            {
+              "iter": 24,
+              "best_fitness": 0.01039056338028169,
+              "best_error": 0.0036666666666666666,
+              "n_selected": 48,
+              "decay": 0.758,
+              "W1": 0.8629,
+              "W2": 0.0002
+            },
+            {
+              "iter": 25,
+              "best_fitness": 0.01039056338028169,
+              "best_error": 0.0036666666666666666,
+              "n_selected": 48,
+              "decay": 0.6999,
+              "W1": 0.8808,
+              "W2": 0.0001
+            }
+          ],
+          "seconds": 105.1,
+          "extra": {
+            "best_fitness": 0.010391,
+            "best_error": 0.003667,
+            "n_selected": 48,
+            "best_iter": 9,
+            "n_evals": 312
+          }
+        },
+        "pso": {
+          "cols": [
+            1,
+            2,
+            5,
+            10,
+            11,
+            15,
+            16,
+            17,
+            19,
+            23,
+            25,
+            26,
+            27,
+            28,
+            31,
+            33,
+            37,
+            38,
+            39,
+            41,
+            42,
+            43,
+            45,
+            48,
+            49,
+            50,
+            51,
+            52,
+            54,
+            55,
+            56,
+            57,
+            61,
+            62,
+            63,
+            65,
+            67,
+            68,
+            70
+          ],
+          "names": [
+            "Flow Duration",
+            "Total Fwd Packets",
+            "Total Length of Bwd Packets",
+            "Bwd Packet Length Max",
+            "Bwd Packet Length Min",
+            "Flow Packets/s",
+            "Flow IAT Mean",
+            "Flow IAT Std",
+            "Flow IAT Min",
+            "Fwd IAT Max",
+            "Bwd IAT Total",
+            "Bwd IAT Mean",
+            "Bwd IAT Std",
+            "Bwd IAT Max",
+            "Bwd PSH Flags",
+            "Bwd URG Flags",
+            "Bwd Packets/s",
+            "Min Packet Length",
+            "Max Packet Length",
+            "Packet Length Std",
+            "Packet Length Variance",
+            "FIN Flag Count",
+            "RST Flag Count",
+            "URG Flag Count",
+            "CWE Flag Count",
+            "ECE Flag Count",
+            "Down/Up Ratio",
+            "Average Packet Size",
+            "Avg Bwd Segment Size",
+            "Subflow Fwd Packets",
+            "Subflow Fwd Bytes",
+            "Subflow Bwd Packets",
+            "act_data_pkt_fwd",
+            "min_seg_size_forward",
+            "Active Mean",
+            "Active Max",
+            "Idle Mean",
+            "Idle Std",
+            "Idle Min"
+          ],
+          "mask": [
+            0,
+            1,
+            1,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            1,
+            1,
+            0,
+            0,
+            0,
+            1,
+            1,
+            1,
+            0,
+            1,
+            0,
+            0,
+            0,
+            1,
+            0,
+            1,
+            1,
+            1,
+            1,
+            0,
+            0,
+            1,
+            0,
+            1,
+            0,
+            0,
+            0,
+            1,
+            1,
+            1,
+            0,
+            1,
+            1,
+            1,
+            0,
+            1,
+            0,
+            0,
+            1,
+            1,
+            1,
+            1,
+            1,
+            0,
+            1,
+            1,
+            1,
+            1,
+            0,
+            0,
+            0,
+            1,
+            1,
+            1,
+            0,
+            1,
+            0,
+            1,
+            1,
+            0,
+            1
+          ],
+          "history": [
+            {
+              "iter": 0,
+              "best_fitness": 0.01161394366197183,
+              "best_error": 0.004333333333333333,
+              "n_selected": 52
+            },
+            {
+              "iter": 1,
+              "best_fitness": 0.011050563380281691,
+              "best_error": 0.004333333333333333,
+              "n_selected": 48
+            },
+            {
+              "iter": 2,
+              "best_fitness": 0.010112957746478874,
+              "best_error": 0.004666666666666667,
+              "n_selected": 39
+            },
+            {
+              "iter": 3,
+              "best_fitness": 0.010112957746478874,
+              "best_error": 0.004666666666666667,
+              "n_selected": 39
+            },
+            {
+              "iter": 4,
+              "best_fitness": 0.010112957746478874,
+              "best_error": 0.004666666666666667,
+              "n_selected": 39
+            },
+            {
+              "iter": 5,
+              "best_fitness": 0.010112957746478874,
+              "best_error": 0.004666666666666667,
+              "n_selected": 39
+            },
+            {
+              "iter": 6,
+              "best_fitness": 0.010112957746478874,
+              "best_error": 0.004666666666666667,
+              "n_selected": 39
+            },
+            {
+              "iter": 7,
+              "best_fitness": 0.010112957746478874,
+              "best_error": 0.004666666666666667,
+              "n_selected": 39
+            },
+            {
+              "iter": 8,
+              "best_fitness": 0.010112957746478874,
+              "best_error": 0.004666666666666667,
+              "n_selected": 39
+            },
+            {
+              "iter": 9,
+              "best_fitness": 0.010112957746478874,
+              "best_error": 0.004666666666666667,
+              "n_selected": 39
+            },
+            {
+              "iter": 10,
+              "best_fitness": 0.010112957746478874,
+              "best_error": 0.004666666666666667,
+              "n_selected": 39
+            },
+            {
+              "iter": 11,
+              "best_fitness": 0.010112957746478874,
+              "best_error": 0.004666666666666667,
+              "n_selected": 39
+            },
+            {
+              "iter": 12,
+              "best_fitness": 0.010112957746478874,
+              "best_error": 0.004666666666666667,
+              "n_selected": 39
+            },
+            {
+              "iter": 13,
+              "best_fitness": 0.010112957746478874,
+              "best_error": 0.004666666666666667,
+              "n_selected": 39
+            },
+            {
+              "iter": 14,
+              "best_fitness": 0.010112957746478874,
+              "best_error": 0.004666666666666667,
+              "n_selected": 39
+            },
+            {
+              "iter": 15,
+              "best_fitness": 0.010112957746478874,
+              "best_error": 0.004666666666666667,
+              "n_selected": 39
+            },
+            {
+              "iter": 16,
+              "best_fitness": 0.010112957746478874,
+              "best_error": 0.004666666666666667,
+              "n_selected": 39
+            },
+            {
+              "iter": 17,
+              "best_fitness": 0.010112957746478874,
+              "best_error": 0.004666666666666667,
+              "n_selected": 39
+            },
+            {
+              "iter": 18,
+              "best_fitness": 0.010112957746478874,
+              "best_error": 0.004666666666666667,
+              "n_selected": 39
+            },
+            {
+              "iter": 19,
+              "best_fitness": 0.010112957746478874,
+              "best_error": 0.004666666666666667,
+              "n_selected": 39
+            },
+            {
+              "iter": 20,
+              "best_fitness": 0.010112957746478874,
+              "best_error": 0.004666666666666667,
+              "n_selected": 39
+            },
+            {
+              "iter": 21,
+              "best_fitness": 0.010112957746478874,
+              "best_error": 0.004666666666666667,
+              "n_selected": 39
+            },
+            {
+              "iter": 22,
+              "best_fitness": 0.010112957746478874,
+              "best_error": 0.004666666666666667,
+              "n_selected": 39
+            },
+            {
+              "iter": 23,
+              "best_fitness": 0.010112957746478874,
+              "best_error": 0.004666666666666667,
+              "n_selected": 39
+            },
+            {
+              "iter": 24,
+              "best_fitness": 0.010112957746478874,
+              "best_error": 0.004666666666666667,
+              "n_selected": 39
+            },
+            {
+              "iter": 25,
+              "best_fitness": 0.010112957746478874,
+              "best_error": 0.004666666666666667,
+              "n_selected": 39
+            }
+          ],
+          "seconds": 98.6,
+          "extra": {
+            "best_fitness": 0.010113,
+            "best_error": 0.004667,
+            "n_selected": 39,
+            "best_iter": 2,
+            "n_evals": 312
+          }
+        }
+      },
+      "pca": {
+        "n_components": 48,
+        "explained_variance_ratio": 0.9998196097163048,
+        "cumulative": [
+          0.24863163136236485,
+          0.4326029724737487,
+          0.52561064919774,
+          0.5862601260764511,
+          0.6333179107067567,
+          0.6790401991226953,
+          0.7185894952475741,
+          0.7534494564836597,
+          0.7854554037769464,
+          0.8110337167410081,
+          0.8362615185688186,
+          0.857592880265273,
+          0.8716340834549935,
+          0.8854561531619194,
+          0.8963851383111772,
+          0.9064977147887787,
+          0.9158042334546556,
+          0.9248354179658995,
+          0.9329184336167711,
+          0.9404093631135573,
+          0.9459773710899072,
+          0.9512561151862517,
+          0.9562416636123602,
+          0.9611580635884618,
+          0.9652761492908547,
+          0.9690410717192344,
+          0.9725039097344322,
+          0.9754919356621535,
+          0.9782900050236645,
+          0.9810160011009846,
+          0.9835813963919224,
+          0.9860260389862524,
+          0.9880677957253009,
+          0.9898921816047958,
+          0.9914055503125997,
+          0.992881631936168,
+          0.994065639686153,
+          0.9952147321905542,
+          0.9963526544452981,
+          0.9971342538088286,
+          0.9977260564626719,
+          0.9982250220905311,
+          0.9986673518926873,
+          0.9990555370249813,
+          0.9994082989570852,
+          0.99958592415058,
+          0.9997100775996505,
+          0.9998196097163049
+        ]
+      },
+      "k_reference": 48,
+      "feature_names_all": [
+        "Protocol",
+        "Flow Duration",
+        "Total Fwd Packets",
+        "Total Backward Packets",
+        "Total Length of Fwd Packets",
+        "Total Length of Bwd Packets",
+        "Fwd Packet Length Max",
+        "Fwd Packet Length Min",
+        "Fwd Packet Length Mean",
+        "Fwd Packet Length Std",
+        "Bwd Packet Length Max",
+        "Bwd Packet Length Min",
+        "Bwd Packet Length Mean",
+        "Bwd Packet Length Std",
+        "Flow Bytes/s",
+        "Flow Packets/s",
+        "Flow IAT Mean",
+        "Flow IAT Std",
+        "Flow IAT Max",
+        "Flow IAT Min",
+        "Fwd IAT Total",
+        "Fwd IAT Mean",
+        "Fwd IAT Std",
+        "Fwd IAT Max",
+        "Fwd IAT Min",
+        "Bwd IAT Total",
+        "Bwd IAT Mean",
+        "Bwd IAT Std",
+        "Bwd IAT Max",
+        "Bwd IAT Min",
+        "Fwd PSH Flags",
+        "Bwd PSH Flags",
+        "Fwd URG Flags",
+        "Bwd URG Flags",
+        "Fwd Header Length",
+        "Bwd Header Length",
+        "Fwd Packets/s",
+        "Bwd Packets/s",
+        "Min Packet Length",
+        "Max Packet Length",
+        "Packet Length Mean",
+        "Packet Length Std",
+        "Packet Length Variance",
+        "FIN Flag Count",
+        "SYN Flag Count",
+        "RST Flag Count",
+        "PSH Flag Count",
+        "ACK Flag Count",
+        "URG Flag Count",
+        "CWE Flag Count",
+        "ECE Flag Count",
+        "Down/Up Ratio",
+        "Average Packet Size",
+        "Avg Fwd Segment Size",
+        "Avg Bwd Segment Size",
+        "Subflow Fwd Packets",
+        "Subflow Fwd Bytes",
+        "Subflow Bwd Packets",
+        "Subflow Bwd Bytes",
+        "Init_Win_bytes_forward",
+        "Init_Win_bytes_backward",
+        "act_data_pkt_fwd",
+        "min_seg_size_forward",
+        "Active Mean",
+        "Active Std",
+        "Active Max",
+        "Active Min",
+        "Idle Mean",
+        "Idle Std",
+        "Idle Max",
+        "Idle Min"
+      ],
+      "m_sweep": {
+        "rows": [
+          {
+            "m": 50.0,
+            "n_selected": 48,
+            "search_seconds": 301.6,
+            "converge_iter": 9,
+            "best_fitness": 0.010391,
+            "surrogate_error": 0.003667,
+            "macro_f1": 0.9947211592407998,
+            "accuracy": 0.9965841161400513,
+            "binary_roc_auc": 0.9999510365251727,
+            "n_features": 48,
+            "online": {
+              "threshold": 0.5,
+              "confirm_windows": 3,
+              "stream_rows": 21478,
+              "stream_hours": 3.0381,
+              "min_segment_rows": 16,
+              "n_raw_attack_segments": 181,
+              "n_ignored_short_segments": 157,
+              "n_attack_segments": 24,
+              "n_segments_detected": 24,
+              "segment_recall": 1.0,
+              "n_segments_missed": 0,
+              "mean_detection_delay_rows": 12.25,
+              "median_detection_delay_rows": 14.5,
+              "mean_detection_delay_sec": 0.023206015427907307,
+              "p95_detection_delay_sec": 0.07979909181594848,
+              "false_alarms": 2,
+              "false_alarms_per_hour": 0.6583050301123599,
+              "n_windows": 7155,
+              "n_alarmed_windows": 2100,
+              "n_raw_alarmed_windows": 2162,
+              "alarm_rate": 0.29350104821802936
+            }
+          },
+          {
+            "m": 75.0,
+            "n_selected": 48,
+            "search_seconds": 8.5,
+            "converge_iter": 9,
+            "best_fitness": 0.010391,
+            "surrogate_error": 0.003667,
+            "macro_f1": 0.9947211592407998,
+            "accuracy": 0.9965841161400513,
+            "binary_roc_auc": 0.9999510365251727,
+            "n_features": 48,
+            "online": {
+              "threshold": 0.5,
+              "confirm_windows": 3,
+              "stream_rows": 21478,
+              "stream_hours": 3.0381,
+              "min_segment_rows": 16,
+              "n_raw_attack_segments": 181,
+              "n_ignored_short_segments": 157,
+              "n_attack_segments": 24,
+              "n_segments_detected": 24,
+              "segment_recall": 1.0,
+              "n_segments_missed": 0,
+              "mean_detection_delay_rows": 12.25,
+              "median_detection_delay_rows": 14.5,
+              "mean_detection_delay_sec": 0.023206015427907307,
+              "p95_detection_delay_sec": 0.07979909181594848,
+              "false_alarms": 2,
+              "false_alarms_per_hour": 0.6583050301123599,
+              "n_windows": 7155,
+              "n_alarmed_windows": 2100,
+              "n_raw_alarmed_windows": 2162,
+              "alarm_rate": 0.29350104821802936
+            }
+          },
+          {
+            "m": 100.0,
+            "n_selected": 48,
+            "search_seconds": 3.0,
+            "converge_iter": 9,
+            "best_fitness": 0.010391,
+            "surrogate_error": 0.003667,
+            "macro_f1": 0.9947211592407998,
+            "accuracy": 0.9965841161400513,
+            "binary_roc_auc": 0.9999510365251727,
+            "n_features": 48,
+            "online": {
+              "threshold": 0.5,
+              "confirm_windows": 3,
+              "stream_rows": 21478,
+              "stream_hours": 3.0381,
+              "min_segment_rows": 16,
+              "n_raw_attack_segments": 181,
+              "n_ignored_short_segments": 157,
+              "n_attack_segments": 24,
+              "n_segments_detected": 24,
+              "segment_recall": 1.0,
+              "n_segments_missed": 0,
+              "mean_detection_delay_rows": 12.25,
+              "median_detection_delay_rows": 14.5,
+              "mean_detection_delay_sec": 0.023206015427907307,
+              "p95_detection_delay_sec": 0.07979909181594848,
+              "false_alarms": 2,
+              "false_alarms_per_hour": 0.6583050301123599,
+              "n_windows": 7155,
+              "n_alarmed_windows": 2100,
+              "n_raw_alarmed_windows": 2162,
+              "alarm_rate": 0.29350104821802936
+            }
+          },
+          {
+            "m": 125.0,
+            "n_selected": 48,
+            "search_seconds": 1.8,
+            "converge_iter": 9,
+            "best_fitness": 0.010391,
+            "surrogate_error": 0.003667,
+            "macro_f1": 0.9947211592407998,
+            "accuracy": 0.9965841161400513,
+            "binary_roc_auc": 0.9999510365251727,
+            "n_features": 48,
+            "online": {
+              "threshold": 0.5,
+              "confirm_windows": 3,
+              "stream_rows": 21478,
+              "stream_hours": 3.0381,
+              "min_segment_rows": 16,
+              "n_raw_attack_segments": 181,
+              "n_ignored_short_segments": 157,
+              "n_attack_segments": 24,
+              "n_segments_detected": 24,
+              "segment_recall": 1.0,
+              "n_segments_missed": 0,
+              "mean_detection_delay_rows": 12.25,
+              "median_detection_delay_rows": 14.5,
+              "mean_detection_delay_sec": 0.023206015427907307,
+              "p95_detection_delay_sec": 0.07979909181594848,
+              "false_alarms": 2,
+              "false_alarms_per_hour": 0.6583050301123599,
+              "n_windows": 7155,
+              "n_alarmed_windows": 2100,
+              "n_raw_alarmed_windows": 2162,
+              "alarm_rate": 0.29350104821802936
+            }
+          }
+        ]
+      }
+    },
+    "processed_ctrl17": {
+      "n_total": 17,
+      "n_eval_sample": 3000,
+      "methods": {
+        "bplo": {
+          "cols": [
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            11,
+            12,
+            13,
+            14,
+            16
+          ],
+          "names": [
+            "tp_dst",
+            "ip_proto",
+            "icmp_code",
+            "icmp_type",
+            "flow_duration_sec",
+            "flow_duration_nsec",
+            "packet_count",
+            "byte_count",
+            "packet_count_per_second",
+            "packet_count_per_nsecond",
+            "byte_count_per_nsecond"
+          ],
+          "mask": [
+            0,
+            0,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            0,
+            0,
+            0,
+            1,
+            1,
+            1,
+            1,
+            0,
+            1
+          ],
+          "history": [
+            {
+              "iter": 0,
+              "best_fitness": 0.10191235294117648,
+              "best_error": 0.097,
+              "n_selected": 10
+            },
+            {
+              "iter": 1,
+              "best_fitness": 0.06513882352941176,
+              "best_error": 0.058666666666666666,
+              "n_selected": 12,
+              "decay": 0.9861,
+              "W1": 0.1371,
+              "W2": 0.9857
+            },
+            {
+              "iter": 2,
+              "best_fitness": 0.06422058823529413,
+              "best_error": 0.058333333333333334,
+              "n_selected": 11,
+              "decay": 0.9762,
+              "W1": 0.1571,
+              "W2": 0.944
+            },
+            {
+              "iter": 3,
+              "best_fitness": 0.06422058823529413,
+              "best_error": 0.058333333333333334,
+              "n_selected": 11,
+              "decay": 0.9574,
+              "W1": 0.1795,
+              "W2": 0.8784
+            },
+            {
+              "iter": 4,
+              "best_fitness": 0.06422058823529413,
+              "best_error": 0.058333333333333334,
+              "n_selected": 11,
+              "decay": 0.9563,
+              "W1": 0.2042,
+              "W2": 0.7942
+            },
+            {
+              "iter": 5,
+              "best_fitness": 0.06422058823529413,
+              "best_error": 0.058333333333333334,
+              "n_selected": 11,
+              "decay": 0.9383,
+              "W1": 0.2315,
+              "W2": 0.6977
+            },
+            {
+              "iter": 6,
+              "best_fitness": 0.06422058823529413,
+              "best_error": 0.058333333333333334,
+              "n_selected": 11,
+              "decay": 0.9287,
+              "W1": 0.2611,
+              "W2": 0.5955
+            },
+            {
+              "iter": 7,
+              "best_fitness": 0.06422058823529413,
+              "best_error": 0.058333333333333334,
+              "n_selected": 11,
+              "decay": 0.925,
+              "W1": 0.2932,
+              "W2": 0.4938
+            },
+            {
+              "iter": 8,
+              "best_fitness": 0.06422058823529413,
+              "best_error": 0.058333333333333334,
+              "n_selected": 11,
+              "decay": 0.9105,
+              "W1": 0.3274,
+              "W2": 0.3979
+            },
+            {
+              "iter": 9,
+              "best_fitness": 0.06422058823529413,
+              "best_error": 0.058333333333333334,
+              "n_selected": 11,
+              "decay": 0.8939,
+              "W1": 0.3635,
+              "W2": 0.3115
+            },
+            {
+              "iter": 10,
+              "best_fitness": 0.06422058823529413,
+              "best_error": 0.058333333333333334,
+              "n_selected": 11,
+              "decay": 0.8871,
+              "W1": 0.4013,
+              "W2": 0.2369
+            },
+            {
+              "iter": 11,
+              "best_fitness": 0.06422058823529413,
+              "best_error": 0.058333333333333334,
+              "n_selected": 11,
+              "decay": 0.8725,
+              "W1": 0.4403,
+              "W2": 0.1751
+            },
+            {
+              "iter": 12,
+              "best_fitness": 0.06422058823529413,
+              "best_error": 0.058333333333333334,
+              "n_selected": 11,
+              "decay": 0.8686,
+              "W1": 0.48,
+              "W2": 0.1257
+            },
+            {
+              "iter": 13,
+              "best_fitness": 0.06422058823529413,
+              "best_error": 0.058333333333333334,
+              "n_selected": 11,
+              "decay": 0.8246,
+              "W1": 0.52,
+              "W2": 0.0877
+            },
+            {
+              "iter": 14,
+              "best_fitness": 0.06422058823529413,
+              "best_error": 0.058333333333333334,
+              "n_selected": 11,
+              "decay": 0.8637,
+              "W1": 0.5597,
+              "W2": 0.0595
+            },
+            {
+              "iter": 15,
+              "best_fitness": 0.06422058823529413,
+              "best_error": 0.058333333333333334,
+              "n_selected": 11,
+              "decay": 0.8011,
+              "W1": 0.5987,
+              "W2": 0.0392
+            },
+            {
+              "iter": 16,
+              "best_fitness": 0.06422058823529413,
+              "best_error": 0.058333333333333334,
+              "n_selected": 11,
+              "decay": 0.8446,
+              "W1": 0.6365,
+              "W2": 0.0251
+            },
+            {
+              "iter": 17,
+              "best_fitness": 0.06422058823529413,
+              "best_error": 0.058333333333333334,
+              "n_selected": 11,
+              "decay": 0.84,
+              "W1": 0.6726,
+              "W2": 0.0156
+            },
+            {
+              "iter": 18,
+              "best_fitness": 0.06422058823529413,
+              "best_error": 0.058333333333333334,
+              "n_selected": 11,
+              "decay": 0.8302,
+              "W1": 0.7068,
+              "W2": 0.0094
+            },
+            {
+              "iter": 19,
+              "best_fitness": 0.06422058823529413,
+              "best_error": 0.058333333333333334,
+              "n_selected": 11,
+              "decay": 0.7633,
+              "W1": 0.7389,
+              "W2": 0.0055
+            },
+            {
+              "iter": 20,
+              "best_fitness": 0.06422058823529413,
+              "best_error": 0.058333333333333334,
+              "n_selected": 11,
+              "decay": 0.8135,
+              "W1": 0.7685,
+              "W2": 0.0032
+            },
+            {
+              "iter": 21,
+              "best_fitness": 0.06422058823529413,
+              "best_error": 0.058333333333333334,
+              "n_selected": 11,
+              "decay": 0.7405,
+              "W1": 0.7958,
+              "W2": 0.0017
+            },
+            {
+              "iter": 22,
+              "best_fitness": 0.06422058823529413,
+              "best_error": 0.058333333333333334,
+              "n_selected": 11,
+              "decay": 0.8008,
+              "W1": 0.8205,
+              "W2": 0.0009
+            },
+            {
+              "iter": 23,
+              "best_fitness": 0.06422058823529413,
+              "best_error": 0.058333333333333334,
+              "n_selected": 11,
+              "decay": 0.7622,
+              "W1": 0.8429,
+              "W2": 0.0005
+            },
+            {
+              "iter": 24,
+              "best_fitness": 0.06422058823529413,
+              "best_error": 0.058333333333333334,
+              "n_selected": 11,
+              "decay": 0.7393,
+              "W1": 0.8629,
+              "W2": 0.0002
+            },
+            {
+              "iter": 25,
+              "best_fitness": 0.06422058823529413,
+              "best_error": 0.058333333333333334,
+              "n_selected": 11,
+              "decay": 0.7053,
+              "W1": 0.8808,
+              "W2": 0.0001
+            }
+          ],
+          "seconds": 37.4,
+          "extra": {
+            "best_fitness": 0.064221,
+            "best_error": 0.058333,
+            "n_selected": 11,
+            "best_iter": 2,
+            "n_evals": 312
+          }
+        },
+        "pso": {
+          "cols": [
+            2,
+            3,
+            4,
+            6,
+            7,
+            11,
+            12
+          ],
+          "names": [
+            "tp_dst",
+            "ip_proto",
+            "icmp_code",
+            "flow_duration_sec",
+            "flow_duration_nsec",
+            "packet_count",
+            "byte_count"
+          ],
+          "mask": [
+            0,
+            0,
+            1,
+            1,
+            1,
+            0,
+            1,
+            1,
+            0,
+            0,
+            0,
+            1,
+            1,
+            0,
+            0,
+            0,
+            0
+          ],
+          "history": [
+            {
+              "iter": 0,
+              "best_fitness": 0.0794435294117647,
+              "best_error": 0.07133333333333333,
+              "n_selected": 15
+            },
+            {
+              "iter": 1,
+              "best_fitness": 0.0794435294117647,
+              "best_error": 0.07133333333333333,
+              "n_selected": 15
+            },
+            {
+              "iter": 2,
+              "best_fitness": 0.07841058823529412,
+              "best_error": 0.07266666666666667,
+              "n_selected": 11
+            },
+            {
+              "iter": 3,
+              "best_fitness": 0.06975882352941178,
+              "best_error": 0.06333333333333334,
+              "n_selected": 12
+            },
+            {
+              "iter": 4,
+              "best_fitness": 0.06975882352941178,
+              "best_error": 0.06333333333333334,
+              "n_selected": 12
+            },
+            {
+              "iter": 5,
+              "best_fitness": 0.06678882352941178,
+              "best_error": 0.060333333333333336,
+              "n_selected": 12
+            },
+            {
+              "iter": 6,
+              "best_fitness": 0.06678882352941178,
+              "best_error": 0.060333333333333336,
+              "n_selected": 12
+            },
+            {
+              "iter": 7,
+              "best_fitness": 0.06535411764705883,
+              "best_error": 0.06066666666666667,
+              "n_selected": 9
+            },
+            {
+              "iter": 8,
+              "best_fitness": 0.06535411764705883,
+              "best_error": 0.06066666666666667,
+              "n_selected": 9
+            },
+            {
+              "iter": 9,
+              "best_fitness": 0.06535411764705883,
+              "best_error": 0.06066666666666667,
+              "n_selected": 9
+            },
+            {
+              "iter": 10,
+              "best_fitness": 0.06535411764705883,
+              "best_error": 0.06066666666666667,
+              "n_selected": 9
+            },
+            {
+              "iter": 11,
+              "best_fitness": 0.06535411764705883,
+              "best_error": 0.06066666666666667,
+              "n_selected": 9
+            },
+            {
+              "iter": 12,
+              "best_fitness": 0.06535411764705883,
+              "best_error": 0.06066666666666667,
+              "n_selected": 9
+            },
+            {
+              "iter": 13,
+              "best_fitness": 0.06535411764705883,
+              "best_error": 0.06066666666666667,
+              "n_selected": 9
+            },
+            {
+              "iter": 14,
+              "best_fitness": 0.06535411764705883,
+              "best_error": 0.06066666666666667,
+              "n_selected": 9
+            },
+            {
+              "iter": 15,
+              "best_fitness": 0.06535411764705883,
+              "best_error": 0.06066666666666667,
+              "n_selected": 9
+            },
+            {
+              "iter": 16,
+              "best_fitness": 0.06535411764705883,
+              "best_error": 0.06066666666666667,
+              "n_selected": 9
+            },
+            {
+              "iter": 17,
+              "best_fitness": 0.06417764705882353,
+              "best_error": 0.06066666666666667,
+              "n_selected": 7
+            },
+            {
+              "iter": 18,
+              "best_fitness": 0.06417764705882353,
+              "best_error": 0.06066666666666667,
+              "n_selected": 7
+            },
+            {
+              "iter": 19,
+              "best_fitness": 0.06417764705882353,
+              "best_error": 0.06066666666666667,
+              "n_selected": 7
+            },
+            {
+              "iter": 20,
+              "best_fitness": 0.06417764705882353,
+              "best_error": 0.06066666666666667,
+              "n_selected": 7
+            },
+            {
+              "iter": 21,
+              "best_fitness": 0.06417764705882353,
+              "best_error": 0.06066666666666667,
+              "n_selected": 7
+            },
+            {
+              "iter": 22,
+              "best_fitness": 0.06417764705882353,
+              "best_error": 0.06066666666666667,
+              "n_selected": 7
+            },
+            {
+              "iter": 23,
+              "best_fitness": 0.06417764705882353,
+              "best_error": 0.06066666666666667,
+              "n_selected": 7
+            },
+            {
+              "iter": 24,
+              "best_fitness": 0.06417764705882353,
+              "best_error": 0.06066666666666667,
+              "n_selected": 7
+            },
+            {
+              "iter": 25,
+              "best_fitness": 0.06417764705882353,
+              "best_error": 0.06066666666666667,
+              "n_selected": 7
+            }
+          ],
+          "seconds": 37.0,
+          "extra": {
+            "best_fitness": 0.064178,
+            "best_error": 0.060667,
+            "n_selected": 7,
+            "best_iter": 17,
+            "n_evals": 312
+          }
+        }
+      },
+      "pca": {
+        "n_components": 11,
+        "explained_variance_ratio": 0.8943873601472605,
+        "cumulative": [
+          0.18250495428123165,
+          0.3206769882216714,
+          0.4354452004937411,
+          0.5057632247222865,
+          0.5722948029371769,
+          0.6298188288229482,
+          0.6871414761713605,
+          0.7439722824086936,
+          0.7978284176289057,
+          0.8466830229161982,
+          0.8943873601472604
+        ]
+      },
+      "k_reference": 11,
+      "feature_names_all": [
+        "datapath_id",
+        "tp_src",
+        "tp_dst",
+        "ip_proto",
+        "icmp_code",
+        "icmp_type",
+        "flow_duration_sec",
+        "flow_duration_nsec",
+        "idle_timeout",
+        "hard_timeout",
+        "flags",
+        "packet_count",
+        "byte_count",
+        "packet_count_per_second",
+        "packet_count_per_nsecond",
+        "byte_count_per_second",
+        "byte_count_per_nsecond"
+      ]
+    }
+  },
+  "summary": {
+    "processed|none|cnn_bilstm": {
+      "dataset": "processed",
+      "method": "none",
+      "variant": "cnn_bilstm",
+      "n_features": 71,
+      "n_params": 151434,
+      "n_seeds": 3,
+      "macro_f1": {
+        "n": 3,
+        "mean": 0.993978497897814,
+        "std": 0.00148973404917491,
+        "values": [
+          0.9940235539200628,
+          0.9924667469337992,
+          0.9954451928395799
+        ]
+      },
+      "accuracy": {
+        "n": 3,
+        "mean": 0.9958250308378404,
+        "std": 0.0009996824891215905,
+        "values": [
+          0.9957301451750641,
+          0.9948761742100769,
+          0.9968687731283803
+        ]
+      },
+      "binary_f1": {
+        "n": 3,
+        "mean": 0.9916688183396586,
+        "std": 0.0012888756850823824,
+        "values": [
+          0.9921645445641528,
+          0.990205680705191,
+          0.9926362297496318
+        ]
+      },
+      "binary_roc_auc": {
+        "n": 3,
+        "mean": 0.9999407699901285,
+        "std": 3.1876777161980004e-05,
+        "values": [
+          0.9999435340572557,
+          0.9999076011846002,
+          0.9999711747285291
+        ]
+      },
+      "tpr_at_fpr_1pct": {
+        "n": 3,
+        "mean": 0.9990128331688055,
+        "std": 0.000987166831194486,
+        "values": [
+          1.0,
+          0.998025666337611,
+          0.9990128331688055
+        ]
+      },
+      "online": {
+        "segment_recall": 1.0,
+        "mean_detection_delay_sec": 0.01984993285602993,
+        "p95_detection_delay_sec": 0.07525286277135211,
+        "false_alarms_per_hour": 0.5485875250936333,
+        "n_attack_segments": 24.0,
+        "n_segments_detected": 24.0,
+        "stream_hours": 3.0381,
+        "mean_delay_ms": 19.84993285602993,
+        "p95_delay_ms": 75.25286277135211
+      }
+    },
+    "processed|pca|cnn_bilstm": {
+      "dataset": "processed",
+      "method": "pca",
+      "variant": "cnn_bilstm",
+      "n_features": 48,
+      "n_params": 135242,
+      "n_seeds": 3,
+      "macro_f1": {
+        "n": 3,
+        "mean": 0.9939504539995182,
+        "std": 0.0009417991110866202,
+        "values": [
+          0.9950379376269812,
+          0.9934111938867272,
+          0.993402230484846
+        ]
+      },
+      "accuracy": {
+        "n": 3,
+        "mean": 0.995730145175064,
+        "std": 0.0004930403665154746,
+        "values": [
+          0.9962994591517221,
+          0.995445488186735,
+          0.995445488186735
+        ]
+      },
+      "binary_f1": {
+        "n": 3,
+        "mean": 0.9913436079489125,
+        "std": 0.0020262786677728885,
+        "values": [
+          0.9936180657830143,
+          0.9897310513447433,
+          0.9906817067189799
+        ]
+      },
+      "binary_roc_auc": {
+        "n": 3,
+        "mean": 0.9999394537676869,
+        "std": 3.496819335095894e-05,
+        "values": [
+          0.9999751233958539,
+          0.999938005923001,
+          0.9999052319842054
+        ]
+      },
+      "tpr_at_fpr_1pct": {
+        "n": 3,
+        "mean": 0.9996709443896018,
+        "std": 0.0005699410357252062,
+        "values": [
+          1.0,
+          0.9990128331688055,
+          1.0
+        ]
+      },
+      "online": {
+        "segment_recall": 1.0,
+        "mean_detection_delay_sec": 0.0174073146449195,
+        "p95_detection_delay_sec": 0.06721735795338947,
+        "false_alarms_per_hour": 0.32915251505617993,
+        "n_attack_segments": 24.0,
+        "n_segments_detected": 24.0,
+        "stream_hours": 3.0381,
+        "mean_delay_ms": 17.4073146449195,
+        "p95_delay_ms": 67.21735795338947
+      }
+    },
+    "processed|pso|cnn_bilstm": {
+      "dataset": "processed",
+      "method": "pso",
+      "variant": "cnn_bilstm",
+      "n_features": 39,
+      "n_params": 128906,
+      "n_seeds": 3,
+      "macro_f1": {
+        "n": 3,
+        "mean": 0.993397054682467,
+        "std": 0.0035864817294559317,
+        "values": [
+          0.9946191210394355,
+          0.9893592494718663,
+          0.9962127935360992
+        ]
+      },
+      "accuracy": {
+        "n": 3,
+        "mean": 0.9958250308378404,
+        "std": 0.002318396759250555,
+        "values": [
+          0.9968687731283803,
+          0.9931682322801024,
+          0.9974380871050385
+        ]
+      },
+      "binary_f1": {
+        "n": 3,
+        "mean": 0.9908773825116238,
+        "std": 0.004837035245477424,
+        "values": [
+          0.9945945945945946,
+          0.9854085603112841,
+          0.9926289926289926
+        ]
+      },
+      "binary_roc_auc": {
+        "n": 3,
+        "mean": 0.9999728858177032,
+        "std": 1.084506590594859e-05,
+        "values": [
+          0.9999849950641658,
+          0.9999695952615991,
+          0.9999640671273445
+        ]
+      },
+      "tpr_at_fpr_1pct": {
+        "n": 3,
+        "mean": 0.9993418887792037,
+        "std": 0.0011398820714504125,
+        "values": [
+          1.0,
+          1.0,
+          0.998025666337611
+        ]
+      },
+      "online": {
+        "segment_recall": 1.0,
+        "mean_detection_delay_sec": 0.018225686417685617,
+        "p95_detection_delay_sec": 0.07072374820709228,
+        "false_alarms_per_hour": 0.43887002007490655,
+        "n_attack_segments": 24.0,
+        "n_segments_detected": 24.0,
+        "stream_hours": 3.0381,
+        "mean_delay_ms": 18.225686417685615,
+        "p95_delay_ms": 70.72374820709227
+      }
+    },
+    "processed|bplo|cnn_bilstm": {
+      "dataset": "processed",
+      "method": "bplo",
+      "variant": "cnn_bilstm",
+      "n_features": 48,
+      "n_params": 135242,
+      "n_seeds": 3,
+      "macro_f1": {
+        "n": 3,
+        "mean": 0.9941983669351661,
+        "std": 0.0022043379410402815,
+        "values": [
+          0.9947211592407998,
+          0.9917796293832684,
+          0.9960943121814296
+        ]
+      },
+      "accuracy": {
+        "n": 3,
+        "mean": 0.9962045734889459,
+        "std": 0.0014607462110580653,
+        "values": [
+          0.9965841161400513,
+          0.9945915172217478,
+          0.9974380871050385
+        ]
+      },
+      "binary_f1": {
+        "n": 3,
+        "mean": 0.9915218899186297,
+        "std": 0.003223347441763696,
+        "values": [
+          0.9931305201177625,
+          0.9878108239882983,
+          0.9936243256498284
+        ]
+      },
+      "binary_roc_auc": {
+        "n": 3,
+        "mean": 0.9999524843698585,
+        "std": 1.4467075015970695e-05,
+        "values": [
+          0.9999510365251727,
+          0.9999387956564659,
+          0.9999676209279368
+        ]
+      },
+      "tpr_at_fpr_1pct": {
+        "n": 3,
+        "mean": 0.9996709443896018,
+        "std": 0.0005699410357252062,
+        "values": [
+          0.9990128331688055,
+          1.0,
+          1.0
+        ]
+      },
+      "online": {
+        "segment_recall": 1.0,
+        "mean_detection_delay_sec": 0.0229351884788937,
+        "p95_detection_delay_sec": 0.07949827909469603,
+        "false_alarms_per_hour": 0.5485875250936333,
+        "n_attack_segments": 24.0,
+        "n_segments_detected": 24.0,
+        "stream_hours": 3.0381,
+        "mean_delay_ms": 22.9351884788937,
+        "p95_delay_ms": 79.49827909469603
+      }
+    },
+    "processed|none|bilstm": {
+      "dataset": "processed",
+      "method": "none",
+      "variant": "bilstm",
+      "n_features": 71,
+      "n_params": 95882,
+      "n_seeds": 3,
+      "macro_f1": {
+        "n": 3,
+        "mean": 0.9968235672758455,
+        "std": 0.0008455086068751661,
+        "values": [
+          0.9973358646857629,
+          0.9972871743121938,
+          0.9958476628295803
+        ]
+      },
+      "accuracy": {
+        "n": 3,
+        "mean": 0.9979125154189202,
+        "std": 0.0006573871553540088,
+        "values": [
+          0.9982920580700256,
+          0.9982920580700256,
+          0.9971534301167093
+        ]
+      },
+      "binary_f1": {
+        "n": 3,
+        "mean": 0.9954126157397054,
+        "std": 0.002036351828093117,
+        "values": [
+          0.9960629921259843,
+          0.9970443349753695,
+          0.9931305201177625
+        ]
+      },
+      "binary_roc_auc": {
+        "n": 3,
+        "mean": 0.9999601184600199,
+        "std": 3.493622327436653e-05,
+        "values": [
+          0.9999782823297136,
+          0.9999822309970386,
+          0.9999198420533071
+        ]
+      },
+      "tpr_at_fpr_1pct": {
+        "n": 3,
+        "mean": 1.0,
+        "std": 0.0,
+        "values": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "online": {
+        "segment_recall": 1.0,
+        "mean_detection_delay_sec": 0.021450738112131756,
+        "p95_detection_delay_sec": 0.07432652711868286,
+        "false_alarms_per_hour": 0.21943501003745328,
+        "n_attack_segments": 24.0,
+        "n_segments_detected": 24.0,
+        "stream_hours": 3.0381,
+        "mean_delay_ms": 21.450738112131756,
+        "p95_delay_ms": 74.32652711868286
+      }
+    },
+    "processed|pca|bilstm": {
+      "dataset": "processed",
+      "method": "pca",
+      "variant": "bilstm",
+      "n_features": 48,
+      "n_params": 84106,
+      "n_seeds": 3,
+      "macro_f1": {
+        "n": 3,
+        "mean": 0.9983031362840199,
+        "std": 0.0007945692531850224,
+        "values": [
+          0.9990406264537252,
+          0.9974617163793407,
+          0.9984070660189936
+        ]
+      },
+      "accuracy": {
+        "n": 3,
+        "mean": 0.9989562577094601,
+        "std": 0.0005925607741150193,
+        "values": [
+          0.9994306860233418,
+          0.9982920580700256,
+          0.9991460290350128
+        ]
+      },
+      "binary_f1": {
+        "n": 3,
+        "mean": 0.9975392863687748,
+        "std": 0.0012986567338204853,
+        "values": [
+          0.9980295566502463,
+          0.9960668633235005,
+          0.9985214391325776
+        ]
+      },
+      "binary_roc_auc": {
+        "n": 3,
+        "mean": 0.9999734123066798,
+        "std": 1.0845065905931747e-05,
+        "values": [
+          0.9999767028627838,
+          0.9999822309970385,
+          0.9999613030602172
+        ]
+      },
+      "tpr_at_fpr_1pct": {
+        "n": 3,
+        "mean": 1.0,
+        "std": 0.0,
+        "values": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "online": {
+        "segment_recall": 1.0,
+        "mean_detection_delay_sec": 0.020100408130221896,
+        "p95_detection_delay_sec": 0.07207430601119993,
+        "false_alarms_per_hour": 0.0,
+        "n_attack_segments": 24.0,
+        "n_segments_detected": 24.0,
+        "stream_hours": 3.0381,
+        "mean_delay_ms": 20.100408130221897,
+        "p95_delay_ms": 72.07430601119994
+      }
+    },
+    "processed|pso|bilstm": {
+      "dataset": "processed",
+      "method": "pso",
+      "variant": "bilstm",
+      "n_features": 39,
+      "n_params": 79498,
+      "n_seeds": 3,
+      "macro_f1": {
+        "n": 3,
+        "mean": 0.9962105487439142,
+        "std": 0.001074630165903384,
+        "values": [
+          0.9974473161061529,
+          0.9956795427615819,
+          0.9955047873640077
+        ]
+      },
+      "accuracy": {
+        "n": 3,
+        "mean": 0.9976278584305911,
+        "std": 0.0005925607741150636,
+        "values": [
+          0.9982920580700256,
+          0.9974380871050385,
+          0.9971534301167093
+        ]
+      },
+      "binary_f1": {
+        "n": 3,
+        "mean": 0.9955785181850952,
+        "std": 0.0012951936449594503,
+        "values": [
+          0.9970472440944882,
+          0.9950884086444007,
+          0.9945999018163967
+        ]
+      },
+      "binary_roc_auc": {
+        "n": 3,
+        "mean": 0.9999894702204672,
+        "std": 8.508744381110427e-06,
+        "values": [
+          0.9999960513326752,
+          0.9999798617966437,
+          0.999992497532083
+        ]
+      },
+      "tpr_at_fpr_1pct": {
+        "n": 3,
+        "mean": 1.0,
+        "std": 0.0,
+        "values": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "online": {
+        "segment_recall": 1.0,
+        "mean_detection_delay_sec": 0.021169599559572008,
+        "p95_detection_delay_sec": 0.07597919702529905,
+        "false_alarms_per_hour": 0.10971750501872664,
+        "n_attack_segments": 24.0,
+        "n_segments_detected": 24.0,
+        "stream_hours": 3.0381,
+        "mean_delay_ms": 21.169599559572006,
+        "p95_delay_ms": 75.97919702529906
+      }
+    },
+    "processed|bplo|bilstm": {
+      "dataset": "processed",
+      "method": "bplo",
+      "variant": "bilstm",
+      "n_features": 48,
+      "n_params": 84106,
+      "n_seeds": 3,
+      "macro_f1": {
+        "n": 3,
+        "mean": 0.9964545679889732,
+        "std": 0.0005654671645453991,
+        "values": [
+          0.9963390325475499,
+          0.995955791205166,
+          0.997068880214204
+        ]
+      },
+      "accuracy": {
+        "n": 3,
+        "mean": 0.997817629756144,
+        "std": 0.00043482073203869836,
+        "values": [
+          0.9977227440933675,
+          0.9974380871050385,
+          0.9982920580700256
+        ]
+      },
+      "binary_f1": {
+        "n": 3,
+        "mean": 0.994922194922195,
+        "std": 0.0005674204119799296,
+        "values": [
+          0.9945945945945946,
+          0.9945945945945946,
+          0.9955773955773956
+        ]
+      },
+      "binary_roc_auc": {
+        "n": 3,
+        "mean": 0.9999639355051003,
+        "std": 1.5776560859904454e-05,
+        "values": [
+          0.9999767028627837,
+          0.9999688055281343,
+          0.9999462981243831
+        ]
+      },
+      "tpr_at_fpr_1pct": {
+        "n": 3,
+        "mean": 1.0,
+        "std": 0.0,
+        "values": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "online": {
+        "segment_recall": 1.0,
+        "mean_detection_delay_sec": 0.022205187214745417,
+        "p95_detection_delay_sec": 0.07889665365219115,
+        "false_alarms_per_hour": 0.21943501003745328,
+        "n_attack_segments": 24.0,
+        "n_segments_detected": 24.0,
+        "stream_hours": 3.0381,
+        "mean_delay_ms": 22.20518721474542,
+        "p95_delay_ms": 78.89665365219115
+      }
+    },
+    "processed_ctrl17|none|cnn_bilstm": {
+      "dataset": "processed_ctrl17",
+      "method": "none",
+      "variant": "cnn_bilstm",
+      "n_features": 17,
+      "n_params": 113418,
+      "n_seeds": 3,
+      "macro_f1": {
+        "n": 3,
+        "mean": 0.8148299108652964,
+        "std": 0.024081231803781567,
+        "values": [
+          0.8067873718429603,
+          0.8419031629320519,
+          0.7957991978208768
+        ]
+      },
+      "accuracy": {
+        "n": 3,
+        "mean": 0.8931587437138249,
+        "std": 0.015419723058940387,
+        "values": [
+          0.8830059777967549,
+          0.9109023626530032,
+          0.8855678906917165
+        ]
+      },
+      "binary_f1": {
+        "n": 3,
+        "mean": 0.8295200506563694,
+        "std": 0.01648116885586571,
+        "values": [
+          0.8135593220338984,
+          0.8464765100671141,
+          0.8285243198680956
+        ]
+      },
+      "binary_roc_auc": {
+        "n": 3,
+        "mean": 0.9943007568279039,
+        "std": 0.001356934151344788,
+        "values": [
+          0.9941230009871669,
+          0.9957378084896347,
+          0.9930414610069102
+        ]
+      },
+      "tpr_at_fpr_1pct": {
+        "n": 3,
+        "mean": 0.9055610398157289,
+        "std": 0.028342749960709252,
+        "values": [
+          0.8983218163869694,
+          0.9368213228035538,
+          0.8815399802566634
+        ]
+      },
+      "online": {
+        "segment_recall": 1.0,
+        "mean_detection_delay_sec": 0.015976955493291218,
+        "p95_detection_delay_sec": 0.061913343270619675,
+        "false_alarms_per_hour": 95.01535934621728,
+        "n_attack_segments": 24.0,
+        "n_segments_detected": 24.0,
+        "stream_hours": 3.0381,
+        "mean_delay_ms": 15.976955493291218,
+        "p95_delay_ms": 61.91334327061968
+      }
+    },
+    "processed_ctrl17|pca|cnn_bilstm": {
+      "dataset": "processed_ctrl17",
+      "method": "pca",
+      "variant": "cnn_bilstm",
+      "n_features": 11,
+      "n_params": 109194,
+      "n_seeds": 3,
+      "macro_f1": {
+        "n": 3,
+        "mean": 0.7177272600423947,
+        "std": 0.024902753493674788,
+        "values": [
+          0.7222722903673235,
+          0.7400444613499475,
+          0.6908650284099129
+        ]
+      },
+      "accuracy": {
+        "n": 3,
+        "mean": 0.7717050953600911,
+        "std": 0.023032602930996248,
+        "values": [
+          0.7677198975234842,
+          0.7964702533447197,
+          0.7509251352120695
+        ]
+      },
+      "binary_f1": {
+        "n": 3,
+        "mean": 0.6564680599250853,
+        "std": 0.042399880010013664,
+        "values": [
+          0.6478599221789884,
+          0.7025114962858153,
+          0.6190327613104524
+        ]
+      },
+      "binary_roc_auc": {
+        "n": 3,
+        "mean": 0.9681819677525502,
+        "std": 0.006297303051018136,
+        "values": [
+          0.9708570582428431,
+          0.9727000987166832,
+          0.9609887462981244
+        ]
+      },
+      "tpr_at_fpr_1pct": {
+        "n": 3,
+        "mean": 0.7114182296808161,
+        "std": 0.04664123878941163,
+        "values": [
+          0.7018756169792695,
+          0.7620927936821322,
+          0.6702862783810464
+        ]
+      },
+      "online": {
+        "segment_recall": 1.0,
+        "mean_detection_delay_sec": 0.012197193172242908,
+        "p95_detection_delay_sec": 0.05305176178614295,
+        "false_alarms_per_hour": 330.57884262142335,
+        "n_attack_segments": 24.0,
+        "n_segments_detected": 24.0,
+        "stream_hours": 3.0381,
+        "mean_delay_ms": 12.197193172242908,
+        "p95_delay_ms": 53.051761786142954
+      }
+    },
+    "processed_ctrl17|pso|cnn_bilstm": {
+      "dataset": "processed_ctrl17",
+      "method": "pso",
+      "variant": "cnn_bilstm",
+      "n_features": 7,
+      "n_params": 106378,
+      "n_seeds": 3,
+      "macro_f1": {
+        "n": 3,
+        "mean": 0.8223088255521557,
+        "std": 0.025180207262855792,
+        "values": [
+          0.8510682390088535,
+          0.8042257499493353,
+          0.8116324876982781
+        ]
+      },
+      "accuracy": {
+        "n": 3,
+        "mean": 0.8983774551665243,
+        "std": 0.02413548842724903,
+        "values": [
+          0.9248505550811272,
+          0.8775974950185027,
+          0.8926843153999431
+        ]
+      },
+      "binary_f1": {
+        "n": 3,
+        "mean": 0.8194950608788255,
+        "std": 0.03966740799068933,
+        "values": [
+          0.8616567036720751,
+          0.7829126213592233,
+          0.813915857605178
+        ]
+      },
+      "binary_roc_auc": {
+        "n": 3,
+        "mean": 0.9942012504113196,
+        "std": 0.002117397305305316,
+        "values": [
+          0.9966373149062192,
+          0.9928027640671273,
+          0.9931636722606121
+        ]
+      },
+      "tpr_at_fpr_1pct": {
+        "n": 3,
+        "mean": 0.9055610398157289,
+        "std": 0.025367178508993768,
+        "values": [
+          0.9348469891411648,
+          0.8904244817374136,
+          0.8914116485686081
+        ]
+      },
+      "online": {
+        "segment_recall": 1.0,
+        "mean_detection_delay_sec": 0.016139898035261366,
+        "p95_detection_delay_sec": 0.07170120477676388,
+        "false_alarms_per_hour": 95.12507685123599,
+        "n_attack_segments": 24.0,
+        "n_segments_detected": 24.0,
+        "stream_hours": 3.0381,
+        "mean_delay_ms": 16.139898035261368,
+        "p95_delay_ms": 71.70120477676387
+      }
+    },
+    "processed_ctrl17|bplo|cnn_bilstm": {
+      "dataset": "processed_ctrl17",
+      "method": "bplo",
+      "variant": "cnn_bilstm",
+      "n_features": 11,
+      "n_params": 109194,
+      "n_seeds": 3,
+      "macro_f1": {
+        "n": 3,
+        "mean": 0.8536169586175669,
+        "std": 0.007173692579320706,
+        "values": [
+          0.8482497266160552,
+          0.8508364662094366,
+          0.8617646830272092
+        ]
+      },
+      "accuracy": {
+        "n": 3,
+        "mean": 0.9180187873612297,
+        "std": 0.006837695502114586,
+        "values": [
+          0.910333048676345,
+          0.9234272701394819,
+          0.9202960432678622
+        ]
+      },
+      "binary_f1": {
+        "n": 3,
+        "mean": 0.8465663959260129,
+        "std": 0.006518591021216655,
+        "values": [
+          0.8514600084638172,
+          0.8490725126475548,
+          0.8391666666666666
+        ]
+      },
+      "binary_roc_auc": {
+        "n": 3,
+        "mean": 0.9964221125370187,
+        "std": 0.0004511467766556141,
+        "values": [
+          0.9966918065153011,
+          0.9966732477788746,
+          0.9959012833168805
+        ]
+      },
+      "tpr_at_fpr_1pct": {
+        "n": 3,
+        "mean": 0.9499835472194801,
+        "std": 0.007276520035372196,
+        "values": [
+          0.9526159921026653,
+          0.9555774925962488,
+          0.9417571569595261
+        ]
+      },
+      "online": {
+        "segment_recall": 1.0,
+        "mean_detection_delay_sec": 0.017320672671000164,
+        "p95_detection_delay_sec": 0.06555864016215004,
+        "false_alarms_per_hour": 68.68315814172287,
+        "n_attack_segments": 24.0,
+        "n_segments_detected": 24.0,
+        "stream_hours": 3.0381,
+        "mean_delay_ms": 17.320672671000164,
+        "p95_delay_ms": 65.55864016215004
+      }
+    },
+    "processed_ctrl17|none|bilstm": {
+      "dataset": "processed_ctrl17",
+      "method": "none",
+      "variant": "bilstm",
+      "n_features": 17,
+      "n_params": 68234,
+      "n_seeds": 3,
+      "macro_f1": {
+        "n": 3,
+        "mean": 0.9109388722609949,
+        "std": 0.0009268589451414248,
+        "values": [
+          0.9111671272325504,
+          0.9117302790126478,
+          0.9099192105377868
+        ]
+      },
+      "accuracy": {
+        "n": 3,
+        "mean": 0.957965651390075,
+        "std": 0.0018953396295130563,
+        "values": [
+          0.9601480216339311,
+          0.9567321377739824,
+          0.9570167947623114
+        ]
+      },
+      "binary_f1": {
+        "n": 3,
+        "mean": 0.9353133734866822,
+        "std": 0.004464781061998133,
+        "values": [
+          0.9404536862003781,
+          0.9330855018587361,
+          0.9324009324009324
+        ]
+      },
+      "binary_roc_auc": {
+        "n": 3,
+        "mean": 0.9970166502138862,
+        "std": 0.0006155366141080696,
+        "values": [
+          0.9963170779861797,
+          0.997475222112537,
+          0.9972576505429417
+        ]
+      },
+      "tpr_at_fpr_1pct": {
+        "n": 3,
+        "mean": 0.9318854886475814,
+        "std": 0.017959926356031837,
+        "values": [
+          0.9111549851924975,
+          0.9427443237907206,
+          0.9417571569595261
+        ]
+      },
+      "online": {
+        "segment_recall": 1.0,
+        "mean_detection_delay_sec": 0.022918876674440175,
+        "p95_detection_delay_sec": 0.09210015137990313,
+        "false_alarms_per_hour": 19.090845873258434,
+        "n_attack_segments": 24.0,
+        "n_segments_detected": 24.0,
+        "stream_hours": 3.0381,
+        "mean_delay_ms": 22.918876674440174,
+        "p95_delay_ms": 92.10015137990312
+      }
+    },
+    "processed_ctrl17|pca|bilstm": {
+      "dataset": "processed_ctrl17",
+      "method": "pca",
+      "variant": "bilstm",
+      "n_features": 11,
+      "n_params": 65162,
+      "n_seeds": 3,
+      "macro_f1": {
+        "n": 3,
+        "mean": 0.8989175213456139,
+        "std": 0.008280795183280015,
+        "values": [
+          0.9084307085588814,
+          0.8949952062604745,
+          0.893326649217486
+        ]
+      },
+      "accuracy": {
+        "n": 3,
+        "mean": 0.9419299743808711,
+        "std": 0.006125088184272688,
+        "values": [
+          0.9479077711357814,
+          0.9422146313692001,
+          0.9356675206376317
+        ]
+      },
+      "binary_f1": {
+        "n": 3,
+        "mean": 0.903599047051627,
+        "std": 0.01551943425373447,
+        "values": [
+          0.9199623352165726,
+          0.9017447199265382,
+          0.8890900860117701
+        ]
+      },
+      "binary_roc_auc": {
+        "n": 3,
+        "mean": 0.9899874958868048,
+        "std": 0.002207449849588003,
+        "values": [
+          0.9924458045409674,
+          0.9881749259624877,
+          0.9893417571569594
+        ]
+      },
+      "tpr_at_fpr_1pct": {
+        "n": 3,
+        "mean": 0.88746298124383,
+        "std": 0.026708290737351783,
+        "values": [
+          0.9131293188548865,
+          0.8894373149062191,
+          0.859822309970385
+        ]
+      },
+      "online": {
+        "segment_recall": 1.0,
+        "mean_detection_delay_sec": 0.022141949998007882,
+        "p95_detection_delay_sec": 0.08514324426650999,
+        "false_alarms_per_hour": 24.905873639250945,
+        "n_attack_segments": 24.0,
+        "n_segments_detected": 24.0,
+        "stream_hours": 3.0381,
+        "mean_delay_ms": 22.14194999800788,
+        "p95_delay_ms": 85.14324426650998
+      }
+    },
+    "processed_ctrl17|pso|bilstm": {
+      "dataset": "processed_ctrl17",
+      "method": "pso",
+      "variant": "bilstm",
+      "n_features": 7,
+      "n_params": 63114,
+      "n_seeds": 3,
+      "macro_f1": {
+        "n": 3,
+        "mean": 0.9365059073056866,
+        "std": 0.0028531915791943922,
+        "values": [
+          0.9332910289233565,
+          0.938737141276972,
+          0.9374895517167314
+        ]
+      },
+      "accuracy": {
+        "n": 3,
+        "mean": 0.9715343011670936,
+        "std": 0.0014232849416452864,
+        "values": [
+          0.9701110162254484,
+          0.9715343011670936,
+          0.972957586108739
+        ]
+      },
+      "binary_f1": {
+        "n": 3,
+        "mean": 0.9611009693524042,
+        "std": 0.0005112393178451307,
+        "values": [
+          0.961225466730493,
+          0.960538979788258,
+          0.9615384615384616
+        ]
+      },
+      "binary_roc_auc": {
+        "n": 3,
+        "mean": 0.9986837775584073,
+        "std": 0.0003763157303324276,
+        "values": [
+          0.9990527147087858,
+          0.9983004935834157,
+          0.9986981243830206
+        ]
+      },
+      "tpr_at_fpr_1pct": {
+        "n": 3,
+        "mean": 0.9707140506745641,
+        "std": 0.010647377221035521,
+        "values": [
+          0.9782823297137216,
+          0.9585389930898321,
+          0.9753208292201382
+        ]
+      },
+      "online": {
+        "segment_recall": 1.0,
+        "mean_detection_delay_sec": 0.022443330950207185,
+        "p95_detection_delay_sec": 0.08745427529017129,
+        "false_alarms_per_hour": 3.840112675655432,
+        "n_attack_segments": 24.0,
+        "n_segments_detected": 24.0,
+        "stream_hours": 3.0381,
+        "mean_delay_ms": 22.443330950207184,
+        "p95_delay_ms": 87.45427529017128
+      }
+    },
+    "processed_ctrl17|bplo|bilstm": {
+      "dataset": "processed_ctrl17",
+      "method": "bplo",
+      "variant": "bilstm",
+      "n_features": 11,
+      "n_params": 65162,
+      "n_seeds": 3,
+      "macro_f1": {
+        "n": 3,
+        "mean": 0.9413007231705164,
+        "std": 0.0026517508623153064,
+        "values": [
+          0.942092771179297,
+          0.9434661982583825,
+          0.9383432000738698
+        ]
+      },
+      "accuracy": {
+        "n": 3,
+        "mean": 0.9763734699686877,
+        "std": 0.0029582421990929117,
+        "values": [
+          0.9797893538286365,
+          0.9746655280387133,
+          0.9746655280387133
+        ]
+      },
+      "binary_f1": {
+        "n": 3,
+        "mean": 0.9616805799737472,
+        "std": 0.006385573930975098,
+        "values": [
+          0.9690522243713733,
+          0.9581351094196003,
+          0.9578544061302682
+        ]
+      },
+      "binary_roc_auc": {
+        "n": 3,
+        "mean": 0.9991795985521553,
+        "std": 9.689721740643596e-05,
+        "values": [
+          0.9992888450148075,
+          0.9991459032576505,
+          0.9991040473840079
+        ]
+      },
+      "tpr_at_fpr_1pct": {
+        "n": 3,
+        "mean": 0.9815728858177032,
+        "std": 0.0034668159765885915,
+        "values": [
+          0.9851924975320829,
+          0.981243830207305,
+          0.9782823297137216
+        ]
+      },
+      "online": {
+        "segment_recall": 1.0,
+        "mean_detection_delay_sec": 0.022358205583360463,
+        "p95_detection_delay_sec": 0.08317546447118121,
+        "false_alarms_per_hour": 3.840112675655432,
+        "n_attack_segments": 24.0,
+        "n_segments_detected": 24.0,
+        "stream_hours": 3.0381,
+        "mean_delay_ms": 22.358205583360462,
+        "p95_delay_ms": 83.17546447118121
+      }
+    }
+  },
+  "per_dataset": {
+    "processed": {
+      "n": 6,
+      "positive": 3,
+      "negative": 3,
+      "mean_delta": -7.456512476019157e-05,
+      "median_delta": -1.899910434055574e-05,
+      "p_value": 1.0,
+      "f1_none": 0.9954010325868299,
+      "f1_bplo": 0.9953264674620698,
+      "fa_none": 0.3840112675655433,
+      "fa_bplo": 0.3840112675655433,
+      "verdict": "tie"
+    },
+    "processed_ctrl17": {
+      "n": 6,
+      "positive": 6,
+      "negative": 0,
+      "mean_delta": 0.03457444933089606,
+      "median_delta": 0.03133078159624064,
+      "p_value": 0.03125,
+      "f1_none": 0.8628843915631457,
+      "f1_bplo": 0.8974588408940418,
+      "fa_none": 57.05310260973786,
+      "fa_bplo": 36.26163540868915,
+      "verdict": "bplo_better"
+    }
+  },
+  "overall_rank": {
+    "none": {
+      "macro_f1": 0.9291427120749877,
+      "feature_counts": [
+        17,
+        71
+      ]
+    },
+    "pca": {
+      "macro_f1": 0.9022245929178867,
+      "feature_counts": [
+        11,
+        48
+      ]
+    },
+    "pso": {
+      "macro_f1": 0.9371055840710558,
+      "feature_counts": [
+        7,
+        39
+      ]
+    },
+    "bplo": {
+      "macro_f1": 0.9463926541780556,
+      "feature_counts": [
+        11,
+        48
+      ]
+    }
+  },
+  "dim_reduction": {
+    "bplo_ratio": 0.6615575807787903,
+    "bplo_detail": "71 维→48 维；17 维→11 维",
+    "pso_ratio": 0.48053024026512015,
+    "pso_detail": "71 维→39 维；17 维→7 维"
+  },
+  "methods": [
+    "none",
+    "pca",
+    "pso",
+    "bplo"
+  ],
+  "datasets": [
+    "processed",
+    "processed_ctrl17"
+  ],
+  "records": [
+    {
+      "dataset": "processed",
+      "method": "none",
+      "variant": "cnn_bilstm",
+      "seed": 0,
+      "n_features": 71,
+      "n_params": 151434,
+      "macro_f1": 0.9940235539200628,
+      "accuracy": 0.9957301451750641,
+      "binary_f1": 0.9921645445641528,
+      "binary_roc_auc": 0.9999435340572557,
+      "online": {
+        "threshold": 0.5,
+        "confirm_windows": 3,
+        "stream_rows": 21478,
+        "stream_hours": 3.0381,
+        "min_segment_rows": 16,
+        "n_raw_attack_segments": 181,
+        "n_ignored_short_segments": 157,
+        "n_attack_segments": 24,
+        "n_segments_detected": 24,
+        "segment_recall": 1.0,
+        "n_segments_missed": 0,
+        "mean_detection_delay_rows": 10.625,
+        "median_detection_delay_rows": 13.0,
+        "mean_detection_delay_sec": 0.01756913463274638,
+        "p95_detection_delay_sec": 0.06978455781936643,
+        "false_alarms": 2,
+        "false_alarms_per_hour": 0.6583050301123599,
+        "n_windows": 7155,
+        "n_alarmed_windows": 2108,
+        "n_raw_alarmed_windows": 2180,
+        "alarm_rate": 0.29461914744933615
+      },
+      "tpr_at_fpr_1pct": 1.0,
+      "seconds": 50.9
+    },
+    {
+      "dataset": "processed",
+      "method": "none",
+      "variant": "cnn_bilstm",
+      "seed": 1,
+      "n_features": 71,
+      "n_params": 151434,
+      "macro_f1": 0.9924667469337992,
+      "accuracy": 0.9948761742100769,
+      "binary_f1": 0.990205680705191,
+      "binary_roc_auc": 0.9999076011846002,
+      "online": {
+        "threshold": 0.5,
+        "confirm_windows": 3,
+        "stream_rows": 21478,
+        "stream_hours": 3.0381,
+        "min_segment_rows": 16,
+        "n_raw_attack_segments": 181,
+        "n_ignored_short_segments": 157,
+        "n_attack_segments": 24,
+        "n_segments_detected": 24,
+        "segment_recall": 1.0,
+        "n_segments_missed": 0,
+        "mean_detection_delay_rows": 11.25,
+        "median_detection_delay_rows": 14.0,
+        "mean_detection_delay_sec": 0.022567739089330036,
+        "p95_detection_delay_sec": 0.07889665365219115,
+        "false_alarms": 2,
+        "false_alarms_per_hour": 0.6583050301123599,
+        "n_windows": 7155,
+        "n_alarmed_windows": 2105,
+        "n_raw_alarmed_windows": 2184,
+        "alarm_rate": 0.2941998602375961
+      },
+      "tpr_at_fpr_1pct": 0.998025666337611,
+      "seconds": 47.4
+    },
+    {
+      "dataset": "processed",
+      "method": "none",
+      "variant": "cnn_bilstm",
+      "seed": 2,
+      "n_features": 71,
+      "n_params": 151434,
+      "macro_f1": 0.9954451928395799,
+      "accuracy": 0.9968687731283803,
+      "binary_f1": 0.9926362297496318,
+      "binary_roc_auc": 0.9999711747285291,
+      "online": {
+        "threshold": 0.5,
+        "confirm_windows": 3,
+        "stream_rows": 21478,
+        "stream_hours": 3.0381,
+        "min_segment_rows": 16,
+        "n_raw_attack_segments": 181,
+        "n_ignored_short_segments": 157,
+        "n_attack_segments": 24,
+        "n_segments_detected": 24,
+        "segment_recall": 1.0,
+        "n_segments_missed": 0,
+        "mean_detection_delay_rows": 11.0,
+        "median_detection_delay_rows": 14.0,
+        "mean_detection_delay_sec": 0.019412924846013386,
+        "p95_detection_delay_sec": 0.07707737684249877,
+        "false_alarms": 1,
+        "false_alarms_per_hour": 0.32915251505617993,
+        "n_windows": 7155,
+        "n_alarmed_windows": 2099,
+        "n_raw_alarmed_windows": 2174,
+        "alarm_rate": 0.293361285814116
+      },
+      "tpr_at_fpr_1pct": 0.9990128331688055,
+      "seconds": 52.4
+    },
+    {
+      "dataset": "processed",
+      "method": "none",
+      "variant": "bilstm",
+      "seed": 0,
+      "n_features": 71,
+      "n_params": 95882,
+      "macro_f1": 0.9973358646857629,
+      "accuracy": 0.9982920580700256,
+      "binary_f1": 0.9960629921259843,
+      "binary_roc_auc": 0.9999782823297136,
+      "online": {
+        "threshold": 0.5,
+        "confirm_windows": 3,
+        "stream_rows": 21478,
+        "stream_hours": 3.0381,
+        "min_segment_rows": 16,
+        "n_raw_attack_segments": 181,
+        "n_ignored_short_segments": 157,
+        "n_attack_segments": 24,
+        "n_segments_detected": 24,
+        "segment_recall": 1.0,
+        "n_segments_missed": 0,
+        "mean_detection_delay_rows": 11.375,
+        "median_detection_delay_rows": 14.0,
+        "mean_detection_delay_sec": 0.021911005179087322,
+        "p95_detection_delay_sec": 0.07196356058120727,
+        "false_alarms": 0,
+        "false_alarms_per_hour": 0.0,
+        "n_windows": 7155,
+        "n_alarmed_windows": 2100,
+        "n_raw_alarmed_windows": 2158,
+        "alarm_rate": 0.29350104821802936
+      },
+      "tpr_at_fpr_1pct": 1.0,
+      "seconds": 42.3
+    },
+    {
+      "dataset": "processed",
+      "method": "none",
+      "variant": "bilstm",
+      "seed": 1,
+      "n_features": 71,
+      "n_params": 95882,
+      "macro_f1": 0.9972871743121938,
+      "accuracy": 0.9982920580700256,
+      "binary_f1": 0.9970443349753695,
+      "binary_roc_auc": 0.9999822309970386,
+      "online": {
+        "threshold": 0.5,
+        "confirm_windows": 3,
+        "stream_rows": 21478,
+        "stream_hours": 3.0381,
+        "min_segment_rows": 16,
+        "n_raw_attack_segments": 181,
+        "n_ignored_short_segments": 157,
+        "n_attack_segments": 24,
+        "n_segments_detected": 24,
+        "segment_recall": 1.0,
+        "n_segments_missed": 0,
+        "mean_detection_delay_rows": 11.625,
+        "median_detection_delay_rows": 14.0,
+        "mean_detection_delay_sec": 0.019371261199315388,
+        "p95_detection_delay_sec": 0.07121692895889283,
+        "false_alarms": 0,
+        "false_alarms_per_hour": 0.0,
+        "n_windows": 7155,
+        "n_alarmed_windows": 2095,
+        "n_raw_alarmed_windows": 2149,
+        "alarm_rate": 0.29280223619846263
+      },
+      "tpr_at_fpr_1pct": 1.0,
+      "seconds": 39.4
+    },
+    {
+      "dataset": "processed",
+      "method": "none",
+      "variant": "bilstm",
+      "seed": 2,
+      "n_features": 71,
+      "n_params": 95882,
+      "macro_f1": 0.9958476628295803,
+      "accuracy": 0.9971534301167093,
+      "binary_f1": 0.9931305201177625,
+      "binary_roc_auc": 0.9999198420533071,
+      "online": {
+        "threshold": 0.5,
+        "confirm_windows": 3,
+        "stream_rows": 21478,
+        "stream_hours": 3.0381,
+        "min_segment_rows": 16,
+        "n_raw_attack_segments": 181,
+        "n_ignored_short_segments": 157,
+        "n_attack_segments": 24,
+        "n_segments_detected": 24,
+        "segment_recall": 1.0,
+        "n_segments_missed": 0,
+        "mean_detection_delay_rows": 11.625,
+        "median_detection_delay_rows": 14.0,
+        "mean_detection_delay_sec": 0.023069947957992554,
+        "p95_detection_delay_sec": 0.07979909181594848,
+        "false_alarms": 2,
+        "false_alarms_per_hour": 0.6583050301123599,
+        "n_windows": 7155,
+        "n_alarmed_windows": 2097,
+        "n_raw_alarmed_windows": 2160,
+        "alarm_rate": 0.2930817610062893
+      },
+      "tpr_at_fpr_1pct": 1.0,
+      "seconds": 44.8
+    },
+    {
+      "dataset": "processed",
+      "method": "pca",
+      "variant": "cnn_bilstm",
+      "seed": 0,
+      "n_features": 48,
+      "n_params": 135242,
+      "macro_f1": 0.9950379376269812,
+      "accuracy": 0.9962994591517221,
+      "binary_f1": 0.9936180657830143,
+      "binary_roc_auc": 0.9999751233958539,
+      "online": {
+        "threshold": 0.5,
+        "confirm_windows": 3,
+        "stream_rows": 21478,
+        "stream_hours": 3.0381,
+        "min_segment_rows": 16,
+        "n_raw_attack_segments": 181,
+        "n_ignored_short_segments": 157,
+        "n_attack_segments": 24,
+        "n_segments_detected": 24,
+        "segment_recall": 1.0,
+        "n_segments_missed": 0,
+        "mean_detection_delay_rows": 10.0,
+        "median_detection_delay_rows": 11.5,
+        "mean_detection_delay_sec": 0.016643812259038288,
+        "p95_detection_delay_sec": 0.06038897037506103,
+        "false_alarms": 0,
+        "false_alarms_per_hour": 0.0,
+        "n_windows": 7155,
+        "n_alarmed_windows": 2105,
+        "n_raw_alarmed_windows": 2175,
+        "alarm_rate": 0.2941998602375961
+      },
+      "tpr_at_fpr_1pct": 1.0,
+      "seconds": 43.6
+    },
+    {
+      "dataset": "processed",
+      "method": "pca",
+      "variant": "cnn_bilstm",
+      "seed": 1,
+      "n_features": 48,
+      "n_params": 135242,
+      "macro_f1": 0.9934111938867272,
+      "accuracy": 0.995445488186735,
+      "binary_f1": 0.9897310513447433,
+      "binary_roc_auc": 0.999938005923001,
+      "online": {
+        "threshold": 0.5,
+        "confirm_windows": 3,
+        "stream_rows": 21478,
+        "stream_hours": 3.0381,
+        "min_segment_rows": 16,
+        "n_raw_attack_segments": 181,
+        "n_ignored_short_segments": 157,
+        "n_attack_segments": 24,
+        "n_segments_detected": 24,
+        "segment_recall": 1.0,
+        "n_segments_missed": 0,
+        "mean_detection_delay_rows": 10.75,
+        "median_detection_delay_rows": 14.0,
+        "mean_detection_delay_sec": 0.01882132887840271,
+        "p95_detection_delay_sec": 0.07196356058120727,
+        "false_alarms": 2,
+        "false_alarms_per_hour": 0.6583050301123599,
+        "n_windows": 7155,
+        "n_alarmed_windows": 2114,
+        "n_raw_alarmed_windows": 2191,
+        "alarm_rate": 0.2954577218728162
+      },
+      "tpr_at_fpr_1pct": 0.9990128331688055,
+      "seconds": 41.0
+    },
+    {
+      "dataset": "processed",
+      "method": "pca",
+      "variant": "cnn_bilstm",
+      "seed": 2,
+      "n_features": 48,
+      "n_params": 135242,
+      "macro_f1": 0.993402230484846,
+      "accuracy": 0.995445488186735,
+      "binary_f1": 0.9906817067189799,
+      "binary_roc_auc": 0.9999052319842054,
+      "online": {
+        "threshold": 0.5,
+        "confirm_windows": 3,
+        "stream_rows": 21478,
+        "stream_hours": 3.0381,
+        "min_segment_rows": 16,
+        "n_raw_attack_segments": 181,
+        "n_ignored_short_segments": 157,
+        "n_attack_segments": 24,
+        "n_segments_detected": 24,
+        "segment_recall": 1.0,
+        "n_segments_missed": 0,
+        "mean_detection_delay_rows": 10.125,
+        "median_detection_delay_rows": 12.0,
+        "mean_detection_delay_sec": 0.016756802797317505,
+        "p95_detection_delay_sec": 0.06929954290390011,
+        "false_alarms": 1,
+        "false_alarms_per_hour": 0.32915251505617993,
+        "n_windows": 7155,
+        "n_alarmed_windows": 2106,
+        "n_raw_alarmed_windows": 2179,
+        "alarm_rate": 0.2943396226415094
+      },
+      "tpr_at_fpr_1pct": 1.0,
+      "seconds": 45.3
+    },
+    {
+      "dataset": "processed",
+      "method": "pca",
+      "variant": "bilstm",
+      "seed": 0,
+      "n_features": 48,
+      "n_params": 84106,
+      "macro_f1": 0.9990406264537252,
+      "accuracy": 0.9994306860233418,
+      "binary_f1": 0.9980295566502463,
+      "binary_roc_auc": 0.9999767028627838,
+      "online": {
+        "threshold": 0.5,
+        "confirm_windows": 3,
+        "stream_rows": 21478,
+        "stream_hours": 3.0381,
+        "min_segment_rows": 16,
+        "n_raw_attack_segments": 181,
+        "n_ignored_short_segments": 157,
+        "n_attack_segments": 24,
+        "n_segments_detected": 24,
+        "segment_recall": 1.0,
+        "n_segments_missed": 0,
+        "mean_detection_delay_rows": 10.375,
+        "median_detection_delay_rows": 12.0,
+        "mean_detection_delay_sec": 0.016915758450826008,
+        "p95_detection_delay_sec": 0.06038897037506103,
+        "false_alarms": 0,
+        "false_alarms_per_hour": 0.0,
+        "n_windows": 7155,
+        "n_alarmed_windows": 2107,
+        "n_raw_alarmed_windows": 2154,
+        "alarm_rate": 0.29447938504542276
+      },
+      "tpr_at_fpr_1pct": 1.0,
+      "seconds": 38.7
+    },
+    {
+      "dataset": "processed",
+      "method": "pca",
+      "variant": "bilstm",
+      "seed": 1,
+      "n_features": 48,
+      "n_params": 84106,
+      "macro_f1": 0.9974617163793407,
+      "accuracy": 0.9982920580700256,
+      "binary_f1": 0.9960668633235005,
+      "binary_roc_auc": 0.9999822309970385,
+      "online": {
+        "threshold": 0.5,
+        "confirm_windows": 3,
+        "stream_rows": 21478,
+        "stream_hours": 3.0381,
+        "min_segment_rows": 16,
+        "n_raw_attack_segments": 181,
+        "n_ignored_short_segments": 157,
+        "n_attack_segments": 24,
+        "n_segments_detected": 24,
+        "segment_recall": 1.0,
+        "n_segments_missed": 0,
+        "mean_detection_delay_rows": 11.375,
+        "median_detection_delay_rows": 14.0,
+        "mean_detection_delay_sec": 0.022452135880788166,
+        "p95_detection_delay_sec": 0.07889665365219115,
+        "false_alarms": 0,
+        "false_alarms_per_hour": 0.0,
+        "n_windows": 7155,
+        "n_alarmed_windows": 2104,
+        "n_raw_alarmed_windows": 2157,
+        "alarm_rate": 0.29406009783368275
+      },
+      "tpr_at_fpr_1pct": 1.0,
+      "seconds": 38.7
+    },
+    {
+      "dataset": "processed",
+      "method": "pca",
+      "variant": "bilstm",
+      "seed": 2,
+      "n_features": 48,
+      "n_params": 84106,
+      "macro_f1": 0.9984070660189936,
+      "accuracy": 0.9991460290350128,
+      "binary_f1": 0.9985214391325776,
+      "binary_roc_auc": 0.9999613030602172,
+      "online": {
+        "threshold": 0.5,
+        "confirm_windows": 3,
+        "stream_rows": 21478,
+        "stream_hours": 3.0381,
+        "min_segment_rows": 16,
+        "n_raw_attack_segments": 181,
+        "n_ignored_short_segments": 157,
+        "n_attack_segments": 24,
+        "n_segments_detected": 24,
+        "segment_recall": 1.0,
+        "n_segments_missed": 0,
+        "mean_detection_delay_rows": 11.0,
+        "median_detection_delay_rows": 12.5,
+        "mean_detection_delay_sec": 0.020933330059051514,
+        "p95_detection_delay_sec": 0.07693729400634763,
+        "false_alarms": 0,
+        "false_alarms_per_hour": 0.0,
+        "n_windows": 7155,
+        "n_alarmed_windows": 2098,
+        "n_raw_alarmed_windows": 2151,
+        "alarm_rate": 0.29322152341020263
+      },
+      "tpr_at_fpr_1pct": 1.0,
+      "seconds": 36.2
+    },
+    {
+      "dataset": "processed",
+      "method": "pso",
+      "variant": "cnn_bilstm",
+      "seed": 0,
+      "n_features": 39,
+      "n_params": 128906,
+      "macro_f1": 0.9946191210394355,
+      "accuracy": 0.9968687731283803,
+      "binary_f1": 0.9945945945945946,
+      "binary_roc_auc": 0.9999849950641658,
+      "online": {
+        "threshold": 0.5,
+        "confirm_windows": 3,
+        "stream_rows": 21478,
+        "stream_hours": 3.0381,
+        "min_segment_rows": 16,
+        "n_raw_attack_segments": 181,
+        "n_ignored_short_segments": 157,
+        "n_attack_segments": 24,
+        "n_segments_detected": 24,
+        "segment_recall": 1.0,
+        "n_segments_missed": 0,
+        "mean_detection_delay_rows": 11.5,
+        "median_detection_delay_rows": 14.0,
+        "mean_detection_delay_sec": 0.018740355968475342,
+        "p95_detection_delay_sec": 0.07121692895889283,
+        "false_alarms": 0,
+        "false_alarms_per_hour": 0.0,
+        "n_windows": 7155,
+        "n_alarmed_windows": 2101,
+        "n_raw_alarmed_windows": 2161,
+        "alarm_rate": 0.2936408106219427
+      },
+      "tpr_at_fpr_1pct": 1.0,
+      "seconds": 41.4
+    },
+    {
+      "dataset": "processed",
+      "method": "pso",
+      "variant": "cnn_bilstm",
+      "seed": 1,
+      "n_features": 39,
+      "n_params": 128906,
+      "macro_f1": 0.9893592494718663,
+      "accuracy": 0.9931682322801024,
+      "binary_f1": 0.9854085603112841,
+      "binary_roc_auc": 0.9999695952615991,
+      "online": {
+        "threshold": 0.5,
+        "confirm_windows": 3,
+        "stream_rows": 21478,
+        "stream_hours": 3.0381,
+        "min_segment_rows": 16,
+        "n_raw_attack_segments": 181,
+        "n_ignored_short_segments": 157,
+        "n_attack_segments": 24,
+        "n_segments_detected": 24,
+        "segment_recall": 1.0,
+        "n_segments_missed": 0,
+        "mean_detection_delay_rows": 10.625,
+        "median_detection_delay_rows": 13.5,
+        "mean_detection_delay_sec": 0.018261919418970745,
+        "p95_detection_delay_sec": 0.07196356058120727,
+        "false_alarms": 4,
+        "false_alarms_per_hour": 1.3166100602247197,
+        "n_windows": 7155,
+        "n_alarmed_windows": 2114,
+        "n_raw_alarmed_windows": 2215,
+        "alarm_rate": 0.2954577218728162
+      },
+      "tpr_at_fpr_1pct": 1.0,
+      "seconds": 41.9
+    },
+    {
+      "dataset": "processed",
+      "method": "pso",
+      "variant": "cnn_bilstm",
+      "seed": 2,
+      "n_features": 39,
+      "n_params": 128906,
+      "macro_f1": 0.9962127935360992,
+      "accuracy": 0.9974380871050385,
+      "binary_f1": 0.9926289926289926,
+      "binary_roc_auc": 0.9999640671273445,
+      "online": {
+        "threshold": 0.5,
+        "confirm_windows": 3,
+        "stream_rows": 21478,
+        "stream_hours": 3.0381,
+        "min_segment_rows": 16,
+        "n_raw_attack_segments": 181,
+        "n_ignored_short_segments": 157,
+        "n_attack_segments": 24,
+        "n_segments_detected": 24,
+        "segment_recall": 1.0,
+        "n_segments_missed": 0,
+        "mean_detection_delay_rows": 10.875,
+        "median_detection_delay_rows": 12.0,
+        "mean_detection_delay_sec": 0.01767478386561076,
+        "p95_detection_delay_sec": 0.06899075508117673,
+        "false_alarms": 0,
+        "false_alarms_per_hour": 0.0,
+        "n_windows": 7155,
+        "n_alarmed_windows": 2110,
+        "n_raw_alarmed_windows": 2183,
+        "alarm_rate": 0.2948986722571628
+      },
+      "tpr_at_fpr_1pct": 0.998025666337611,
+      "seconds": 38.9
+    },
+    {
+      "dataset": "processed",
+      "method": "pso",
+      "variant": "bilstm",
+      "seed": 0,
+      "n_features": 39,
+      "n_params": 79498,
+      "macro_f1": 0.9974473161061529,
+      "accuracy": 0.9982920580700256,
+      "binary_f1": 0.9970472440944882,
+      "binary_roc_auc": 0.9999960513326752,
+      "online": {
+        "threshold": 0.5,
+        "confirm_windows": 3,
+        "stream_rows": 21478,
+        "stream_hours": 3.0381,
+        "min_segment_rows": 16,
+        "n_raw_attack_segments": 181,
+        "n_ignored_short_segments": 157,
+        "n_attack_segments": 24,
+        "n_segments_detected": 24,
+        "segment_recall": 1.0,
+        "n_segments_missed": 0,
+        "mean_detection_delay_rows": 11.125,
+        "median_detection_delay_rows": 14.0,
+        "mean_detection_delay_sec": 0.01920055349667867,
+        "p95_detection_delay_sec": 0.07707737684249877,
+        "false_alarms": 0,
+        "false_alarms_per_hour": 0.0,
+        "n_windows": 7155,
+        "n_alarmed_windows": 2099,
+        "n_raw_alarmed_windows": 2159,
+        "alarm_rate": 0.293361285814116
+      },
+      "tpr_at_fpr_1pct": 1.0,
+      "seconds": 34.7
+    },
+    {
+      "dataset": "processed",
+      "method": "pso",
+      "variant": "bilstm",
+      "seed": 1,
+      "n_features": 39,
+      "n_params": 79498,
+      "macro_f1": 0.9956795427615819,
+      "accuracy": 0.9974380871050385,
+      "binary_f1": 0.9950884086444007,
+      "binary_roc_auc": 0.9999798617966437,
+      "online": {
+        "threshold": 0.5,
+        "confirm_windows": 3,
+        "stream_rows": 21478,
+        "stream_hours": 3.0381,
+        "min_segment_rows": 16,
+        "n_raw_attack_segments": 181,
+        "n_ignored_short_segments": 157,
+        "n_attack_segments": 24,
+        "n_segments_detected": 24,
+        "segment_recall": 1.0,
+        "n_segments_missed": 0,
+        "mean_detection_delay_rows": 11.5,
+        "median_detection_delay_rows": 14.0,
+        "mean_detection_delay_sec": 0.022818058729171753,
+        "p95_detection_delay_sec": 0.07889665365219115,
+        "false_alarms": 0,
+        "false_alarms_per_hour": 0.0,
+        "n_windows": 7155,
+        "n_alarmed_windows": 2098,
+        "n_raw_alarmed_windows": 2161,
+        "alarm_rate": 0.29322152341020263
+      },
+      "tpr_at_fpr_1pct": 1.0,
+      "seconds": 35.3
+    },
+    {
+      "dataset": "processed",
+      "method": "pso",
+      "variant": "bilstm",
+      "seed": 2,
+      "n_features": 39,
+      "n_params": 79498,
+      "macro_f1": 0.9955047873640077,
+      "accuracy": 0.9971534301167093,
+      "binary_f1": 0.9945999018163967,
+      "binary_roc_auc": 0.999992497532083,
+      "online": {
+        "threshold": 0.5,
+        "confirm_windows": 3,
+        "stream_rows": 21478,
+        "stream_hours": 3.0381,
+        "min_segment_rows": 16,
+        "n_raw_attack_segments": 181,
+        "n_ignored_short_segments": 157,
+        "n_attack_segments": 24,
+        "n_segments_detected": 24,
+        "segment_recall": 1.0,
+        "n_segments_missed": 0,
+        "mean_detection_delay_rows": 11.0,
+        "median_detection_delay_rows": 14.0,
+        "mean_detection_delay_sec": 0.0214901864528656,
+        "p95_detection_delay_sec": 0.07196356058120727,
+        "false_alarms": 1,
+        "false_alarms_per_hour": 0.32915251505617993,
+        "n_windows": 7155,
+        "n_alarmed_windows": 2107,
+        "n_raw_alarmed_windows": 2173,
+        "alarm_rate": 0.29447938504542276
+      },
+      "tpr_at_fpr_1pct": 1.0,
+      "seconds": 41.5
+    },
+    {
+      "dataset": "processed",
+      "method": "bplo",
+      "variant": "cnn_bilstm",
+      "seed": 0,
+      "n_features": 48,
+      "n_params": 135242,
+      "macro_f1": 0.9947211592407998,
+      "accuracy": 0.9965841161400513,
+      "binary_f1": 0.9931305201177625,
+      "binary_roc_auc": 0.9999510365251727,
+      "online": {
+        "threshold": 0.5,
+        "confirm_windows": 3,
+        "stream_rows": 21478,
+        "stream_hours": 3.0381,
+        "min_segment_rows": 16,
+        "n_raw_attack_segments": 181,
+        "n_ignored_short_segments": 157,
+        "n_attack_segments": 24,
+        "n_segments_detected": 24,
+        "segment_recall": 1.0,
+        "n_segments_missed": 0,
+        "mean_detection_delay_rows": 12.25,
+        "median_detection_delay_rows": 14.5,
+        "mean_detection_delay_sec": 0.023206015427907307,
+        "p95_detection_delay_sec": 0.07979909181594848,
+        "false_alarms": 2,
+        "false_alarms_per_hour": 0.6583050301123599,
+        "n_windows": 7155,
+        "n_alarmed_windows": 2100,
+        "n_raw_alarmed_windows": 2162,
+        "alarm_rate": 0.29350104821802936
+      },
+      "tpr_at_fpr_1pct": 0.9990128331688055,
+      "seconds": 57.7
+    },
+    {
+      "dataset": "processed",
+      "method": "bplo",
+      "variant": "cnn_bilstm",
+      "seed": 1,
+      "n_features": 48,
+      "n_params": 135242,
+      "macro_f1": 0.9917796293832684,
+      "accuracy": 0.9945915172217478,
+      "binary_f1": 0.9878108239882983,
+      "binary_roc_auc": 0.9999387956564659,
+      "online": {
+        "threshold": 0.5,
+        "confirm_windows": 3,
+        "stream_rows": 21478,
+        "stream_hours": 3.0381,
+        "min_segment_rows": 16,
+        "n_raw_attack_segments": 181,
+        "n_ignored_short_segments": 157,
+        "n_attack_segments": 24,
+        "n_segments_detected": 24,
+        "segment_recall": 1.0,
+        "n_segments_missed": 0,
+        "mean_detection_delay_rows": 11.625,
+        "median_detection_delay_rows": 14.0,
+        "mean_detection_delay_sec": 0.023119638363520306,
+        "p95_detection_delay_sec": 0.07889665365219115,
+        "false_alarms": 3,
+        "false_alarms_per_hour": 0.9874575451685398,
+        "n_windows": 7155,
+        "n_alarmed_windows": 2112,
+        "n_raw_alarmed_windows": 2192,
+        "alarm_rate": 0.29517819706498954
+      },
+      "tpr_at_fpr_1pct": 1.0,
+      "seconds": 56.6
+    },
+    {
+      "dataset": "processed",
+      "method": "bplo",
+      "variant": "cnn_bilstm",
+      "seed": 2,
+      "n_features": 48,
+      "n_params": 135242,
+      "macro_f1": 0.9960943121814296,
+      "accuracy": 0.9974380871050385,
+      "binary_f1": 0.9936243256498284,
+      "binary_roc_auc": 0.9999676209279368,
+      "online": {
+        "threshold": 0.5,
+        "confirm_windows": 3,
+        "stream_rows": 21478,
+        "stream_hours": 3.0381,
+        "min_segment_rows": 16,
+        "n_raw_attack_segments": 181,
+        "n_ignored_short_segments": 157,
+        "n_attack_segments": 24,
+        "n_segments_detected": 24,
+        "segment_recall": 1.0,
+        "n_segments_missed": 0,
+        "mean_detection_delay_rows": 11.5,
+        "median_detection_delay_rows": 14.0,
+        "mean_detection_delay_sec": 0.022479911645253498,
+        "p95_detection_delay_sec": 0.07979909181594848,
+        "false_alarms": 0,
+        "false_alarms_per_hour": 0.0,
+        "n_windows": 7155,
+        "n_alarmed_windows": 2099,
+        "n_raw_alarmed_windows": 2174,
+        "alarm_rate": 0.293361285814116
+      },
+      "tpr_at_fpr_1pct": 1.0,
+      "seconds": 69.0
+    },
+    {
+      "dataset": "processed",
+      "method": "bplo",
+      "variant": "bilstm",
+      "seed": 0,
+      "n_features": 48,
+      "n_params": 84106,
+      "macro_f1": 0.9963390325475499,
+      "accuracy": 0.9977227440933675,
+      "binary_f1": 0.9945945945945946,
+      "binary_roc_auc": 0.9999767028627837,
+      "online": {
+        "threshold": 0.5,
+        "confirm_windows": 3,
+        "stream_rows": 21478,
+        "stream_hours": 3.0381,
+        "min_segment_rows": 16,
+        "n_raw_attack_segments": 181,
+        "n_ignored_short_segments": 157,
+        "n_attack_segments": 24,
+        "n_segments_detected": 24,
+        "segment_recall": 1.0,
+        "n_segments_missed": 0,
+        "mean_detection_delay_rows": 11.0,
+        "median_detection_delay_rows": 14.0,
+        "mean_detection_delay_sec": 0.02231055498123169,
+        "p95_detection_delay_sec": 0.07889665365219115,
+        "false_alarms": 1,
+        "false_alarms_per_hour": 0.32915251505617993,
+        "n_windows": 7155,
+        "n_alarmed_windows": 2105,
+        "n_raw_alarmed_windows": 2174,
+        "alarm_rate": 0.2941998602375961
+      },
+      "tpr_at_fpr_1pct": 1.0,
+      "seconds": 44.8
+    },
+    {
+      "dataset": "processed",
+      "method": "bplo",
+      "variant": "bilstm",
+      "seed": 1,
+      "n_features": 48,
+      "n_params": 84106,
+      "macro_f1": 0.995955791205166,
+      "accuracy": 0.9974380871050385,
+      "binary_f1": 0.9945945945945946,
+      "binary_roc_auc": 0.9999688055281343,
+      "online": {
+        "threshold": 0.5,
+        "confirm_windows": 3,
+        "stream_rows": 21478,
+        "stream_hours": 3.0381,
+        "min_segment_rows": 16,
+        "n_raw_attack_segments": 181,
+        "n_ignored_short_segments": 157,
+        "n_attack_segments": 24,
+        "n_segments_detected": 24,
+        "segment_recall": 1.0,
+        "n_segments_missed": 0,
+        "mean_detection_delay_rows": 11.25,
+        "median_detection_delay_rows": 14.0,
+        "mean_detection_delay_sec": 0.022162745396296184,
+        "p95_detection_delay_sec": 0.07889665365219115,
+        "false_alarms": 1,
+        "false_alarms_per_hour": 0.32915251505617993,
+        "n_windows": 7155,
+        "n_alarmed_windows": 2098,
+        "n_raw_alarmed_windows": 2167,
+        "alarm_rate": 0.29322152341020263
+      },
+      "tpr_at_fpr_1pct": 1.0,
+      "seconds": 42.9
+    },
+    {
+      "dataset": "processed",
+      "method": "bplo",
+      "variant": "bilstm",
+      "seed": 2,
+      "n_features": 48,
+      "n_params": 84106,
+      "macro_f1": 0.997068880214204,
+      "accuracy": 0.9982920580700256,
+      "binary_f1": 0.9955773955773956,
+      "binary_roc_auc": 0.9999462981243831,
+      "online": {
+        "threshold": 0.5,
+        "confirm_windows": 3,
+        "stream_rows": 21478,
+        "stream_hours": 3.0381,
+        "min_segment_rows": 16,
+        "n_raw_attack_segments": 181,
+        "n_ignored_short_segments": 157,
+        "n_attack_segments": 24,
+        "n_segments_detected": 24,
+        "segment_recall": 1.0,
+        "n_segments_missed": 0,
+        "mean_detection_delay_rows": 11.125,
+        "median_detection_delay_rows": 14.0,
+        "mean_detection_delay_sec": 0.022142261266708374,
+        "p95_detection_delay_sec": 0.07889665365219115,
+        "false_alarms": 0,
+        "false_alarms_per_hour": 0.0,
+        "n_windows": 7155,
+        "n_alarmed_windows": 2101,
+        "n_raw_alarmed_windows": 2164,
+        "alarm_rate": 0.2936408106219427
+      },
+      "tpr_at_fpr_1pct": 1.0,
+      "seconds": 44.3
+    },
+    {
+      "dataset": "processed_ctrl17",
+      "method": "none",
+      "variant": "cnn_bilstm",
+      "seed": 0,
+      "n_features": 17,
+      "n_params": 113418,
+      "macro_f1": 0.8067873718429603,
+      "accuracy": 0.8830059777967549,
+      "binary_f1": 0.8135593220338984,
+      "binary_roc_auc": 0.9941230009871669,
+      "online": {
+        "threshold": 0.5,
+        "confirm_windows": 3,
+        "stream_rows": 21478,
+        "stream_hours": 3.0381,
+        "min_segment_rows": 16,
+        "n_raw_attack_segments": 181,
+        "n_ignored_short_segments": 157,
+        "n_attack_segments": 24,
+        "n_segments_detected": 24,
+        "segment_recall": 1.0,
+        "n_segments_missed": 0,
+        "mean_detection_delay_rows": 9.125,
+        "median_detection_delay_rows": 11.0,
+        "mean_detection_delay_sec": 0.015013982852300009,
+        "p95_detection_delay_sec": 0.05894315242767331,
+        "false_alarms": 339,
+        "false_alarms_per_hour": 111.582702604045,
+        "n_windows": 7155,
+        "n_alarmed_windows": 2502,
+        "n_raw_alarmed_windows": 3035,
+        "alarm_rate": 0.34968553459119495
+      },
+      "tpr_at_fpr_1pct": 0.8983218163869694,
+      "seconds": 53.1
+    },
+    {
+      "dataset": "processed_ctrl17",
+      "method": "none",
+      "variant": "cnn_bilstm",
+      "seed": 1,
+      "n_features": 17,
+      "n_params": 113418,
+      "macro_f1": 0.8419031629320519,
+      "accuracy": 0.9109023626530032,
+      "binary_f1": 0.8464765100671141,
+      "binary_roc_auc": 0.9957378084896347,
+      "online": {
+        "threshold": 0.5,
+        "confirm_windows": 3,
+        "stream_rows": 21478,
+        "stream_hours": 3.0381,
+        "min_segment_rows": 16,
+        "n_raw_attack_segments": 181,
+        "n_ignored_short_segments": 157,
+        "n_attack_segments": 24,
+        "n_segments_detected": 24,
+        "segment_recall": 1.0,
+        "n_segments_missed": 0,
+        "mean_detection_delay_rows": 8.75,
+        "median_detection_delay_rows": 10.0,
+        "mean_detection_delay_sec": 0.015984654426574707,
+        "p95_detection_delay_sec": 0.0678537249565124,
+        "false_alarms": 219,
+        "false_alarms_per_hour": 72.0844007973034,
+        "n_windows": 7155,
+        "n_alarmed_windows": 2357,
+        "n_raw_alarmed_windows": 2818,
+        "alarm_rate": 0.3294199860237596
+      },
+      "tpr_at_fpr_1pct": 0.9368213228035538,
+      "seconds": 54.6
+    },
+    {
+      "dataset": "processed_ctrl17",
+      "method": "none",
+      "variant": "cnn_bilstm",
+      "seed": 2,
+      "n_features": 17,
+      "n_params": 113418,
+      "macro_f1": 0.7957991978208768,
+      "accuracy": 0.8855678906917165,
+      "binary_f1": 0.8285243198680956,
+      "binary_roc_auc": 0.9930414610069102,
+      "online": {
+        "threshold": 0.5,
+        "confirm_windows": 3,
+        "stream_rows": 21478,
+        "stream_hours": 3.0381,
+        "min_segment_rows": 16,
+        "n_raw_attack_segments": 181,
+        "n_ignored_short_segments": 157,
+        "n_attack_segments": 24,
+        "n_segments_detected": 24,
+        "segment_recall": 1.0,
+        "n_segments_missed": 0,
+        "mean_detection_delay_rows": 9.375,
+        "median_detection_delay_rows": 10.0,
+        "mean_detection_delay_sec": 0.016932229200998943,
+        "p95_detection_delay_sec": 0.05894315242767331,
+        "false_alarms": 308,
+        "false_alarms_per_hour": 101.37897463730341,
+        "n_windows": 7155,
+        "n_alarmed_windows": 2434,
+        "n_raw_alarmed_windows": 2939,
+        "alarm_rate": 0.34018169112508734
+      },
+      "tpr_at_fpr_1pct": 0.8815399802566634,
+      "seconds": 52.7
+    },
+    {
+      "dataset": "processed_ctrl17",
+      "method": "none",
+      "variant": "bilstm",
+      "seed": 0,
+      "n_features": 17,
+      "n_params": 68234,
+      "macro_f1": 0.9111671272325504,
+      "accuracy": 0.9601480216339311,
+      "binary_f1": 0.9404536862003781,
+      "binary_roc_auc": 0.9963170779861797,
+      "online": {
+        "threshold": 0.5,
+        "confirm_windows": 3,
+        "stream_rows": 21478,
+        "stream_hours": 3.0381,
+        "min_segment_rows": 16,
+        "n_raw_attack_segments": 181,
+        "n_ignored_short_segments": 157,
+        "n_attack_segments": 24,
+        "n_segments_detected": 24,
+        "segment_recall": 1.0,
+        "n_segments_missed": 0,
+        "mean_detection_delay_rows": 12.0,
+        "median_detection_delay_rows": 14.0,
+        "mean_detection_delay_sec": 0.022617260615030926,
+        "p95_detection_delay_sec": 0.07889665365219115,
+        "false_alarms": 45,
+        "false_alarms_per_hour": 14.811863177528096,
+        "n_windows": 7155,
+        "n_alarmed_windows": 2065,
+        "n_raw_alarmed_windows": 2279,
+        "alarm_rate": 0.2886093640810622
+      },
+      "tpr_at_fpr_1pct": 0.9111549851924975,
+      "seconds": 38.5
+    },
+    {
+      "dataset": "processed_ctrl17",
+      "method": "none",
+      "variant": "bilstm",
+      "seed": 1,
+      "n_features": 17,
+      "n_params": 68234,
+      "macro_f1": 0.9117302790126478,
+      "accuracy": 0.9567321377739824,
+      "binary_f1": 0.9330855018587361,
+      "binary_roc_auc": 0.997475222112537,
+      "online": {
+        "threshold": 0.5,
+        "confirm_windows": 3,
+        "stream_rows": 21478,
+        "stream_hours": 3.0381,
+        "min_segment_rows": 16,
+        "n_raw_attack_segments": 181,
+        "n_ignored_short_segments": 157,
+        "n_attack_segments": 24,
+        "n_segments_detected": 24,
+        "segment_recall": 1.0,
+        "n_segments_missed": 0,
+        "mean_detection_delay_rows": 11.0,
+        "median_detection_delay_rows": 12.0,
+        "mean_detection_delay_sec": 0.023467342058817547,
+        "p95_detection_delay_sec": 0.1056707143783569,
+        "false_alarms": 71,
+        "false_alarms_per_hour": 23.369828568988773,
+        "n_windows": 7155,
+        "n_alarmed_windows": 2150,
+        "n_raw_alarmed_windows": 2366,
+        "alarm_rate": 0.3004891684136967
+      },
+      "tpr_at_fpr_1pct": 0.9427443237907206,
+      "seconds": 41.2
+    },
+    {
+      "dataset": "processed_ctrl17",
+      "method": "none",
+      "variant": "bilstm",
+      "seed": 2,
+      "n_features": 17,
+      "n_params": 68234,
+      "macro_f1": 0.9099192105377868,
+      "accuracy": 0.9570167947623114,
+      "binary_f1": 0.9324009324009324,
+      "binary_roc_auc": 0.9972576505429417,
+      "online": {
+        "threshold": 0.5,
+        "confirm_windows": 3,
+        "stream_rows": 21478,
+        "stream_hours": 3.0381,
+        "min_segment_rows": 16,
+        "n_raw_attack_segments": 181,
+        "n_ignored_short_segments": 157,
+        "n_attack_segments": 24,
+        "n_segments_detected": 24,
+        "segment_recall": 1.0,
+        "n_segments_missed": 0,
+        "mean_detection_delay_rows": 11.375,
+        "median_detection_delay_rows": 13.0,
+        "mean_detection_delay_sec": 0.022672027349472046,
+        "p95_detection_delay_sec": 0.09173308610916135,
+        "false_alarms": 58,
+        "false_alarms_per_hour": 19.090845873258434,
+        "n_windows": 7155,
+        "n_alarmed_windows": 2110,
+        "n_raw_alarmed_windows": 2328,
+        "alarm_rate": 0.2948986722571628
+      },
+      "tpr_at_fpr_1pct": 0.9417571569595261,
+      "seconds": 42.5
+    },
+    {
+      "dataset": "processed_ctrl17",
+      "method": "pca",
+      "variant": "cnn_bilstm",
+      "seed": 0,
+      "n_features": 11,
+      "n_params": 109194,
+      "macro_f1": 0.7222722903673235,
+      "accuracy": 0.7677198975234842,
+      "binary_f1": 0.6478599221789884,
+      "binary_roc_auc": 0.9708570582428431,
+      "online": {
+        "threshold": 0.5,
+        "confirm_windows": 3,
+        "stream_rows": 21478,
+        "stream_hours": 3.0381,
+        "min_segment_rows": 16,
+        "n_raw_attack_segments": 181,
+        "n_ignored_short_segments": 157,
+        "n_attack_segments": 24,
+        "n_segments_detected": 24,
+        "segment_recall": 1.0,
+        "n_segments_missed": 0,
+        "mean_detection_delay_rows": 7.125,
+        "median_detection_delay_rows": 9.0,
+        "mean_detection_delay_sec": 0.012413998444875082,
+        "p95_detection_delay_sec": 0.05612603425979612,
+        "false_alarms": 1089,
+        "false_alarms_per_hour": 358.44708889617993,
+        "n_windows": 7155,
+        "n_alarmed_windows": 3362,
+        "n_raw_alarmed_windows": 4280,
+        "alarm_rate": 0.46988120195667366
+      },
+      "tpr_at_fpr_1pct": 0.7018756169792695,
+      "seconds": 53.8
+    },
+    {
+      "dataset": "processed_ctrl17",
+      "method": "pca",
+      "variant": "cnn_bilstm",
+      "seed": 1,
+      "n_features": 11,
+      "n_params": 109194,
+      "macro_f1": 0.7400444613499475,
+      "accuracy": 0.7964702533447197,
+      "binary_f1": 0.7025114962858153,
+      "binary_roc_auc": 0.9727000987166832,
+      "online": {
+        "threshold": 0.5,
+        "confirm_windows": 3,
+        "stream_rows": 21478,
+        "stream_hours": 3.0381,
+        "min_segment_rows": 16,
+        "n_raw_attack_segments": 181,
+        "n_ignored_short_segments": 157,
+        "n_attack_segments": 24,
+        "n_segments_detected": 24,
+        "segment_recall": 1.0,
+        "n_segments_missed": 0,
+        "mean_detection_delay_rows": 8.625,
+        "median_detection_delay_rows": 9.0,
+        "mean_detection_delay_sec": 0.012933909893035889,
+        "p95_detection_delay_sec": 0.05698531866073603,
+        "false_alarms": 708,
+        "false_alarms_per_hour": 233.03998065977538,
+        "n_windows": 7155,
+        "n_alarmed_windows": 2870,
+        "n_raw_alarmed_windows": 3709,
+        "alarm_rate": 0.40111809923130676
+      },
+      "tpr_at_fpr_1pct": 0.7620927936821322,
+      "seconds": 46.9
+    },
+    {
+      "dataset": "processed_ctrl17",
+      "method": "pca",
+      "variant": "cnn_bilstm",
+      "seed": 2,
+      "n_features": 11,
+      "n_params": 109194,
+      "macro_f1": 0.6908650284099129,
+      "accuracy": 0.7509251352120695,
+      "binary_f1": 0.6190327613104524,
+      "binary_roc_auc": 0.9609887462981244,
+      "online": {
+        "threshold": 0.5,
+        "confirm_windows": 3,
+        "stream_rows": 21478,
+        "stream_hours": 3.0381,
+        "min_segment_rows": 16,
+        "n_raw_attack_segments": 181,
+        "n_ignored_short_segments": 157,
+        "n_attack_segments": 24,
+        "n_segments_detected": 24,
+        "segment_recall": 1.0,
+        "n_segments_missed": 0,
+        "mean_detection_delay_rows": 6.25,
+        "median_detection_delay_rows": 3.5,
+        "mean_detection_delay_sec": 0.011243671178817749,
+        "p95_detection_delay_sec": 0.0460439324378967,
+        "false_alarms": 1216,
+        "false_alarms_per_hour": 400.2494583083148,
+        "n_windows": 7155,
+        "n_alarmed_windows": 3548,
+        "n_raw_alarmed_windows": 4518,
+        "alarm_rate": 0.49587700908455623
+      },
+      "tpr_at_fpr_1pct": 0.6702862783810464,
+      "seconds": 56.0
+    },
+    {
+      "dataset": "processed_ctrl17",
+      "method": "pca",
+      "variant": "bilstm",
+      "seed": 0,
+      "n_features": 11,
+      "n_params": 65162,
+      "macro_f1": 0.9084307085588814,
+      "accuracy": 0.9479077711357814,
+      "binary_f1": 0.9199623352165726,
+      "binary_roc_auc": 0.9924458045409674,
+      "online": {
+        "threshold": 0.5,
+        "confirm_windows": 3,
+        "stream_rows": 21478,
+        "stream_hours": 3.0381,
+        "min_segment_rows": 16,
+        "n_raw_attack_segments": 181,
+        "n_ignored_short_segments": 157,
+        "n_attack_segments": 24,
+        "n_segments_detected": 24,
+        "segment_recall": 1.0,
+        "n_segments_missed": 0,
+        "mean_detection_delay_rows": 12.875,
+        "median_detection_delay_rows": 14.0,
+        "mean_detection_delay_sec": 0.021702895561854046,
+        "p95_detection_delay_sec": 0.09173308610916135,
+        "false_alarms": 49,
+        "false_alarms_per_hour": 16.128473237752814,
+        "n_windows": 7155,
+        "n_alarmed_windows": 2027,
+        "n_raw_alarmed_windows": 2279,
+        "alarm_rate": 0.283298392732355
+      },
+      "tpr_at_fpr_1pct": 0.9131293188548865,
+      "seconds": 45.8
+    },
+    {
+      "dataset": "processed_ctrl17",
+      "method": "pca",
+      "variant": "bilstm",
+      "seed": 1,
+      "n_features": 11,
+      "n_params": 65162,
+      "macro_f1": 0.8949952062604745,
+      "accuracy": 0.9422146313692001,
+      "binary_f1": 0.9017447199265382,
+      "binary_roc_auc": 0.9881749259624877,
+      "online": {
+        "threshold": 0.5,
+        "confirm_windows": 3,
+        "stream_rows": 21478,
+        "stream_hours": 3.0381,
+        "min_segment_rows": 16,
+        "n_raw_attack_segments": 181,
+        "n_ignored_short_segments": 157,
+        "n_attack_segments": 24,
+        "n_segments_detected": 24,
+        "segment_recall": 1.0,
+        "n_segments_missed": 0,
+        "mean_detection_delay_rows": 12.0,
+        "median_detection_delay_rows": 12.5,
+        "mean_detection_delay_sec": 0.020607024431228638,
+        "p95_detection_delay_sec": 0.07196356058120727,
+        "false_alarms": 93,
+        "false_alarms_per_hour": 30.61118390022473,
+        "n_windows": 7155,
+        "n_alarmed_windows": 2080,
+        "n_raw_alarmed_windows": 2391,
+        "alarm_rate": 0.2907058001397624
+      },
+      "tpr_at_fpr_1pct": 0.8894373149062191,
+      "seconds": 40.4
+    },
+    {
+      "dataset": "processed_ctrl17",
+      "method": "pca",
+      "variant": "bilstm",
+      "seed": 2,
+      "n_features": 11,
+      "n_params": 65162,
+      "macro_f1": 0.893326649217486,
+      "accuracy": 0.9356675206376317,
+      "binary_f1": 0.8890900860117701,
+      "binary_roc_auc": 0.9893417571569594,
+      "online": {
+        "threshold": 0.5,
+        "confirm_windows": 3,
+        "stream_rows": 21478,
+        "stream_hours": 3.0381,
+        "min_segment_rows": 16,
+        "n_raw_attack_segments": 181,
+        "n_ignored_short_segments": 157,
+        "n_attack_segments": 24,
+        "n_segments_detected": 24,
+        "segment_recall": 1.0,
+        "n_segments_missed": 0,
+        "mean_detection_delay_rows": 13.0,
+        "median_detection_delay_rows": 15.0,
+        "mean_detection_delay_sec": 0.02411593000094096,
+        "p95_detection_delay_sec": 0.09173308610916135,
+        "false_alarms": 85,
+        "false_alarms_per_hour": 27.977963779775294,
+        "n_windows": 7155,
+        "n_alarmed_windows": 2059,
+        "n_raw_alarmed_windows": 2407,
+        "alarm_rate": 0.2877707896575821
+      },
+      "tpr_at_fpr_1pct": 0.859822309970385,
+      "seconds": 42.6
+    },
+    {
+      "dataset": "processed_ctrl17",
+      "method": "pso",
+      "variant": "cnn_bilstm",
+      "seed": 0,
+      "n_features": 7,
+      "n_params": 106378,
+      "macro_f1": 0.8510682390088535,
+      "accuracy": 0.9248505550811272,
+      "binary_f1": 0.8616567036720751,
+      "binary_roc_auc": 0.9966373149062192,
+      "online": {
+        "threshold": 0.5,
+        "confirm_windows": 3,
+        "stream_rows": 21478,
+        "stream_hours": 3.0381,
+        "min_segment_rows": 16,
+        "n_raw_attack_segments": 181,
+        "n_ignored_short_segments": 157,
+        "n_attack_segments": 24,
+        "n_segments_detected": 24,
+        "segment_recall": 1.0,
+        "n_segments_missed": 0,
+        "mean_detection_delay_rows": 9.25,
+        "median_detection_delay_rows": 11.0,
+        "mean_detection_delay_sec": 0.01687850554784139,
+        "p95_detection_delay_sec": 0.07196356058120727,
+        "false_alarms": 174,
+        "false_alarms_per_hour": 57.272537619775306,
+        "n_windows": 7155,
+        "n_alarmed_windows": 2281,
+        "n_raw_alarmed_windows": 2720,
+        "alarm_rate": 0.3187980433263452
+      },
+      "tpr_at_fpr_1pct": 0.9348469891411648,
+      "seconds": 64.3
+    },
+    {
+      "dataset": "processed_ctrl17",
+      "method": "pso",
+      "variant": "cnn_bilstm",
+      "seed": 1,
+      "n_features": 7,
+      "n_params": 106378,
+      "macro_f1": 0.8042257499493353,
+      "accuracy": 0.8775974950185027,
+      "binary_f1": 0.7829126213592233,
+      "binary_roc_auc": 0.9928027640671273,
+      "online": {
+        "threshold": 0.5,
+        "confirm_windows": 3,
+        "stream_rows": 21478,
+        "stream_hours": 3.0381,
+        "min_segment_rows": 16,
+        "n_raw_attack_segments": 181,
+        "n_ignored_short_segments": 157,
+        "n_attack_segments": 24,
+        "n_segments_detected": 24,
+        "segment_recall": 1.0,
+        "n_segments_missed": 0,
+        "mean_detection_delay_rows": 7.875,
+        "median_detection_delay_rows": 8.5,
+        "mean_detection_delay_sec": 0.01635366678237915,
+        "p95_detection_delay_sec": 0.07528632879257195,
+        "false_alarms": 373,
+        "false_alarms_per_hour": 122.7738881159551,
+        "n_windows": 7155,
+        "n_alarmed_windows": 2533,
+        "n_raw_alarmed_windows": 3162,
+        "alarm_rate": 0.3540181691125087
+      },
+      "tpr_at_fpr_1pct": 0.8904244817374136,
+      "seconds": 55.4
+    },
+    {
+      "dataset": "processed_ctrl17",
+      "method": "pso",
+      "variant": "cnn_bilstm",
+      "seed": 2,
+      "n_features": 7,
+      "n_params": 106378,
+      "macro_f1": 0.8116324876982781,
+      "accuracy": 0.8926843153999431,
+      "binary_f1": 0.813915857605178,
+      "binary_roc_auc": 0.9931636722606121,
+      "online": {
+        "threshold": 0.5,
+        "confirm_windows": 3,
+        "stream_rows": 21478,
+        "stream_hours": 3.0381,
+        "min_segment_rows": 16,
+        "n_raw_attack_segments": 181,
+        "n_ignored_short_segments": 157,
+        "n_attack_segments": 24,
+        "n_segments_detected": 24,
+        "segment_recall": 1.0,
+        "n_segments_missed": 0,
+        "mean_detection_delay_rows": 8.0,
+        "median_detection_delay_rows": 9.0,
+        "mean_detection_delay_sec": 0.015187521775563559,
+        "p95_detection_delay_sec": 0.0678537249565124,
+        "false_alarms": 320,
+        "false_alarms_per_hour": 105.32880481797757,
+        "n_windows": 7155,
+        "n_alarmed_windows": 2461,
+        "n_raw_alarmed_windows": 3018,
+        "alarm_rate": 0.3439552760307477
+      },
+      "tpr_at_fpr_1pct": 0.8914116485686081,
+      "seconds": 56.9
+    },
+    {
+      "dataset": "processed_ctrl17",
+      "method": "pso",
+      "variant": "bilstm",
+      "seed": 0,
+      "n_features": 7,
+      "n_params": 63114,
+      "macro_f1": 0.9332910289233565,
+      "accuracy": 0.9701110162254484,
+      "binary_f1": 0.961225466730493,
+      "binary_roc_auc": 0.9990527147087858,
+      "online": {
+        "threshold": 0.5,
+        "confirm_windows": 3,
+        "stream_rows": 21478,
+        "stream_hours": 3.0381,
+        "min_segment_rows": 16,
+        "n_raw_attack_segments": 181,
+        "n_ignored_short_segments": 157,
+        "n_attack_segments": 24,
+        "n_segments_detected": 24,
+        "segment_recall": 1.0,
+        "n_segments_missed": 0,
+        "mean_detection_delay_rows": 10.875,
+        "median_detection_delay_rows": 13.0,
+        "mean_detection_delay_sec": 0.022479395071665447,
+        "p95_detection_delay_sec": 0.09173308610916135,
+        "false_alarms": 10,
+        "false_alarms_per_hour": 3.291525150561799,
+        "n_windows": 7155,
+        "n_alarmed_windows": 2063,
+        "n_raw_alarmed_windows": 2235,
+        "alarm_rate": 0.2883298392732355
+      },
+      "tpr_at_fpr_1pct": 0.9782823297137216,
+      "seconds": 42.3
+    },
+    {
+      "dataset": "processed_ctrl17",
+      "method": "pso",
+      "variant": "bilstm",
+      "seed": 1,
+      "n_features": 7,
+      "n_params": 63114,
+      "macro_f1": 0.938737141276972,
+      "accuracy": 0.9715343011670936,
+      "binary_f1": 0.960538979788258,
+      "binary_roc_auc": 0.9983004935834157,
+      "online": {
+        "threshold": 0.5,
+        "confirm_windows": 3,
+        "stream_rows": 21478,
+        "stream_hours": 3.0381,
+        "min_segment_rows": 16,
+        "n_raw_attack_segments": 181,
+        "n_ignored_short_segments": 157,
+        "n_attack_segments": 24,
+        "n_segments_detected": 24,
+        "segment_recall": 1.0,
+        "n_segments_missed": 0,
+        "mean_detection_delay_rows": 11.375,
+        "median_detection_delay_rows": 14.0,
+        "mean_detection_delay_sec": 0.023309359947840374,
+        "p95_detection_delay_sec": 0.09173308610916135,
+        "false_alarms": 13,
+        "false_alarms_per_hour": 4.278982695730339,
+        "n_windows": 7155,
+        "n_alarmed_windows": 2037,
+        "n_raw_alarmed_windows": 2208,
+        "alarm_rate": 0.2846960167714885
+      },
+      "tpr_at_fpr_1pct": 0.9585389930898321,
+      "seconds": 38.8
+    },
+    {
+      "dataset": "processed_ctrl17",
+      "method": "pso",
+      "variant": "bilstm",
+      "seed": 2,
+      "n_features": 7,
+      "n_params": 63114,
+      "macro_f1": 0.9374895517167314,
+      "accuracy": 0.972957586108739,
+      "binary_f1": 0.9615384615384616,
+      "binary_roc_auc": 0.9986981243830206,
+      "online": {
+        "threshold": 0.5,
+        "confirm_windows": 3,
+        "stream_rows": 21478,
+        "stream_hours": 3.0381,
+        "min_segment_rows": 16,
+        "n_raw_attack_segments": 181,
+        "n_ignored_short_segments": 157,
+        "n_attack_segments": 24,
+        "n_segments_detected": 24,
+        "segment_recall": 1.0,
+        "n_segments_missed": 0,
+        "mean_detection_delay_rows": 10.75,
+        "median_detection_delay_rows": 13.0,
+        "mean_detection_delay_sec": 0.021541237831115723,
+        "p95_detection_delay_sec": 0.07889665365219115,
+        "false_alarms": 12,
+        "false_alarms_per_hour": 3.949830180674159,
+        "n_windows": 7155,
+        "n_alarmed_windows": 2052,
+        "n_raw_alarmed_windows": 2226,
+        "alarm_rate": 0.28679245283018867
+      },
+      "tpr_at_fpr_1pct": 0.9753208292201382,
+      "seconds": 40.5
+    },
+    {
+      "dataset": "processed_ctrl17",
+      "method": "bplo",
+      "variant": "cnn_bilstm",
+      "seed": 0,
+      "n_features": 11,
+      "n_params": 109194,
+      "macro_f1": 0.8482497266160552,
+      "accuracy": 0.910333048676345,
+      "binary_f1": 0.8514600084638172,
+      "binary_roc_auc": 0.9966918065153011,
+      "online": {
+        "threshold": 0.5,
+        "confirm_windows": 3,
+        "stream_rows": 21478,
+        "stream_hours": 3.0381,
+        "min_segment_rows": 16,
+        "n_raw_attack_segments": 181,
+        "n_ignored_short_segments": 157,
+        "n_attack_segments": 24,
+        "n_segments_detected": 24,
+        "segment_recall": 1.0,
+        "n_segments_missed": 0,
+        "mean_detection_delay_rows": 10.375,
+        "median_detection_delay_rows": 12.0,
+        "mean_detection_delay_sec": 0.020356297492980957,
+        "p95_detection_delay_sec": 0.0787896156311035,
+        "false_alarms": 182,
+        "false_alarms_per_hour": 59.90575774022474,
+        "n_windows": 7155,
+        "n_alarmed_windows": 2307,
+        "n_raw_alarmed_windows": 2772,
+        "alarm_rate": 0.32243186582809225
+      },
+      "tpr_at_fpr_1pct": 0.9526159921026653,
+      "seconds": 53.4
+    },
+    {
+      "dataset": "processed_ctrl17",
+      "method": "bplo",
+      "variant": "cnn_bilstm",
+      "seed": 1,
+      "n_features": 11,
+      "n_params": 109194,
+      "macro_f1": 0.8508364662094366,
+      "accuracy": 0.9234272701394819,
+      "binary_f1": 0.8490725126475548,
+      "binary_roc_auc": 0.9966732477788746,
+      "online": {
+        "threshold": 0.5,
+        "confirm_windows": 3,
+        "stream_rows": 21478,
+        "stream_hours": 3.0381,
+        "min_segment_rows": 16,
+        "n_raw_attack_segments": 181,
+        "n_ignored_short_segments": 157,
+        "n_attack_segments": 24,
+        "n_segments_detected": 24,
+        "segment_recall": 1.0,
+        "n_segments_missed": 0,
+        "mean_detection_delay_rows": 8.75,
+        "median_detection_delay_rows": 10.0,
+        "mean_detection_delay_sec": 0.015997856855392456,
+        "p95_detection_delay_sec": 0.05894315242767331,
+        "false_alarms": 205,
+        "false_alarms_per_hour": 67.47626558651689,
+        "n_windows": 7155,
+        "n_alarmed_windows": 2342,
+        "n_raw_alarmed_windows": 2851,
+        "alarm_rate": 0.3273235499650594
+      },
+      "tpr_at_fpr_1pct": 0.9555774925962488,
+      "seconds": 53.2
+    },
+    {
+      "dataset": "processed_ctrl17",
+      "method": "bplo",
+      "variant": "cnn_bilstm",
+      "seed": 2,
+      "n_features": 11,
+      "n_params": 109194,
+      "macro_f1": 0.8617646830272092,
+      "accuracy": 0.9202960432678622,
+      "binary_f1": 0.8391666666666666,
+      "binary_roc_auc": 0.9959012833168805,
+      "online": {
+        "threshold": 0.5,
+        "confirm_windows": 3,
+        "stream_rows": 21478,
+        "stream_hours": 3.0381,
+        "min_segment_rows": 16,
+        "n_raw_attack_segments": 181,
+        "n_ignored_short_segments": 157,
+        "n_attack_segments": 24,
+        "n_segments_detected": 24,
+        "segment_recall": 1.0,
+        "n_segments_missed": 0,
+        "mean_detection_delay_rows": 9.0,
+        "median_detection_delay_rows": 10.0,
+        "mean_detection_delay_sec": 0.015607863664627075,
+        "p95_detection_delay_sec": 0.05894315242767331,
+        "false_alarms": 239,
+        "false_alarms_per_hour": 78.667451098427,
+        "n_windows": 7155,
+        "n_alarmed_windows": 2379,
+        "n_raw_alarmed_windows": 2869,
+        "alarm_rate": 0.33249475890985325
+      },
+      "tpr_at_fpr_1pct": 0.9417571569595261,
+      "seconds": 54.8
+    },
+    {
+      "dataset": "processed_ctrl17",
+      "method": "bplo",
+      "variant": "bilstm",
+      "seed": 0,
+      "n_features": 11,
+      "n_params": 65162,
+      "macro_f1": 0.942092771179297,
+      "accuracy": 0.9797893538286365,
+      "binary_f1": 0.9690522243713733,
+      "binary_roc_auc": 0.9992888450148075,
+      "online": {
+        "threshold": 0.5,
+        "confirm_windows": 3,
+        "stream_rows": 21478,
+        "stream_hours": 3.0381,
+        "min_segment_rows": 16,
+        "n_raw_attack_segments": 181,
+        "n_ignored_short_segments": 157,
+        "n_attack_segments": 24,
+        "n_segments_detected": 24,
+        "segment_recall": 1.0,
+        "n_segments_missed": 0,
+        "mean_detection_delay_rows": 11.375,
+        "median_detection_delay_rows": 13.5,
+        "mean_detection_delay_sec": 0.023240278164545696,
+        "p95_detection_delay_sec": 0.09173308610916135,
+        "false_alarms": 8,
+        "false_alarms_per_hour": 2.6332201204494394,
+        "n_windows": 7155,
+        "n_alarmed_windows": 2062,
+        "n_raw_alarmed_windows": 2203,
+        "alarm_rate": 0.28819007686932213
+      },
+      "tpr_at_fpr_1pct": 0.9851924975320829,
+      "seconds": 41.2
+    },
+    {
+      "dataset": "processed_ctrl17",
+      "method": "bplo",
+      "variant": "bilstm",
+      "seed": 1,
+      "n_features": 11,
+      "n_params": 65162,
+      "macro_f1": 0.9434661982583825,
+      "accuracy": 0.9746655280387133,
+      "binary_f1": 0.9581351094196003,
+      "binary_roc_auc": 0.9991459032576505,
+      "online": {
+        "threshold": 0.5,
+        "confirm_windows": 3,
+        "stream_rows": 21478,
+        "stream_hours": 3.0381,
+        "min_segment_rows": 16,
+        "n_raw_attack_segments": 181,
+        "n_ignored_short_segments": 157,
+        "n_attack_segments": 24,
+        "n_segments_detected": 24,
+        "segment_recall": 1.0,
+        "n_segments_missed": 0,
+        "mean_detection_delay_rows": 11.0,
+        "median_detection_delay_rows": 13.0,
+        "mean_detection_delay_sec": 0.022207210461298626,
+        "p95_detection_delay_sec": 0.07889665365219115,
+        "false_alarms": 18,
+        "false_alarms_per_hour": 5.924745271011238,
+        "n_windows": 7155,
+        "n_alarmed_windows": 2096,
+        "n_raw_alarmed_windows": 2270,
+        "alarm_rate": 0.29294199860237596
+      },
+      "tpr_at_fpr_1pct": 0.981243830207305,
+      "seconds": 41.4
+    },
+    {
+      "dataset": "processed_ctrl17",
+      "method": "bplo",
+      "variant": "bilstm",
+      "seed": 2,
+      "n_features": 11,
+      "n_params": 65162,
+      "macro_f1": 0.9383432000738698,
+      "accuracy": 0.9746655280387133,
+      "binary_f1": 0.9578544061302682,
+      "binary_roc_auc": 0.9991040473840079,
+      "online": {
+        "threshold": 0.5,
+        "confirm_windows": 3,
+        "stream_rows": 21478,
+        "stream_hours": 3.0381,
+        "min_segment_rows": 16,
+        "n_raw_attack_segments": 181,
+        "n_ignored_short_segments": 157,
+        "n_attack_segments": 24,
+        "n_segments_detected": 24,
+        "segment_recall": 1.0,
+        "n_segments_missed": 0,
+        "mean_detection_delay_rows": 11.0,
+        "median_detection_delay_rows": 13.0,
+        "mean_detection_delay_sec": 0.02162712812423706,
+        "p95_detection_delay_sec": 0.07889665365219115,
+        "false_alarms": 9,
+        "false_alarms_per_hour": 2.962372635505619,
+        "n_windows": 7155,
+        "n_alarmed_windows": 2076,
+        "n_raw_alarmed_windows": 2232,
+        "alarm_rate": 0.290146750524109
+      },
+      "tpr_at_fpr_1pct": 0.9782823297137216,
+      "seconds": 42.0
+    }
+  ],
+  "verdict": {
+    "overall": "partial",
+    "n_units": 12,
+    "positive": 9,
+    "negative": 3,
+    "mean_delta": 0.017249942103067933,
+    "sign_p": 0.14599609375,
+    "elo": {
+      "ref": "PSO",
+      "n": 12,
+      "positive": 9,
+      "negative": 3,
+      "mean_delta": 0.009287070106999825,
+      "median_delta": 0.0012088706036673669,
+      "p_value": 0.14599609375
+    }
+  },
+  "redrawn_at": "2026-09-13 02:21:57",
+  "seconds_total": 3045.8,
+  "generated_at": "2026-09-13 02:17:23"
+}

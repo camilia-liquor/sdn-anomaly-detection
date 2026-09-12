@@ -48,6 +48,10 @@ jobs:
         run: python tests/test_core.py
       - name: Ryu 适配层行为测试（桩件替代 Ryu：接口契约 + 安全默认值 + 下发路径）
         run: python tests/test_ryu_guard.py
+      - name: 特征选择算法自检（bPLO/PSO 在已知答案的合成问题上，不依赖 TF）
+        run: python tools/feature_selection.py --self-test
+      - name: OF1.3 编解码自检（真实 Ryu 联调工具的离线部分，不依赖 ryu）
+        run: python tools/ryu_live_check.py --self-test
       - name: 无 TF 全链路自检（数据生成 → 评估 → 出图）
         run: python tools/smoke_test.py --scale 0.08
 

@@ -73,3 +73,14 @@ logs/
 # ---------- 系统杂项 ----------
 .DS_Store
 Thumbs.db
+# 对标实验（tools/feature_selection.py）的逐次训练产物：可由一条命令重算，
+# 汇总结果本身在 results/feature_selection.{json,md}，那是要交付的
+artifacts/_featsel/
+artifacts/_pub_baselines/
+
+# ---------- 参考文献原文 ----------
+# 期刊论文 PDF 有版权，只本地阅读、**不随仓库分发**（引用信息与对标的结论写在
+# competition/02_技术报告.md 的文件（23）/（24）两节里，只引用不转载）。
+# 放在 _tmp/refs/ 下即可（_tmp/ 已在上面整体忽略）。
+refs/
+_tmp/refs/

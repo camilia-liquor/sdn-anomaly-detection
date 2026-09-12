@@ -34,7 +34,12 @@ from .utils import get_logger
 
 LOGGER = get_logger("cida.model")
 
-VARIANTS = ("cnn_bilstm", "cnn", "bilstm", "mlp")
+#: 可用模型变体。``cnn_bilstm`` 是本项目主模型；其余都是**对照/消融**用的单分支或经典结构：
+#:   * ``cnn`` / ``bilstm`` / ``mlp`` —— 结构消融（证明双分支融合的必要性）；
+#:   * ``rnn`` / ``lstm`` / ``transformer`` —— 与已发表工作对标（PLO-BiLSTM 一文的对照组就是
+#:     RNN / LSTM / BiLSTM / Transformer，见 competition/02 的「与已发表方法对标」一节）。
+#: 所有变体共用同一套输入、同一套训练与评估口径，因此数字之间可以直接比。
+VARIANTS = ("cnn_bilstm", "cnn", "bilstm", "mlp", "rnn", "lstm", "transformer")
 
 
 # --------------------------------------------------------------------------------------
@@ -47,6 +52,45 @@ def _reduce_sum(t, axis: int):
 
 
 _SUM_POOL_CLS: Any = None
+_POS_ENC_CLS: Any = None
+
+
+def _pos_enc_class():
+    """正弦位置编码层（延迟构建：不在模块导入期拉进 TensorFlow）。"""
+    global _POS_ENC_CLS
+    if _POS_ENC_CLS is None:
+        import numpy as np
+        from tensorflow.keras import initializers, layers
+
+        class PositionalEncoding(layers.Layer):
+            def __init__(self, seq_len: int = 16, d_model: int = 64, **kwargs):
+                super().__init__(**kwargs)
+                self.seq_len = int(seq_len)
+                self.d_model = int(d_model)
+
+            def build(self, input_shape):
+                pos = np.arange(self.seq_len)[:, None]
+                i = np.arange(self.d_model)[None, :]
+                angle = pos / np.power(10000.0, (2 * (i // 2)) / max(self.d_model, 1))
+                enc = np.where(i % 2 == 0, np.sin(angle), np.cos(angle)).astype("float32")
+                self.enc = self.add_weight(name="enc", shape=(1, self.seq_len, self.d_model),
+                                           initializer=initializers.Constant(enc), trainable=False)
+                super().build(input_shape)
+
+            def call(self, t):
+                return t + self.enc
+
+            def compute_output_shape(self, input_shape):
+                return input_shape
+
+            def get_config(self):
+                cfg = super().get_config()
+                cfg.update({"seq_len": self.seq_len, "d_model": self.d_model})
+                return cfg
+
+        PositionalEncoding.__name__ = "PositionalEncoding"
+        _POS_ENC_CLS = PositionalEncoding
+    return _POS_ENC_CLS
 
 
 def sum_pooling_class():
@@ -76,7 +120,7 @@ def make_sum_pooling_layer(name: str = "sum_pool"):
 
 def custom_objects() -> dict[str, Any]:
     """加载模型时需要传入的自定义层（延迟构建，避免无 TF 环境导入报错）。"""
-    return {"SumPooling1D": sum_pooling_class()}
+    return {"SumPooling1D": sum_pooling_class(), "PositionalEncoding": _pos_enc_class()}
 
 
 def _conv_block(x, filters: int, kernel: int, l2, *, pool: bool, dropout: float, idx: int,
@@ -100,6 +144,16 @@ def _conv_block(x, filters: int, kernel: int, l2, *, pool: bool, dropout: float,
     if dropout > 0:
         x = layers.Dropout(dropout * 0.5, name=f"drop_conv_{idx}")(x)
     return x
+
+
+def _positional_encoding(t, seq_len: int, d_model: int):
+    """把正弦位置编码加到张量 ``t`` 上（返回张量，不是层）。
+
+    为什么不用 Lambda 包一个常量：本项目要求模型能无损保存/加载（见 ``custom_objects``），
+    而 Lambda 序列化会带上闭包。为什么不用可训练的位置 Embedding：窗口只有 T=16 步，
+    可训练位置向量会和分类任务一起过拟合，而正弦编码是确定性的、更贴近原始 Transformer。
+    """
+    return _pos_enc_class()(int(seq_len), int(d_model), name="pos_encoding")(t)
 
 
 def _attention_pool(x):
@@ -218,6 +272,39 @@ def build_model(
         trunk = _dense_head(
             flat, [int(cfg.dense_units[0])], cfg.l2_reg, cfg.dropout, cfg.batch_norm, prefix="mlp"
         )
+    elif variant == "rnn":            # 对标用：朴素双向 RNN（无门控，长依赖能力弱）
+        trunk = layers.Bidirectional(
+            layers.SimpleRNN(int(cfg.lstm_units), return_sequences=True), name="bi_rnn"
+        )(x)
+        if cfg.use_attention:
+            trunk, attn_weights = _attention_pool(trunk)
+        else:
+            trunk = layers.GlobalMaxPooling1D(name="global_max_pool")(trunk)
+    elif variant == "lstm":           # 对标用：**单向** LSTM（论文的 LSTM 基线）
+        trunk = layers.LSTM(int(cfg.lstm_units), return_sequences=True, name="uni_lstm")(x)
+        if cfg.use_attention:
+            trunk, attn_weights = _attention_pool(trunk)
+        else:
+            trunk = layers.GlobalMaxPooling1D(name="global_max_pool")(trunk)
+    elif variant == "transformer":    # 对标用：2 层 Transformer 编码器（自注意力 + 位置编码）
+        # 输入只有 T=16 个时间步，因此用一个小型编码器即可；d_model 取 dense_units[0] 以保证
+        # 参数量与 BiLSTM 分支同量级（否则"Transformer 更强/更弱"会被参数量差异污染）。
+        d_model = int(cfg.dense_units[0])
+        h = layers.Dense(d_model, name="tf_proj")(x)
+        h = _positional_encoding(h, seq_len, d_model)
+        for i in range(2):
+            attn = layers.MultiHeadAttention(
+                num_heads=4, key_dim=max(d_model // 4, 1), dropout=cfg.dropout, name=f"tf_mha_{i}"
+            )(h, h)
+            h = layers.LayerNormalization(epsilon=1e-6, name=f"tf_ln1_{i}")(
+                layers.Add(name=f"tf_res1_{i}")([h, attn])
+            )
+            ff = layers.Dense(d_model * 2, activation="relu", name=f"tf_ff1_{i}")(h)
+            ff = layers.Dense(d_model, name=f"tf_ff2_{i}")(ff)
+            h = layers.LayerNormalization(epsilon=1e-6, name=f"tf_ln2_{i}")(
+                layers.Add(name=f"tf_res2_{i}")([h, ff])
+            )
+        trunk = layers.GlobalAveragePooling1D(name="tf_pool")(h)
     else:  # pragma: no cover
         raise ValueError(variant)
 

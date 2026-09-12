@@ -209,6 +209,27 @@
         <div class="honest">${cf.honest}</div>
         <div class="src">results/ctrl_field_extension.md</div>`));
     }
+    const fs = d.feature_selection;
+    if (fs) {
+      const rows = (fs.rows || []).map((r) => {
+        const cells = r.cells || {};
+        const cell = (m) => {
+          const c = cells[m];
+          return c && c.f1 !== null && c.f1 !== undefined
+            ? `<b>${fmt(c.f1)}</b><span class="dim">(${c.n_features}维)</span>` : "—";
+        };
+        return `<div class="row"><b>${r.dataset}</b> / ${r.variant}：
+         不选 ${cell("none")} ｜ PCA ${cell("pca")} ｜ PSO ${cell("pso")} ｜ bPLO ${cell("bplo")}</div>`;
+      }).join("");
+      const dr = fs.dim_reduction || {};
+      box.appendChild(card(`
+        <h3>特征选择：把对标论文的方法框架补齐（bPLO 二值化极光优化）</h3>
+        ${rows}
+        <div class="row">bPLO 平均保留 <b>${pct(dr.bplo_ratio, 0)}</b> 的特征；PSO 保留 ${pct(dr.pso_ratio, 0)}</div>
+        <div class="row">判定：<b>${fs.verdict || "—"}</b>；对标：${fs.paper || "—"}</div>
+        <div class="honest">${fs.honest}</div>
+        <div class="src">results/feature_selection.md · 复现：python tools/feature_selection.py</div>`));
+    }
     if (!box.children.length) box.innerHTML = '<div class="j-card">未找到实验产物</div>';
   }
 

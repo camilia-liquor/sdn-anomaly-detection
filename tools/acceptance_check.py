@@ -955,6 +955,117 @@ def check_judge_view(r: Report) -> None:
                 "主大屏提供了进入评审视图的入口链接", "index.html → /judge")
 
 
+def check_published_benchmarks(r: Report) -> None:
+    """特征选择（bPLO/PSO/PCA/不选）与"与已发表方法对标"这条线的验收。
+
+    这一节存在的理由：`feature_selection.py` 里的 bPLO 是本项目**新引入的算法**——
+    如果实现写错，它照样会"选出一些特征"并跑出像模像样的数字。因此验收既要看产物，
+    也要跑它的**离线自检**（在已知答案的合成问题上验算法），否则等于没验。
+    """
+    section("14) 特征选择（bPLO/PSO/PCA）与已发表方法对标")
+    tool = ROOT / "tools" / "feature_selection.py"
+    if not tool.exists():
+        r.warn(False, "特征选择工具（可选）", "未找到 tools/feature_selection.py")
+        return
+    # ---- ① 离线自检：在"已知答案"的合成问题上验 bPLO/PSO ----
+    try:
+        env = {**os.environ, "PYTHONIOENCODING": "utf-8"}
+        out = subprocess.run([sys.executable, str(tool), "--self-test"],
+                             capture_output=True, text=True, timeout=300, cwd=str(ROOT),
+                             env=env, encoding="utf-8", errors="replace")
+        tail = [ln.strip() for ln in (out.stdout or "").splitlines() if ln.strip()]
+        ok = out.returncode == 0 and any("全部通过" in ln for ln in tail)
+        detail = ([ln for ln in tail if "自检结果" in ln] or ["无输出"])[0]
+        n_chk = sum(1 for ln in tail if ln.startswith("✓") or ln.startswith("✗"))
+        r.check(ok, "bPLO/PSO 离线自检通过（已知答案的合成问题，不需要 TF）",
+                f"{detail}（{n_chk} 项）")
+        hit = [ln for ln in tail if "命中" in ln and "真实特征" in ln]
+        r.check(bool(hit), "自检确认 bPLO 能定位到真实有效特征（不是随机选）",
+                (hit[0] if hit else "未输出命中信息")[:150])
+    except Exception as exc:  # noqa: BLE001
+        r.check(False, "bPLO/PSO 离线自检", f"执行失败：{type(exc).__name__}: {exc}")
+
+    # ---- ② 对照实验产物 ----
+    fs = RESULT_DIR / "feature_selection.json"
+    if not fs.exists():
+        r.warn(False, "特征选择对照实验（可选）",
+               "未生成 results/feature_selection.json：跑 python tools/feature_selection.py")
+    else:
+        try:
+            d = json.loads(fs.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            r.check(False, "特征选择对照结果可解析", str(exc))
+            d = None
+        if d:
+            methods = set(d.get("methods") or [])
+            recs = d.get("records") or []
+            r.check({"none", "bplo"} <= methods and len(recs) >= 8,
+                    "对照实验覆盖「不选特征 / bPLO」且已跑满多种子多模型",
+                    f"方法 {sorted(methods)}；{len(recs)} 条运行记录；"
+                    f"判定 {d.get('verdict', {}).get('overall')}")
+            per_seed_ok = all("seed" in x and "macro_f1" in x for x in recs[:5]) if recs else False
+            r.check(per_seed_ok, "逐种子结果与逐种子指标都写进了产物（可复算）",
+                    f"示例：seed={recs[0].get('seed')} macro_f1={recs[0].get('macro_f1'):.4f}"
+                    if recs else "无记录")
+            sel = d.get("selections") or {}
+            ratios = []
+            for ds, s in sel.items():
+                for m in ("bplo", "pso"):
+                    e = (s.get("methods", {}).get(m) or {}).get("extra") or {}
+                    if e.get("n_selected"):
+                        ratios.append((ds, m, e["n_selected"], s["n_total"]))
+            r.check(bool(ratios) and all(n < t for _, _, n, t in ratios),
+                    "bPLO/PSO 确实做了降维（选中维数 < 全维数，且已如实记录比例）",
+                    "；".join(f"{ds}/{m}: {n}/{t}" for ds, m, n, t in ratios) or "无选择记录")
+            r.check(bool(d.get("reference_paper", {}).get("doi")),
+                    "产物里记录了被对标的论文（DOI 可追溯）",
+                    (d.get("reference_paper") or {}).get("doi", ""))
+    # ---- ③ 对标基线：RNN / LSTM / Transformer ----
+    pb = RESULT_DIR / "published_baselines.json"
+    if not pb.exists():
+        r.warn(False, "与已发表方法对标实验（可选）",
+               "未生成 results/published_baselines.json：跑 python tools/published_baselines.py")
+    else:
+        try:
+            bp = json.loads(pb.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            r.check(False, "对标基线结果可解析", str(exc))
+            bp = None
+        if bp:
+            got = set(bp.get("summary") or {})
+            r.check({"rnn", "lstm", "transformer"} <= got,
+                    "补齐了论文的三个外部对照组（RNN / LSTM / Transformer）",
+                    f"已完成模型：{sorted(got)}")
+            n_seeds = {v: s.get("n_seeds") for v, s in (bp.get("summary") or {}).items()}
+            r.check(all((v or 0) >= 2 for v in n_seeds.values()) if n_seeds else False,
+                    "每个模型都有多次运行的均值±标准差（不是单次结果）",
+                    ", ".join(f"{k}×{v}" for k, v in sorted(n_seeds.items())))
+    # ---- ④ 模型变体表 ----
+    try:
+        from src.model import VARIANTS
+        r.check({"rnn", "lstm", "transformer"} <= set(VARIANTS),
+                "src/model.py 的变体表包含新加的三种对标结构",
+                f"VARIANTS = {VARIANTS}")
+    except Exception as exc:  # noqa: BLE001
+        r.check(False, "模型变体表可读", f"{type(exc).__name__}: {exc}")
+    # ---- ⑤ 只引用、不转载：论文原文不得进版本库 ----
+    report = ROOT / "competition" / "02_技术报告.md"
+    if report.exists():
+        txt = report.read_text(encoding="utf-8")
+        r.check("10.3969/j.issn.1002-0802.2026.08.013" in txt or "PLO-BiLSTM" in txt,
+                "技术报告里写明了被对标论文的出处（可追溯）",
+                "引用格式与 DOI 写在「与已发表方法对标」一节")
+    if (ROOT / ".git").exists():
+        try:
+            g = subprocess.run(["git", "ls-files", "*.pdf"], capture_output=True, text=True,
+                               cwd=str(ROOT), timeout=60, encoding="utf-8", errors="replace")
+            tracked = [x for x in (g.stdout or "").splitlines() if x.strip()]
+            r.check(not tracked, "参考文献原文（期刊 PDF）未被纳入版本库（只引用、不转载）",
+                    f"git ls-files *.pdf → {'空' if not tracked else tracked}")
+        except Exception as exc:  # noqa: BLE001
+            r.warn(False, "PDF 版权自查（可选）", f"git 不可用：{exc}")
+
+
 def main() -> int:
     print("=" * 74)
     print("交付验收自检 · CNN + BiLSTM SDN 异常检测工程")
@@ -971,6 +1082,7 @@ def main() -> int:
     check_ryu_harness(r)
     check_launchers(r)
     check_judge_view(r)
+    check_published_benchmarks(r)
     check_self_consistency(r, len(r.rows) - r.failed - r.warned)
 
     section("结论")
@@ -985,7 +1097,8 @@ def main() -> int:
             "passed": passed, "warned": r.warned, "failed": r.failed,
             "ts": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "tools": len(list((ROOT / "tools").glob("*.py"))),
-            "tests": {"test_core": 10, "test_ryu_guard": 25, "test_pcap_tools": 58},
+            "tests": {"test_core": 10, "test_ryu_guard": 28, "test_pcap_tools": 58},
+            "self_tests": {"ryu_live_check": 12, "feature_selection": 9},
             "note": "由 tools/acceptance_check.py 生成；评审视图 /api/judge 读取本文件显示真实项数",
         }, RESULT_DIR / "acceptance_summary.json")
     except Exception as exc:  # noqa: BLE001

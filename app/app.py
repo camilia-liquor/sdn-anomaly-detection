@@ -929,6 +929,30 @@ def api_judge():
                       "并列出 OpenFlow 流表**本身不提供**的字段清单",
         }
 
+    # 特征选择与已发表方法对标（对标《通信技术》2026 的 PLO-BiLSTM 一文）
+    fs = _rj("feature_selection.json")
+    if fs:
+        sm = fs.get("summary") or {}
+        rows = []
+        for ds in (fs.get("datasets") or []):
+            for variant in ((fs.get("args") or {}).get("variants") or []):
+                cells = {}
+                for m in (fs.get("methods") or []):
+                    s = sm.get(f"{ds}|{m}|{variant}") or {}
+                    cells[m] = {"f1": (s.get("macro_f1") or {}).get("mean"),
+                                "n_features": s.get("n_features")}
+                if any(v.get("f1") is not None for v in cells.values()):
+                    rows.append({"dataset": ds, "variant": variant, "cells": cells})
+        out["feature_selection"] = {
+            "rows": rows,
+            "verdict": (fs.get("verdict") or {}).get("overall"),
+            "dim_reduction": fs.get("dim_reduction"),
+            "paper": (fs.get("reference_paper") or {}).get("venue"),
+            "honest": "特征**只在训练集上选**（对标论文在全量数据上选，属选择偏差）；"
+                      "适应度用代理分类器（算力约束，已如实标注）；"
+                      "并量化披露：按论文式(3) 实现时二值化选择率会系统性偏高",
+        }
+
     # ---------------- 5) 可验证性 ----------------
     acc = _rj("acceptance_summary.json") or {}
     tests = acc.get("tests") or {}
@@ -943,6 +967,9 @@ def api_judge():
             ("交付验收自检", "python tools/acceptance_check.py"),
             ("一场完整攻防 + 逐窗口核对", "python tools/live_demo.py"),
             ("三套单元/行为测试", "python tests/test_core.py / test_ryu_guard.py / test_pcap_tools.py"),
+            ("特征选择对照（bPLO/PSO/PCA）", "python tools/feature_selection.py"),
+            ("与已发表方法对标（RNN/LSTM/Transformer）", "python tools/published_baselines.py"),
+            ("Ryu 真机联调（离线自检免装 ryu）", "python tools/ryu_live_check.py --self-test"),
         ],
     }
 

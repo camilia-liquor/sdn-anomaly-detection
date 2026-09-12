@@ -81,7 +81,7 @@ python tools/smoke_test.py        # 冒烟：小样本全链路跑通（约 1 �
 python tests/test_core.py         # 单元测试：10 个用例，覆盖数据切分/窗口/泄漏防护
 python tests/test_ryu_guard.py    # Ryu 适配层行为测试：25 个用例，无需安装 Ryu（见 3.5）
 python tests/test_pcap_tools.py   # pcap 解析往返一致性：58 个用例，无需真实抓包
-python tools/acceptance_check.py  # 交付验收：文件齐全性 + 指标复算 + 在线接口真实调用（116 项）
+python tools/acceptance_check.py  # 交付验收：文件齐全性 + 指标复算 + 在线接口真实调用（127 项）
 ```
 
 ---

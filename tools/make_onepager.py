@@ -218,16 +218,19 @@ def render(d: dict, out: Path) -> Path | None:
            f"per-class delay: fastest {d['fast_cls']}, slowest {d['slow_cls']}"),
         _L("错误分析：3,513 个测试窗口漏报 0（错误率 0.48%）",
            "error analysis: zero misses on 3,513 windows"),
-        _L("116 项交付自检 + 10/28/58 项测试 + CI 全过",
-           "116-item acceptance + tests + CI"),
+        _L("127 项交付自检 + 10/28/58 项测试 + CI 全过",
+           "127-item acceptance + tests + CI"),
         _L("包序列复研：卷积落后最好单分支 0.1354 → 0.0071（缩小 19 倍）",
            "packet-level input: CNN gap shrinks 19x"),
+        _L("特征选择：按对标论文框架补 bPLO（二值化极光优化）+ PCA/PSO 对照，特征只在训练集上选",
+           "feature selection: bPLO vs PCA/PSO, selected on train split only"),
     ]
-    # 2 列 × 5 行排布（10 条，占满最后一行的一半）：证据链共 10 条
+    # 2 列 × 6 行排布（12 条上限）：行距从 4.1 收到 3.5，为第 6 行留出空间，
+    # 底部「诚实边界」分隔线在 y=6.6，最后一行落在 y=9.0，仍留 2.4 的余量。
     for i, txt in enumerate(ev):
         col, row = i % 2, i // 2
         x = 5.5 + col * 46
-        y = 26.5 - row * 4.1
+        y = 26.5 - row * 3.5
         ax.text(x, y, "▪", color=ACC, fontsize=11, va="center")
         ax.text(x + 1.6, y, txt, color=FG, fontsize=9.9, va="center")
 
