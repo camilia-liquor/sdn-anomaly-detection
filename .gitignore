@@ -54,7 +54,7 @@ results/summary_backup.json
 # 运行期告警审计台账：每次运行都会追加，属运行日志（其汇总见 results/e2e_controller_report.md /
 # results/live_demo_incident.md）；同目录下的 *.md / *.json 报告才是要交付的产物
 results/audit_alerts*.jsonl
-results/live_demo_audit.jsonl
+results/live_demo_audit*.jsonl
 logs/
 
 # ---------- 系统杂项 ----------

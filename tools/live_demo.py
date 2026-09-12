@@ -355,22 +355,42 @@ def build_scenario(labels: np.ndarray, attack_class: str, window_size: int, stri
     def _want_gstart_mod(playback_pos: int) -> int:
         return (int(playback_pos) - (int(stride) - 1)) % int(stride)
 
-    # ---------- 正常前段：紧邻攻击起点的纯正常片段（取其末尾若干条，保证与攻击段首尾相接）----------
+    # ---------- 正常前段：**优先**紧邻攻击起点的纯正常片段（取其末尾若干条，与攻击段首尾相接）----------
     pre = pre_by_end.get(best["start"] - 1)
     pre_avail = pre[2] if pre else 0
     l1 = min(int(normal_rows), pre_avail)
+    pre_start = int(best["start"]) - l1
+    pre_jumped = False
     align_shift, aligned = 0, False
     if l1 >= int(window_size):
         want_mod = (int(best["start"]) - _want_gstart_mod(0)) % int(stride)
         shift = (l1 - want_mod) % int(stride)
         if l1 - shift >= int(window_size):
             align_shift, l1, aligned = shift, l1 - shift, True
-    if l1 <= 0:
-        raise DemoError(f"{attack_class} 片段前面没有可用的连续正常流量，无法构成演示剧本", code=4)
+            pre_start = int(best["start"]) - l1
+    if l1 < int(window_size):
+        # 退路：该类型的所有够长片段前面都没有**紧邻**的正常流量（测试流里攻击片段密集交错，
+        # 实测 WebAttack 的 13 个够长片段前置正常行数最多只有 1 行）。此时跳到该片段之前
+        # **最近的、够长的纯正常片段**当"安静基线"——因为播放器在位置跳转时会重置滑窗缓冲，
+        # 这样不会产生横跨两段的伪窗口；代价是该场与离线评估的可比窗口会少一些（报告会如实写出）。
+        need = max(2 * int(window_size), 32)
+        for a, _b, ln in sorted([r for r in runs if r[1] < int(best["start"])], key=lambda r: -r[0]):
+            if ln < need:
+                continue
+            take = min(int(normal_rows), ln)
+            if take < int(window_size):
+                continue
+            l1, pre_start, pre_jumped = take, int(a), True
+            break
+    if l1 < int(window_size):
+        raise DemoError(
+            f"{attack_class} 找不到可用的演示剧本：该类型的够长片段前既没有紧邻的正常流量，"
+            f"之前也不存在长度 ≥ {max(2 * int(window_size), 32)} 的纯正常片段。"
+            "可尝试加大 --normal-rows 或换一个攻击类型。", code=4)
 
-    blocks = [Block(key="normal_pre", gstart=int(best["start"]) - l1, length=l1)]
+    blocks = [Block(key="normal_pre", gstart=int(pre_start), length=int(l1), jumped=pre_jumped)]
     blocks.append(Block(key="attack", gstart=int(best["start"]), length=int(best["length"]),
-                        label=str(best["class"]), jumped=False))
+                        label=str(best["class"]), jumped=bool(pre_jumped)))
     offset = l1 + int(best["length"])
 
     # ---------- 恢复段：优先取"紧接着攻击片段"的连续正常流量 ----------
@@ -692,7 +712,9 @@ class LiveDemo:
     def _announce_phase(self, bi: int, blk: Block, scene: Scenario, play_global: list[int],
                         pos_of: dict[int, int], virt: np.ndarray, virt_base: float) -> None:
         if blk.key == "normal_pre":
-            self.say(f"推流中… 正常流量回放（第 {blk.gstart}~{blk.gend} 行，共 {blk.length} 条）", C_DIM)
+            extra = ("（位置跳转：该类型的够长片段前没有紧邻的正常流量，"
+                     "安静基线取自它之前最近的纯正常片段；滑窗已重置）" if blk.jumped else "")
+            self.say(f"推流中… 正常流量回放（第 {blk.gstart}~{blk.gend} 行，共 {blk.length} 条）{extra}", C_DIM)
         elif blk.key == "attack":
             p = pos_of[blk.gstart]
             self.say(f"⚠ 攻击开始（真实标签：{blk.label}，注入位置 = 真实攻击片段起点 "
@@ -1106,15 +1128,20 @@ class LiveDemo:
         lines.append("")
 
         # ---------------- 四、诚实与口径说明 ----------------
-        jump_txt = ("本剧本的恢复阶段取自攻击片段之后最近的纯正常片段，因此那里有一次位置跳转——"
-                    "测试流里攻击片段密集交错（实测各攻击类**后接正常流量的中位数为 0 行**），"
-                    "缺少足够长的连续正常流量，无法拼出「安静基线 + 攻击 + 恢复」的单一连续区间。"
-                    f"跳转处我们**主动重置了滑窗缓冲（本场 {self.stream_resets} 次）**，"
-                    "因为这等价于真实环境里的「上游数据中断」：若不重置，中断前后的行会被拼进同一个窗口，"
-                    "生成**现实中不存在的窗口**（它在全局行号上并不连续）。"
-                    "重置后本场的每一个窗口都是真实连续窗口，逐窗口核对因此**没有任何窗口被跳过**；"
-                    "代价是跳转处会丢掉不足一个窗口的已积累行（本场 16 条，已在屏幕上如实打印）。"
-                    if any(b.jumped for b in scene.blocks) else "本剧本全程连续，没有位置跳转。")
+        _jumped_keys = [b.name_cn for b in scene.blocks if b.jumped]
+        if _jumped_keys:
+            jump_txt = ("本剧本有 **%d 处位置跳转**（%s）——测试流里攻击片段密集交错"
+                        "（实测各攻击类**后接正常流量的中位数为 0 行**），缺少足够长的连续正常流量，"
+                        "无法拼出「安静基线 + 攻击 + 恢复」的单一连续区间。"
+                        "跳转处我们**主动重置了滑窗缓冲（本场 %d 次）**，"
+                        "因为这等价于真实环境里的「上游数据中断」：若不重置，中断前后的行会被拼进同一个窗口，"
+                        "生成**现实中不存在的窗口**（它在全局行号上并不连续）。"
+                        "重置后本场的每一个窗口都是真实连续窗口；"
+                        "代价是跳转处会丢掉不足一个窗口的已积累行（已在屏幕上如实打印），"
+                        "且与离线评估的可比窗口会相应减少（见第三节最后一行）。"
+                        % (len(_jumped_keys), "、".join(_jumped_keys), self.stream_resets))
+        else:
+            jump_txt = "本剧本全程连续，没有位置跳转。"
         lines.append("## 四、诚实与口径说明（逐条）\n")
         lines.append(
             "1. **进程内调用**：本演示直接在本进程里调用 `src.service.DetectionService`"

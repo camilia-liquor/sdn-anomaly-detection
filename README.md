@@ -92,6 +92,7 @@ python tests/test_pcap_tools.py    # ★ pcap 接入的往返一致性测试（5
 # 5) 一条命令看一场攻防（★ 现场演示 / 视频素材）
 python tools/live_demo.py                          # 实时演完"安静→攻击→告警→处置→恢复"，自动出事件报告
 python tools/live_demo.py --attack Probe --speed 50 # 换一类攻击、按 50 倍速演
+python tools/live_demo_campaign.py                  # ★ 7 类攻击连演，出「每类检出时延对比表」
 python tools/pcap_to_flows.py --input capture.pcap --output flows.csv   # 把真实抓包转成流特征
 
 # 6) 起服务 + 验证控制平面闭环（★ 这一步把"算法"变成"系统"）
@@ -472,6 +473,24 @@ CPU 单进程实测（`python tools/benchmark_latency.py`）：
 行为测试 `tests/test_pcap_tools.py`（**58 项**）覆盖往返一致性、空/截断/非法文件、VLAN、pcapng、超时切分、
 自检器有效性（能抓出人为破坏的速率列）等。
 
+**（3）多攻击连演：每类攻击的检出时延对比**（`results/live_demo_campaign.md`）
+
+单场演示能证明「系统在做事」，但下一个问题一定是「换成别的攻击类型呢？」。`python tools/live_demo_campaign.py` 用同一套模型与判定口径把 7 类攻击依次演一遍：
+
+| 攻击类型 | 片段长度 | 检测时延 | 折合流记录 | 片段内告警 | 误报 |
+|---|---|---|---|---|---|
+| DDoS | 164 | **0.36 ms** | 8 | 52 | 0 |
+| Probe | 46 | **4.02 ms** | 19 | 9 | 0 |
+| BruteForce | 229 | **11.95 ms** | 14 | 72 | 0 |
+| DoS | 48 | **13.09 ms** | 23 | 9 | 0 |
+| U2R | 45 | **34.95 ms** | 9 | 12 | 0 |
+| Botnet | 182 | **60.87 ms** | 12 | 57 | 0 |
+| WebAttack | 77 | **62.20 ms** | 21 | 19 | 0 |
+
+**7 类攻击连演**（`python tools/live_demo_campaign.py`）：同一模型、同一阈值、同一确认规则下依次演出，**检出 7/7、合计 230 条确认告警、正常阶段误报 0 条**；检测时延从 **0.36 ms（DDoS）** 到 **62.20 ms（WebAttack）**，平均 26.78 ms；累计与离线评估逐窗口核对 1013 个窗口，最大 |Δp| 5.00e-05、判定类别不一致 0 个。
+
+> 「未检出」与「场景不可用」在报告里是**分开标注**的：某类攻击若在测试流里找不到「有安静基线的前置片段 + 够长攻击片段」的组合，会被标成 ⚠️ 场景不可用（演示脚本的限制），而不是 ❌ 未检出（模型的失败）——这两件事混在一起会误导读者。
+
 ### 3.15 一句话总结
 
 > 在完全可复现的仿真 SDN 流量上，CNN+BiLSTM 双分支模型取得 **宏 F1 0.9940、AUC 0.9999、
@@ -523,6 +542,7 @@ generate_normal_traffic/
 │  ├─ cross_dataset.py         ★ 跨域迁移诊断（零样本跨域 + 逐特征漂移 + 四级校准阶梯）
 │  ├─ openset_eval.py          ★ 开集检测（留出一整类攻击，评估未知攻击拒识能力）
 │  ├─ live_demo.py             ★ 一条命令的实况演示（安静→攻击→告警→处置→恢复 + 事件报告）
+│  ├─ live_demo_campaign.py    ★ 多攻击连演（7 类依次演一遍，汇总每类检出时延对比表）
 │  ├─ pcap_to_flows.py         ★ 零依赖解析 pcap/pcapng → 控制器原生 17 字段流特征
 │  ├─ benchmark_latency.py     ★ 推理性能基准（单窗口 p50/p95、批量吞吐）
 │  ├─ drift_test.py            分布漂移鲁棒性测试

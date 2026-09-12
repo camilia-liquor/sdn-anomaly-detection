@@ -84,7 +84,8 @@ def check_files(r: Report) -> None:
         "tools/make_report.py", "tools/fetch_wheel.py", "tools/sanitize_paths.py",
         "tools/operating_point.py", "tools/error_analysis.py", "tools/benchmark_latency.py",
         "tools/controller_simulator.py", "tools/ops_impact.py", "tools/acceptance_check.py",
-        "tools/cross_dataset.py", "tools/live_demo.py", "tools/openset_eval.py", "tools/pcap_to_flows.py",
+        "tools/cross_dataset.py", "tools/live_demo.py", "tools/live_demo_campaign.py",
+        "tools/openset_eval.py", "tools/openset_calibrate.py", "tools/pcap_to_flows.py",
         "docs/01_原始代码问题清单.md", "docs/02_实验报告.md", "docs/03_答辩要点与配置清单.md",
         "competition/README.md", "competition/01_开源及第三方资源使用清单.md",
         "competition/02_技术报告.md", "competition/02_技术报告_精简稿.md",
@@ -446,6 +447,23 @@ def check_deployable(r: Report) -> None:
     else:
         r.warn(False, "实况演示事件报告（可选）",
                f"未生成 {live}：运行 python tools/live_demo.py --speed 0 --no-color")
+
+    # ---- 多攻击连演：每类攻击的检出对比 ----
+    camp = RESULT_DIR / "live_demo_campaign.json"
+    if camp.exists():
+        c = json.loads(camp.read_text(encoding="utf-8"))
+        sm = c.get("summary") or {}
+        n, det = int(sm.get("n") or 0), int(sm.get("detected") or 0)
+        r.check(n > 0 and det == n, "多攻击连演：所有演出的攻击类型都检出",
+                f"检出 {det}/{n}；平均时延 {float(sm.get('mean_delay_ms') or 0):.2f} ms；"
+                f"误报 {int(sm.get('total_false_alarms') or 0)} 条")
+        r.check(int(sm.get("class_mismatch") or 0) == 0,
+                "连演中每场判定与离线评估缓存一致（判定类别不一致 0）",
+                f"累计核对 {int(sm.get('total_checked_windows') or 0)} 个窗口，"
+                f"最大 |Δp| {float(sm.get('max_abs_dp') or 0):.2e}")
+    else:
+        r.warn(False, "多攻击连演报告（可选）",
+               f"未生成 {camp}：运行 python tools/live_demo_campaign.py --speed 0")
 
     # ---- pcap 接入：往返报告 ----
     pc = RESULT_DIR / "pcap_roundtrip.json"

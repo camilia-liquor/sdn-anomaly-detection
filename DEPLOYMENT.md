@@ -335,6 +335,7 @@ ryu-manager integrations/ryu_guard.py --execute --whitelist 10.0.0.1 10.0.0.254 
 # ① 一条命令看一场攻防（最快建立信心：约 10 秒演完，自动出事件报告）
 python tools/live_demo.py
 python tools/live_demo.py --attack Probe --speed 50   # 换攻击类型 / 调演示节奏
+python tools/live_demo_campaign.py --speed 0        # 7 类攻击连演 → 每类检出时延对比表
 #   产物：results/live_demo_incident.md（时间线 + 关键指标 + 逐窗口与离线评估的一致性核对）
 
 # ② 用真实样本流回放给运行中的检测服务，模拟控制器的完整闭环
