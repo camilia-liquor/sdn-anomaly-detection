@@ -21,6 +21,7 @@
 from __future__ import annotations
 
 import json
+import os
 import threading
 import time
 from collections import deque
@@ -47,6 +48,37 @@ class DetectorConfig:
     action: str = "observe"          # observe=只告警；throttle=建议限速；block=建议封禁
     whitelist: tuple = ()            # 永不处置的源 IP（例如控制器自身、管理网段）
     dry_run: bool = True             # True=只输出建议动作，不真正下发
+
+    @classmethod
+    def from_env(cls, cfg: Config | None = None, **overrides) -> "DetectorConfig":
+        """从环境变量读初始策略，便于 systemd / 容器 / 服务化部署。
+
+        支持（见 `deploy/cida-detect.env`）：
+        `CIDA_POLICY_ACTION` / `CIDA_DRY_RUN` / `CIDA_THRESHOLD` /
+        `CIDA_CONFIRM_WINDOWS` / `CIDA_WHITELIST`（空格分隔的源 IP 列表）。
+
+        传入的关键字参数优先级最高（用于代码内显式指定）。
+        """
+        cfg = cfg or Config()
+        action = str(os.environ.get("CIDA_POLICY_ACTION", "observe")).strip().lower()
+        if action not in ACTIONS:
+            LOGGER.warning("CIDA_POLICY_ACTION=%r 不是合法动作 %s，回退为 observe", action, ACTIONS)
+            action = "observe"
+        dry_raw = str(os.environ.get("CIDA_DRY_RUN", "1")).strip().lower()
+        params: dict[str, Any] = {
+            "threshold": float(os.environ.get("CIDA_THRESHOLD", cfg.report_threshold)),
+            "confirm_windows": int(os.environ.get("CIDA_CONFIRM_WINDOWS", cfg.online_confirm_windows)),
+            "action": action,
+            "dry_run": dry_raw not in ("0", "false", "no", "off"),
+            "whitelist": tuple(str(os.environ.get("CIDA_WHITELIST", "")).split()),
+        }
+        params.update({k: v for k, v in overrides.items() if v is not None})
+        conf = cls(**params)
+        if conf.whitelist:
+            LOGGER.info("已加载白名单 %d 个源 IP（这些地址永不被处置）", len(conf.whitelist))
+        else:
+            LOGGER.warning("白名单为空：上线前请通过 CIDA_WHITELIST 或 /api/policy 至少加入控制器与管理网段")
+        return conf
 
 
 @dataclass
@@ -90,12 +122,8 @@ class DetectionService:
         self.processed_dir = Path(processed_dir or resolve_dir(self.cfg.processed_dir, PROCESSED_DIR))
         self.artifact_dir = Path(artifact_dir or ARTIFACT_DIR)
         self.model_tag = model_tag
-        self.policy = DetectorConfig(
-            threshold=float(self.cfg.report_threshold),
-            confirm_windows=int(self.cfg.online_confirm_windows),
-            action="observe",
-            dry_run=True,
-        )
+        # 初始策略：默认「只观察 + 演练模式」，可由 CIDA_* 环境变量设定，也可用 /api/policy 热更新
+        self.policy = DetectorConfig.from_env(self.cfg)
         self.lock = threading.Lock()
         self.buffer: deque = deque(maxlen=int(self.cfg.window_size))
         self.alerts: list[Alert] = []

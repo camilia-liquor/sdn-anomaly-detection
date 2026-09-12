@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -75,15 +76,19 @@ def check_files(r: Report) -> None:
         "src/service.py",
         "app/app.py", "app/templates/index.html", "app/static/app.js", "app/static/style.css",
         "integrations/ryu_guard.py",
+        "deploy/README.md", "deploy/cida-detect.service", "deploy/cida-detect.env",
+        "deploy/nginx-cida.conf", "deploy/install-windows-service.ps1",
         "tests/test_core.py",
         "tools/check_env.py", "tools/smoke_test.py", "tools/predict_cli.py",
         "tools/reevaluate.py", "tools/drift_test.py", "tools/ensemble_eval.py",
         "tools/make_report.py", "tools/fetch_wheel.py", "tools/sanitize_paths.py",
         "tools/operating_point.py", "tools/error_analysis.py", "tools/benchmark_latency.py",
         "tools/controller_simulator.py", "tools/ops_impact.py", "tools/acceptance_check.py",
+        "tools/cross_dataset.py",
         "docs/01_原始代码问题清单.md", "docs/02_实验报告.md", "docs/03_答辩要点与配置清单.md",
         "competition/README.md", "competition/01_开源及第三方资源使用清单.md",
-        "competition/02_技术报告.md", "competition/03_作品名称与简介.md",
+        "competition/02_技术报告.md", "competition/02_技术报告_精简稿.md",
+        "competition/03_作品名称与简介.md",
         "competition/04_演示视频脚本.md", "competition/05_匿名化与合规自查清单.md",
         "configs/fast.json", "configs/full.json",
         "LICENSE", "NOTICE", "CONTRIBUTING.md", ".github/workflows/ci.yml",
@@ -366,6 +371,30 @@ def check_deployable(r: Report) -> None:
     has_ryu = importlib.util.find_spec("ryu") is not None
     r.warn(has_ryu, "本机 Ryu 环境（未安装属正常，适配层需在真实 SDN 环境验证）",
            "已安装" if has_ryu else "未安装：ryu_guard.py 只在有 Ryu 的机器上运行")
+
+    # 部署样例：环境变量驱动的初始策略必须真的生效（否则 systemd/服务化配置就是摆设）
+    env = dict(os.environ)
+    try:
+        os.environ.update({"CIDA_POLICY_ACTION": "block", "CIDA_DRY_RUN": "0",
+                           "CIDA_THRESHOLD": "0.9", "CIDA_CONFIRM_WINDOWS": "5",
+                           "CIDA_WHITELIST": "10.0.0.1 10.0.0.254"})
+        from src.config import Config as _Cfg
+        from src.service import DetectorConfig
+
+        pol = DetectorConfig.from_env(_Cfg())
+        ok = (pol.action == "block" and pol.dry_run is False and abs(pol.threshold - 0.9) < 1e-9
+              and pol.confirm_windows == 5 and tuple(pol.whitelist) == ("10.0.0.1", "10.0.0.254"))
+        r.check(ok, "服务化部署的环境变量生效（deploy/cida-detect.env）",
+                f"动作={pol.action} 演练={pol.dry_run} 阈值={pol.threshold} 确认={pol.confirm_windows} "
+                f"白名单={len(pol.whitelist)} 个")
+        # 非法动作必须被拦住并回退，而不是把错误动作带到处置链路
+        os.environ["CIDA_POLICY_ACTION"] = "drop_everything"
+        bad = DetectorConfig.from_env(_Cfg())
+        r.check(bad.action == "observe", "非法处置动作被拒绝并回退为 observe（不会误下发奇怪规则）",
+                f"输入 drop_everything → {bad.action}")
+    finally:
+        os.environ.clear()
+        os.environ.update(env)
 
 
 def main() -> int:

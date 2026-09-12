@@ -1,0 +1,49 @@
+[Unit]
+Description=CIDA SDN 异常流量检测服务（CNN+BiLSTM）
+Documentation=file:/opt/cida/DEPLOYMENT.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=cida
+Group=cida
+
+# 工作目录必须是项目根目录：模型、预处理产物、结果目录都按相对路径解析
+WorkingDirectory=/opt/cida
+EnvironmentFile=-/etc/default/cida-detect
+
+# 用项目自带的虚拟环境解释器，避免污染系统 Python
+ExecStart=/opt/cida/.venv/bin/python app/app.py \
+    --host ${CIDA_HOST} \
+    --port ${CIDA_PORT} \
+    --processed-dir ${CIDA_PROCESSED_DIR} \
+    --model-tag ${CIDA_MODEL_TAG}
+
+# 失败自动重启；崩溃后 5 秒重试
+Restart=always
+RestartSec=5
+StartLimitIntervalSec=0
+
+# 优雅停止：给正在处理的批次留出时间
+KillSignal=SIGINT
+TimeoutStopSec=20
+
+# 日志交给 journald（journalctl -u cida-detect -f）
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=cida-detect
+
+# 资源限制（按机器规模调整；本项目 CPU 单进程即可）
+CPUQuota=200%
+MemoryMax=2G
+
+# ---- 安全加固（最小权限）----
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths=/opt/cida/results /opt/cida/logs /opt/cida/data /opt/cida/artifacts
+
+[Install]
+WantedBy=multi-user.target

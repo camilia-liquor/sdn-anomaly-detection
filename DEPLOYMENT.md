@@ -79,7 +79,7 @@ python tools/check_env.py
 ```bash
 python tools/smoke_test.py        # 冒烟：小样本全链路跑通（约 1 分钟，产物写在 _smoke 隔离目录）
 python tests/test_core.py         # 单元测试：10 个用例，覆盖数据切分/窗口/泄漏防护
-python tools/acceptance_check.py  # 交付验收：文件齐全性 + 指标复算 + 一致性交叉校验
+python tools/acceptance_check.py  # 交付验收：文件齐全性 + 指标复算 + 在线接口真实调用（52 项）
 ```
 
 ---
@@ -94,6 +94,43 @@ python app/app.py --port 5000
 
 # 对外提供服务（注意：先用防火墙/安全组限制来源，见 5. 安全清单）
 python app/app.py --host 0.0.0.0 --port 5000
+```
+
+#### 用环境变量配置（服务化部署推荐）
+
+命令行参数都有对应的环境变量，因此 systemd / 容器 / Windows 服务里不用改代码或拼长命令行：
+
+| 环境变量 | 对应参数 | 默认 | 说明 |
+|---|---|---|---|
+| `CIDA_HOST` | `--host` | `127.0.0.1` | 监听地址 |
+| `CIDA_PORT` | `--port` | `5000` | 监听端口 |
+| `CIDA_PROCESSED_DIR` | `--processed-dir` | `data/processed` | 预处理产物目录（决定特征口径） |
+| `CIDA_MODEL_TAG` | `--model-tag` | 空（用主模型） | 指定模型子目录，如 `sdn_ctrl` |
+| `CIDA_POLICY_ACTION` | — | `observe` | 初始处置动作：`observe`/`throttle`/`block`（非法值会被拒绝并回退为 `observe`） |
+| `CIDA_DRY_RUN` | — | `1` | `1`=演练模式（只记录不改流表） |
+| `CIDA_THRESHOLD` | — | 0.5 | 初始判定阈值 |
+| `CIDA_CONFIRM_WINDOWS` | — | 3 | 初始连续确认窗口数 |
+| `CIDA_WHITELIST` | — | 空 | 永不处置的源 IP，空格分隔 |
+
+环境变量只决定**启动时的初始策略**，运行时仍可用 `POST /api/policy` 热更新。
+
+#### 现成的部署样例（`deploy/`）
+
+| 文件 | 用途 |
+|---|---|
+| `deploy/cida-detect.service` | systemd 单元（固定工作目录、崩溃自动重启、日志进 journald、最小权限加固） |
+| `deploy/cida-detect.env` | 环境变量模板（两种特征口径二选一，注释里写清了何时选哪个） |
+| `deploy/nginx-cida.conf` | 反向代理 + Basic 认证；`/metrics` 只对监控机开放 |
+| `deploy/install-windows-service.ps1` | 用 NSSM 注册成 Windows 服务，含启动后的健康检查 |
+| `deploy/README.md` | 四步上线顺序（**先 observe + dry_run，确认后再打开处置**） |
+
+```bash
+# Linux
+sudo cp deploy/cida-detect.service /etc/systemd/system/ && sudo cp deploy/cida-detect.env /etc/default/cida-detect
+sudo systemctl enable --now cida-detect && journalctl -u cida-detect -f
+
+# Windows（需要 nssm.exe 在 PATH 中）
+.\deploy\install-windows-service.ps1 -ProjectRoot "D:\sdn_demo" -Port 5000
 ```
 
 ### 2.2 两种特征口径，按你的数据源选一个

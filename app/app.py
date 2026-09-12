@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 import threading
 from pathlib import Path
@@ -479,13 +480,15 @@ def main(argv: list[str] | None = None) -> int:
     global STATE, DETECTOR, PROCESSED_DIR, ARTIFACT_DIR, MODEL_TAG
     cfg = Config()
     ap = argparse.ArgumentParser(description="CNN+BiLSTM 异常检测演示大屏")
-    ap.add_argument("--host", default=cfg.demo_host)
-    ap.add_argument("--port", type=int, default=cfg.demo_port)
+    # 默认值支持用环境变量配置（服务化部署：见 deploy/cida-detect.env 与 deploy/cida-detect.service）
+    ap.add_argument("--host", default=os.environ.get("CIDA_HOST", cfg.demo_host))
+    ap.add_argument("--port", type=int, default=int(os.environ.get("CIDA_PORT", cfg.demo_port)))
     ap.add_argument("--debug", action="store_true")
-    ap.add_argument("--processed-dir", default=None,
+    ap.add_argument("--processed-dir", default=os.environ.get("CIDA_PROCESSED_DIR") or None,
                     help="预处理产物目录（默认 data/processed；控制器原生字段场景用 data/processed_sdn）")
-    ap.add_argument("--artifact-dir", default=None, help="模型产物目录（默认 artifacts）")
-    ap.add_argument("--model-tag", default=None,
+    ap.add_argument("--artifact-dir", default=os.environ.get("CIDA_ARTIFACT_DIR") or None,
+                    help="模型产物目录（默认 artifacts）")
+    ap.add_argument("--model-tag", default=os.environ.get("CIDA_MODEL_TAG") or None,
                     help="指定模型子目录名（如 sdn_ctrl）；默认用 run_all.py 记录的主模型")
     args = ap.parse_args(argv)
 

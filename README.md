@@ -99,7 +99,8 @@ python app/app.py            # 浏览器打开 http://127.0.0.1:5000
 
 > **真的 SDN 环境怎么接**：`ryu-manager integrations/ryu_guard.py --detect-url http://127.0.0.1:5000`，
 > 默认**演练模式**（只打印将要下发的规则），确认无误后加 `--execute` 才真正改流表。
-> 完整步骤、参数、安全清单与排障见 [`DEPLOYMENT.md`](DEPLOYMENT.md)。
+> 完整步骤、参数、安全清单与排障见 [`DEPLOYMENT.md`](DEPLOYMENT.md)；
+> **常驻部署**（systemd / Windows 服务 / nginx 反代 / 环境变量配置）见 [`deploy/`](deploy/README.md)。
 
 > **没装 TensorFlow 也能验证数据链路**：`python tools/smoke_test.py` 会用一个"假模型"跑完
 > 数据生成 → 预处理 → 评估 → 出图 全流程（约 3 秒）。
@@ -378,6 +379,7 @@ generate_normal_traffic/
 │  └─ static/{style.css,app.js}
 ├─ integrations/
 │  └─ ryu_guard.py             ★ Ryu 控制器适配层（流表统计→判定→下发限速/阻断，默认演练模式）
+├─ deploy/                     ★ 部署样例（systemd 单元 / 环境变量模板 / nginx 反代 / Windows 服务脚本）
 ├─ tools/
 │  ├─ check_env.py             环境自检
 │  ├─ acceptance_check.py      ★ 交付验收自检（提交前跑这个：50 项全过才算完整）
