@@ -86,6 +86,7 @@ def check_files(r: Report) -> None:
         "tools/controller_simulator.py", "tools/ops_impact.py", "tools/acceptance_check.py",
         "tools/cross_dataset.py", "tools/live_demo.py", "tools/live_demo_campaign.py",
         "tools/openset_eval.py", "tools/openset_calibrate.py", "tools/pcap_to_flows.py",
+        "tools/per_class_online.py",
         "docs/01_原始代码问题清单.md", "docs/02_实验报告.md", "docs/03_答辩要点与配置清单.md",
         "competition/README.md", "competition/01_开源及第三方资源使用清单.md",
         "competition/02_技术报告.md", "competition/02_技术报告_精简稿.md",
@@ -447,6 +448,23 @@ def check_deployable(r: Report) -> None:
     else:
         r.warn(False, "实况演示事件报告（可选）",
                f"未生成 {live}：运行 python tools/live_demo.py --speed 0 --no-color")
+
+    # ---- 逐类在线指标：不只是"总体召回 100%"，而是每类各自多少 ----
+    pco = RESULT_DIR / "per_class_online.json"
+    if pco.exists():
+        c = json.loads(pco.read_text(encoding="utf-8"))
+        mg = c.get("merged_segments") or {}
+        cons = c.get("consistency") or {}
+        r.check(bool(cons.get("match")), "逐类在线指标与总体指标对账一致（合并片段口径）",
+                f"片段 {mg.get('n_segments')}（检出 {mg.get('n_detected')}）、"
+                f"误报 {c['totals']['false_alarms']}" if mg else "结构待核")
+        det = sum(1 for x in (c.get("per_class") or []) if x["n_detected"] == x["n_segments"])
+        r.check(det == len(c.get("per_class") or []) and det > 0,
+                "每一类攻击的片段召回率都是 100%",
+                f"{det}/{len(c.get('per_class') or [])} 类逐类全检出")
+    else:
+        r.warn(False, "逐类在线指标表（可选）",
+               f"未生成 {pco}：运行 python tools/per_class_online.py")
 
     # ---- 多攻击连演：每类攻击的检出对比 ----
     camp = RESULT_DIR / "live_demo_campaign.json"

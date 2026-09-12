@@ -1,0 +1,167 @@
+{
+  "tag": "cnn_bilstm_main_s0",
+  "threshold": 0.5,
+  "confirm_windows": 3,
+  "window_size": 16,
+  "min_segment_rows": 16,
+  "stream_rows": 21478,
+  "stream_hours": 3.0381,
+  "totals": {
+    "n_raw_segments": 307,
+    "n_ignored_short": 227,
+    "n_segments": 80,
+    "n_detected": 80,
+    "false_alarms": 2,
+    "false_alarms_per_hour": 0.6583050301123599,
+    "n_alarmed_windows": 2106
+  },
+  "merged_segments": {
+    "definition": "连续的非 Normal 行算一段（相邻不同类攻击合并）——与 src/evaluate.py 同口径",
+    "n_raw": 181,
+    "n_ignored_short": 157,
+    "n_segments": 24,
+    "n_detected": 24,
+    "segment_recall": 1.0
+  },
+  "per_class": [
+    {
+      "class": "Botnet",
+      "n_segments": 4,
+      "n_detected": 4,
+      "segment_recall": 1.0,
+      "n_missed": 0,
+      "missed_lengths": [],
+      "seg_len_min": 17,
+      "seg_len_median": 101.5,
+      "seg_len_max": 207,
+      "mean_delay_ms": 856.9667935371399,
+      "median_delay_ms": 66.11549854278564,
+      "p95_delay_ms": 2780.947637557982,
+      "mean_delay_rows": 14.25,
+      "alarms_inside": 145,
+      "alarms_per_segment": 36.25
+    },
+    {
+      "class": "BruteForce",
+      "n_segments": 9,
+      "n_detected": 9,
+      "segment_recall": 1.0,
+      "n_missed": 0,
+      "missed_lengths": [],
+      "seg_len_min": 29,
+      "seg_len_median": 116.0,
+      "seg_len_max": 229,
+      "mean_delay_ms": 43.60832108391656,
+      "median_delay_ms": 34.729957580566406,
+      "p95_delay_ms": 100.71029663085936,
+      "mean_delay_rows": 13.333333333333334,
+      "alarms_inside": 294,
+      "alarms_per_segment": 32.666666666666664
+    },
+    {
+      "class": "DDoS",
+      "n_segments": 18,
+      "n_detected": 18,
+      "segment_recall": 1.0,
+      "n_missed": 0,
+      "missed_lengths": [],
+      "seg_len_min": 19,
+      "seg_len_median": 62.0,
+      "seg_len_max": 171,
+      "mean_delay_ms": 13.543128967285156,
+      "median_delay_ms": 2.6110410690307617,
+      "p95_delay_ms": 41.84223413467387,
+      "mean_delay_rows": 14.166666666666666,
+      "alarms_inside": 486,
+      "alarms_per_segment": 27.0
+    },
+    {
+      "class": "DoS",
+      "n_segments": 16,
+      "n_detected": 16,
+      "segment_recall": 1.0,
+      "n_missed": 0,
+      "missed_lengths": [],
+      "seg_len_min": 16,
+      "seg_len_median": 42.0,
+      "seg_len_max": 551,
+      "mean_delay_ms": 27.38673985004425,
+      "median_delay_ms": 13.67175579071045,
+      "p95_delay_ms": 101.76253318786621,
+      "mean_delay_rows": 13.6875,
+      "alarms_inside": 451,
+      "alarms_per_segment": 28.1875
+    },
+    {
+      "class": "Probe",
+      "n_segments": 8,
+      "n_detected": 8,
+      "segment_recall": 1.0,
+      "n_missed": 0,
+      "missed_lengths": [],
+      "seg_len_min": 46,
+      "seg_len_median": 96.0,
+      "seg_len_max": 166,
+      "mean_delay_ms": 5.4756999015808105,
+      "median_delay_ms": 5.14674186706543,
+      "p95_delay_ms": 7.710230350494385,
+      "mean_delay_rows": 16.625,
+      "alarms_inside": 233,
+      "alarms_per_segment": 29.125
+    },
+    {
+      "class": "U2R",
+      "n_segments": 5,
+      "n_detected": 5,
+      "segment_recall": 1.0,
+      "n_missed": 0,
+      "missed_lengths": [],
+      "seg_len_min": 35,
+      "seg_len_median": 45.0,
+      "seg_len_max": 91,
+      "mean_delay_ms": 164.23630714416504,
+      "median_delay_ms": 85.60800552368164,
+      "p95_delay_ms": 475.38785934448237,
+      "mean_delay_rows": 8.0,
+      "alarms_inside": 107,
+      "alarms_per_segment": 21.4
+    },
+    {
+      "class": "WebAttack",
+      "n_segments": 20,
+      "n_detected": 20,
+      "segment_recall": 1.0,
+      "n_missed": 0,
+      "missed_lengths": [],
+      "seg_len_min": 17,
+      "seg_len_median": 58.5,
+      "seg_len_max": 163,
+      "mean_delay_ms": 99.07512664794922,
+      "median_delay_ms": 34.28161144256592,
+      "p95_delay_ms": 420.7197189331055,
+      "mean_delay_rows": 14.85,
+      "alarms_inside": 381,
+      "alarms_per_segment": 19.05
+    }
+  ],
+  "false_alarm_nearest_class": {
+    "Probe": 2
+  },
+  "consistency": {
+    "source": "metrics_cnn_bilstm_main_s0.json",
+    "note": "对账用的是「合并片段」口径（连续非 Normal 行为一段），与 src/evaluate.py 一致；本表主体是更细的「逐类片段」口径，段数天然更多。",
+    "merged_n_attack_segments": [
+      24,
+      24
+    ],
+    "merged_n_segments_detected": [
+      24,
+      24
+    ],
+    "false_alarms": [
+      2,
+      2
+    ],
+    "match": true
+  }
+}
