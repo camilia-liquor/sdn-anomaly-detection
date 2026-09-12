@@ -1,0 +1,3961 @@
+{
+  "generated_by": "tools/cross_dataset.py",
+  "experiment": "synthetic-trained model -> real inSDN zero-shot inference",
+  "no_training": true,
+  "no_real_data_fitting": true,
+  "model": {
+    "path": "artifacts/cnn_bilstm_main_s0/model.keras",
+    "tag": "cnn_bilstm_main_s0",
+    "resolved_from": "artifacts/main_model.json",
+    "input_shape": [
+      16,
+      71
+    ],
+    "n_params": 151434
+  },
+  "config": {
+    "window_size": 16,
+    "stride": 3,
+    "threshold": 0.5,
+    "std_source": "data/processed/scaler.joblib (fit on synthetic train only)",
+    "features_filled_with_train_mean_in_z_space": [],
+    "seed": 42
+  },
+  "paths": {
+    "real_csv": "data/real/insdn/Dataset.csv",
+    "synth_csv": "data/raw/insdn_stream.csv",
+    "processed_dir": "data/processed",
+    "figure": "results/figures/cross_dataset_drift.png"
+  },
+  "mapping": {
+    "n_features": 71,
+    "n_mapped": 71,
+    "coverage": 1.0,
+    "unmatched": [],
+    "unused_real_columns": [
+      "Fwd Byts/b Avg",
+      "Fwd Pkts/b Avg",
+      "Fwd Blk Rate Avg",
+      "Bwd Byts/b Avg",
+      "Bwd Pkts/b Avg",
+      "Bwd Blk Rate Avg"
+    ],
+    "collisions": [],
+    "method_counts": {
+      "explicit": 71
+    },
+    "detail": {
+      "Protocol": "explicit",
+      "Flow Duration": "explicit",
+      "Total Fwd Packets": "explicit",
+      "Total Backward Packets": "explicit",
+      "Total Length of Fwd Packets": "explicit",
+      "Total Length of Bwd Packets": "explicit",
+      "Fwd Packet Length Max": "explicit",
+      "Fwd Packet Length Min": "explicit",
+      "Fwd Packet Length Mean": "explicit",
+      "Fwd Packet Length Std": "explicit",
+      "Bwd Packet Length Max": "explicit",
+      "Bwd Packet Length Min": "explicit",
+      "Bwd Packet Length Mean": "explicit",
+      "Bwd Packet Length Std": "explicit",
+      "Flow Bytes/s": "explicit",
+      "Flow Packets/s": "explicit",
+      "Flow IAT Mean": "explicit",
+      "Flow IAT Std": "explicit",
+      "Flow IAT Max": "explicit",
+      "Flow IAT Min": "explicit",
+      "Fwd IAT Total": "explicit",
+      "Fwd IAT Mean": "explicit",
+      "Fwd IAT Std": "explicit",
+      "Fwd IAT Max": "explicit",
+      "Fwd IAT Min": "explicit",
+      "Bwd IAT Total": "explicit",
+      "Bwd IAT Mean": "explicit",
+      "Bwd IAT Std": "explicit",
+      "Bwd IAT Max": "explicit",
+      "Bwd IAT Min": "explicit",
+      "Fwd PSH Flags": "explicit",
+      "Bwd PSH Flags": "explicit",
+      "Fwd URG Flags": "explicit",
+      "Bwd URG Flags": "explicit",
+      "Fwd Header Length": "explicit",
+      "Bwd Header Length": "explicit",
+      "Fwd Packets/s": "explicit",
+      "Bwd Packets/s": "explicit",
+      "Min Packet Length": "explicit",
+      "Max Packet Length": "explicit",
+      "Packet Length Mean": "explicit",
+      "Packet Length Std": "explicit",
+      "Packet Length Variance": "explicit",
+      "FIN Flag Count": "explicit",
+      "SYN Flag Count": "explicit",
+      "RST Flag Count": "explicit",
+      "PSH Flag Count": "explicit",
+      "ACK Flag Count": "explicit",
+      "URG Flag Count": "explicit",
+      "CWE Flag Count": "explicit",
+      "ECE Flag Count": "explicit",
+      "Down/Up Ratio": "explicit",
+      "Average Packet Size": "explicit",
+      "Avg Fwd Segment Size": "explicit",
+      "Avg Bwd Segment Size": "explicit",
+      "Subflow Fwd Packets": "explicit",
+      "Subflow Fwd Bytes": "explicit",
+      "Subflow Bwd Packets": "explicit",
+      "Subflow Bwd Bytes": "explicit",
+      "Init_Win_bytes_forward": "explicit",
+      "Init_Win_bytes_backward": "explicit",
+      "act_data_pkt_fwd": "explicit",
+      "min_seg_size_forward": "explicit",
+      "Active Mean": "explicit",
+      "Active Std": "explicit",
+      "Active Max": "explicit",
+      "Active Min": "explicit",
+      "Idle Mean": "explicit",
+      "Idle Std": "explicit",
+      "Idle Max": "explicit",
+      "Idle Min": "explicit"
+    },
+    "pairs": {
+      "Protocol": "Protocol",
+      "Flow Duration": "Flow Duration",
+      "Total Fwd Packets": "Tot Fwd Pkts",
+      "Total Backward Packets": "Tot Bwd Pkts",
+      "Total Length of Fwd Packets": "TotLen Fwd Pkts",
+      "Total Length of Bwd Packets": "TotLen Bwd Pkts",
+      "Fwd Packet Length Max": "Fwd Pkt Len Max",
+      "Fwd Packet Length Min": "Fwd Pkt Len Min",
+      "Fwd Packet Length Mean": "Fwd Pkt Len Mean",
+      "Fwd Packet Length Std": "Fwd Pkt Len Std",
+      "Bwd Packet Length Max": "Bwd Pkt Len Max",
+      "Bwd Packet Length Min": "Bwd Pkt Len Min",
+      "Bwd Packet Length Mean": "Bwd Pkt Len Mean",
+      "Bwd Packet Length Std": "Bwd Pkt Len Std",
+      "Flow Bytes/s": "Flow Byts/s",
+      "Flow Packets/s": "Flow Pkts/s",
+      "Flow IAT Mean": "Flow IAT Mean",
+      "Flow IAT Std": "Flow IAT Std",
+      "Flow IAT Max": "Flow IAT Max",
+      "Flow IAT Min": "Flow IAT Min",
+      "Fwd IAT Total": "Fwd IAT Tot",
+      "Fwd IAT Mean": "Fwd IAT Mean",
+      "Fwd IAT Std": "Fwd IAT Std",
+      "Fwd IAT Max": "Fwd IAT Max",
+      "Fwd IAT Min": "Fwd IAT Min",
+      "Bwd IAT Total": "Bwd IAT Tot",
+      "Bwd IAT Mean": "Bwd IAT Mean",
+      "Bwd IAT Std": "Bwd IAT Std",
+      "Bwd IAT Max": "Bwd IAT Max",
+      "Bwd IAT Min": "Bwd IAT Min",
+      "Fwd PSH Flags": "Fwd PSH Flags",
+      "Bwd PSH Flags": "Bwd PSH Flags",
+      "Fwd URG Flags": "Fwd URG Flags",
+      "Bwd URG Flags": "Bwd URG Flags",
+      "Fwd Header Length": "Fwd Header Len",
+      "Bwd Header Length": "Bwd Header Len",
+      "Fwd Packets/s": "Fwd Pkts/s",
+      "Bwd Packets/s": "Bwd Pkts/s",
+      "Min Packet Length": "Pkt Len Min",
+      "Max Packet Length": "Pkt Len Max",
+      "Packet Length Mean": "Pkt Len Mean",
+      "Packet Length Std": "Pkt Len Std",
+      "Packet Length Variance": "Pkt Len Var",
+      "FIN Flag Count": "FIN Flag Cnt",
+      "SYN Flag Count": "SYN Flag Cnt",
+      "RST Flag Count": "RST Flag Cnt",
+      "PSH Flag Count": "PSH Flag Cnt",
+      "ACK Flag Count": "ACK Flag Cnt",
+      "URG Flag Count": "URG Flag Cnt",
+      "CWE Flag Count": "CWE Flag Count",
+      "ECE Flag Count": "ECE Flag Cnt",
+      "Down/Up Ratio": "Down/Up Ratio",
+      "Average Packet Size": "Pkt Size Avg",
+      "Avg Fwd Segment Size": "Fwd Seg Size Avg",
+      "Avg Bwd Segment Size": "Bwd Seg Size Avg",
+      "Subflow Fwd Packets": "Subflow Fwd Pkts",
+      "Subflow Fwd Bytes": "Subflow Fwd Byts",
+      "Subflow Bwd Packets": "Subflow Bwd Pkts",
+      "Subflow Bwd Bytes": "Subflow Bwd Byts",
+      "Init_Win_bytes_forward": "Init Fwd Win Byts",
+      "Init_Win_bytes_backward": "Init Bwd Win Byts",
+      "act_data_pkt_fwd": "Fwd Act Data Pkts",
+      "min_seg_size_forward": "Fwd Seg Size Min",
+      "Active Mean": "Active Mean",
+      "Active Std": "Active Std",
+      "Active Max": "Active Max",
+      "Active Min": "Active Min",
+      "Idle Mean": "Idle Mean",
+      "Idle Std": "Idle Std",
+      "Idle Max": "Idle Max",
+      "Idle Min": "Idle Min"
+    }
+  },
+  "synthetic": {
+    "file": "insdn_stream.csv",
+    "raw_rows": 86037,
+    "clean_rows": 86037,
+    "train_rows": 51590,
+    "purge_rows": 32,
+    "label_column": "Label",
+    "label_counts": {
+      "Normal": 56132,
+      "DDoS": 5620,
+      "DoS": 4890,
+      "WebAttack": 4446,
+      "Botnet": 4256,
+      "BruteForce": 4199,
+      "Probe": 3796,
+      "U2R": 2698
+    },
+    "elapsed_sec": 1.45,
+    "scaler_mean_max_abs_diff": 2.4586915969848633e-07,
+    "scaler_mean_max_rel_diff": 6.5035789681215605e-15,
+    "scaler_stats_consistent": true
+  },
+  "real": {
+    "file": "Dataset.csv",
+    "rows_read": 343889,
+    "rows_dropped_no_label": 0,
+    "rows_dropped_nan_or_inf": 0,
+    "rows_after_clean": 343889,
+    "label_column": "target",
+    "columns_not_found_in_real": [],
+    "n_columns_used": 72,
+    "raw_label_counts": {
+      "1": 275465,
+      "0": 68424
+    },
+    "n_columns_total": 84,
+    "label_blocks": [
+      {
+        "label": "Normal",
+        "rows": 68424
+      },
+      {
+        "label": "Attack",
+        "rows": 275465
+      }
+    ],
+    "dedup_stages": {
+      "raw": {
+        "stage": "去重前（仅去 inf/缺失）",
+        "rows": 343889,
+        "attack_rows": 275465,
+        "normal_rows": 68424,
+        "attack_share_rows": 0.8010288203461
+      },
+      "exact": {
+        "stage": "步骤1：按「特征+标签」精确去重",
+        "rows": 184747,
+        "attack_rows": 120633,
+        "normal_rows": 64114,
+        "attack_share_rows": 0.6529632416223268
+      },
+      "approx": {
+        "stage": "步骤2：按 3 位有效数字近似去重",
+        "rows": 163754,
+        "attack_rows": 100838,
+        "normal_rows": 62916,
+        "attack_share_rows": 0.6157895379654849
+      },
+      "survival": {
+        "attack_row_survival": 0.3660646543118,
+        "normal_row_survival": 0.9195019291476675
+      }
+    }
+  },
+  "in_domain_reference": {
+    "tag": "cnn_bilstm_main_s0",
+    "recorded": {
+      "source": "results/metrics_cnn_bilstm_main_s0.json",
+      "multiclass_accuracy": 0.9951608311984059,
+      "multiclass_macro_f1": 0.9929572299559781,
+      "binary_f1": 0.9907090464547678,
+      "binary_roc_auc": 0.9999640671273445,
+      "binary_pr_auc": 0.9999101597706561,
+      "binary_false_positive_rate": 0.0076,
+      "binary_recall": 1.0,
+      "n_test_windows": 3513,
+      "window_size": 16,
+      "n_features": 71
+    },
+    "aggregate_3seeds": {
+      "multiclass_macro_f1": {
+        "mean": 0.9939843796573745,
+        "std": 0.0011358957356995979
+      },
+      "binary_f1": {
+        "mean": 0.9918353175670779,
+        "std": 0.0012711045341222292
+      },
+      "binary_roc_auc": {
+        "mean": 0.9999443237907206,
+        "std": 1.774998067752947e-05
+      }
+    },
+    "recomputed_on_test_tensors": {
+      "n_windows": 3513,
+      "input_shape": [
+        16,
+        71
+      ],
+      "threshold": 0.5,
+      "accuracy": 0.9945915172217478,
+      "balanced_accuracy": 0.9962,
+      "precision": 0.9815891472868217,
+      "recall": 1.0,
+      "f1": 0.9907090464547678,
+      "roc_auc": 0.9999640671273445,
+      "pr_auc": 0.9999101597706561,
+      "mcc": 0.9869797717113771,
+      "tn": 2481,
+      "fp": 19,
+      "fn": 0,
+      "tp": 1013,
+      "false_positive_rate": 0.0076,
+      "false_negative_rate": 0.0,
+      "tpr_at_fpr_0.01": 1.0,
+      "tpr_at_fpr_0.001": 0.9921026653504442,
+      "best_f1": 0.9960591133004926,
+      "best_f1_threshold": 0.9433080554008484
+    },
+    "recomputed_two_class": {
+      "n_windows": 3513,
+      "accuracy": 0.9945915172217478,
+      "macro_precision": 0.9907945736434108,
+      "macro_recall": 0.9962,
+      "macro_f1": 0.9934472756867294,
+      "per_class": {
+        "Normal": {
+          "precision": 1.0,
+          "recall": 0.9924,
+          "f1": 0.9961855049186911,
+          "support": 2500
+        },
+        "Attack": {
+          "precision": 0.9815891472868217,
+          "recall": 1.0,
+          "f1": 0.9907090464547678,
+          "support": 1013
+        }
+      }
+    },
+    "recomputed_eight_class_macro_f1": 0.9929572299559781,
+    "synth_test_attack_share": 0.2883575291773413
+  },
+  "versions": {
+    "raw": {
+      "version": "raw",
+      "n_rows": 343889,
+      "n_windows_total": 114625,
+      "n_windows_pure": 114620,
+      "n_windows_mixed": 5,
+      "window_size": 16,
+      "stride": 3,
+      "infer_seconds": 6.0,
+      "windows_per_sec": 19055.1,
+      "ground_truth_classes": [
+        "Normal",
+        "Attack"
+      ],
+      "binary_pure": {
+        "threshold": 0.5,
+        "accuracy": 0.7541092305007852,
+        "balanced_accuracy": 0.7619716006231296,
+        "precision": 0.9305752912995818,
+        "recall": 0.7489135998780182,
+        "f1": 0.8299197393036026,
+        "roc_auc": 0.817088002132352,
+        "pr_auc": 0.9360507616705295,
+        "mcc": 0.43701756457337765,
+        "tn": 17673,
+        "fp": 5130,
+        "fn": 23054,
+        "tp": 68763,
+        "false_positive_rate": 0.22497039863175897,
+        "false_negative_rate": 0.25108640012198175,
+        "tpr_at_fpr_0.01": 0.0,
+        "tpr_at_fpr_0.001": 0.0,
+        "best_f1": 0.9079232995658466,
+        "best_f1_threshold": 0.01147670391947031
+      },
+      "binary_all_windows": {
+        "threshold": 0.5,
+        "accuracy": 0.754102508178844,
+        "balanced_accuracy": 0.7619782410012876,
+        "precision": 0.9305752912995818,
+        "recall": 0.7488972870538777,
+        "f1": 0.8299097228927296,
+        "roc_auc": 0.8170945055315633,
+        "pr_auc": 0.9360477566299543,
+        "mcc": 0.4370353228857094,
+        "tn": 17676,
+        "fp": 5130,
+        "fn": 23056,
+        "tp": 68763,
+        "false_positive_rate": 0.2249408050513023,
+        "false_negative_rate": 0.25110271294612224,
+        "tpr_at_fpr_0.01": 0.0,
+        "tpr_at_fpr_0.001": 0.0,
+        "best_f1": 0.9079160260082205,
+        "best_f1_threshold": 0.01147670391947031
+      },
+      "two_class_pure": {
+        "class_names": [
+          "Normal",
+          "Attack"
+        ],
+        "accuracy": 0.7728494154597801,
+        "macro_precision": 0.7158612349373095,
+        "macro_recall": 0.8213492535050043,
+        "macro_f1": 0.7258651443440602,
+        "per_class": {
+          "Normal": {
+            "precision": 0.4635636199706976,
+            "recall": 0.9018988729553129,
+            "f1": 0.6123749404478323,
+            "support": 22803
+          },
+          "Attack": {
+            "precision": 0.9681588499039214,
+            "recall": 0.7407996340546957,
+            "f1": 0.8393553482402882,
+            "support": 91817
+          }
+        },
+        "confusion_matrix": [
+          [
+            20566,
+            2237
+          ],
+          [
+            23799,
+            68018
+          ]
+        ]
+      },
+      "attack_share_real_windows": 0.8010381679389313,
+      "trivial_baseline": {
+        "f1_all_attack": 0.8895401502637609,
+        "f1_all_normal": 0.0,
+        "majority_accuracy": 0.8010381679389313
+      },
+      "model_attribution_8class": {
+        "note": "模型侧归因分布（argmax over 8 类），真实数据集没有 8 类真值，故这不是准确率指标",
+        "all_windows": {
+          "Botnet": 5305,
+          "BruteForce": 9919,
+          "DDoS": 100,
+          "DoS": 0,
+          "Normal": 44780,
+          "Probe": 17809,
+          "U2R": 27221,
+          "WebAttack": 9491
+        },
+        "on_true_attack_windows": {
+          "Botnet": 5296,
+          "BruteForce": 9776,
+          "DDoS": 1,
+          "DoS": 0,
+          "Normal": 24151,
+          "Probe": 16774,
+          "U2R": 26334,
+          "WebAttack": 9487
+        },
+        "on_true_normal_windows": {
+          "Botnet": 9,
+          "BruteForce": 143,
+          "DDoS": 99,
+          "DoS": 0,
+          "Normal": 20629,
+          "Probe": 1035,
+          "U2R": 887,
+          "WebAttack": 4
+        },
+        "top_class_share": 0.39066521264994547,
+        "mean_normalized_entropy": 0.11680339276790619
+      }
+    },
+    "dedup3": {
+      "version": "dedup3",
+      "n_rows": 163754,
+      "n_windows_total": 54580,
+      "n_windows_pure": 54575,
+      "n_windows_mixed": 5,
+      "window_size": 16,
+      "stride": 3,
+      "infer_seconds": 2.4,
+      "windows_per_sec": 22607.2,
+      "ground_truth_classes": [
+        "Normal",
+        "Attack"
+      ],
+      "binary_pure": {
+        "threshold": 0.5,
+        "accuracy": 0.5744754924415941,
+        "balanced_accuracy": 0.6162197047622483,
+        "precision": 0.7744305269277523,
+        "recall": 0.4359973815758153,
+        "f1": 0.557901349730625,
+        "roc_auc": 0.6485219113151217,
+        "pr_auc": 0.6905625217365366,
+        "mcc": 0.2375598664429285,
+        "tn": 16699,
+        "fp": 4268,
+        "fn": 18955,
+        "tp": 14653,
+        "false_positive_rate": 0.20355797205131873,
+        "false_negative_rate": 0.5640026184241848,
+        "tpr_at_fpr_0.01": 0.0,
+        "tpr_at_fpr_0.001": 0.0,
+        "best_f1": 0.7904826615545147,
+        "best_f1_threshold": 0.009154731407761574
+      },
+      "binary_all_windows": {
+        "threshold": 0.5,
+        "accuracy": 0.5744778307072188,
+        "balanced_accuracy": 0.6162212931665744,
+        "precision": 0.7744305269277523,
+        "recall": 0.4359714370722999,
+        "f1": 0.5578801088880851,
+        "roc_auc": 0.6485414379675872,
+        "pr_auc": 0.6905598086333454,
+        "mcc": 0.2375705197043472,
+        "tn": 16702,
+        "fp": 4268,
+        "fn": 18957,
+        "tp": 14653,
+        "false_positive_rate": 0.20352885073915117,
+        "false_negative_rate": 0.5640285629277001,
+        "tpr_at_fpr_0.01": 0.0,
+        "tpr_at_fpr_0.001": 0.0,
+        "best_f1": 0.7904736484519073,
+        "best_f1_threshold": 0.009154731407761574
+      },
+      "two_class_pure": {
+        "class_names": [
+          "Normal",
+          "Attack"
+        ],
+        "accuracy": 0.6095831424644984,
+        "macro_precision": 0.6752217283089766,
+        "macro_recall": 0.660475418280937,
+        "macro_f1": 0.60783667956104,
+        "per_class": {
+          "Normal": {
+            "precision": 0.49543624161073824,
+            "recall": 0.880192683741117,
+            "f1": 0.6340072487417765,
+            "support": 20967
+          },
+          "Attack": {
+            "precision": 0.855007215007215,
+            "recall": 0.440758152820757,
+            "f1": 0.5816661103803036,
+            "support": 33608
+          }
+        },
+        "confusion_matrix": [
+          [
+            18455,
+            2512
+          ],
+          [
+            18795,
+            14813
+          ]
+        ]
+      },
+      "attack_share_real_windows": 0.6157933308904361,
+      "trivial_baseline": {
+        "f1_all_attack": 0.762233083474139,
+        "f1_all_normal": 0.0,
+        "majority_accuracy": 0.6157933308904361
+      },
+      "model_attribution_8class": {
+        "note": "模型侧归因分布（argmax over 8 类），真实数据集没有 8 类真值，故这不是准确率指标",
+        "all_windows": {
+          "Botnet": 5332,
+          "BruteForce": 134,
+          "DDoS": 107,
+          "DoS": 0,
+          "Normal": 37528,
+          "Probe": 9466,
+          "U2R": 665,
+          "WebAttack": 1348
+        },
+        "on_true_attack_windows": {
+          "Botnet": 5321,
+          "BruteForce": 4,
+          "DDoS": 5,
+          "DoS": 0,
+          "Normal": 18974,
+          "Probe": 7861,
+          "U2R": 98,
+          "WebAttack": 1347
+        },
+        "on_true_normal_windows": {
+          "Botnet": 11,
+          "BruteForce": 130,
+          "DDoS": 102,
+          "DoS": 0,
+          "Normal": 18554,
+          "Probe": 1605,
+          "U2R": 567,
+          "WebAttack": 1
+        },
+        "top_class_share": 0.6875778673506779,
+        "mean_normalized_entropy": 0.1237604022026062
+      }
+    }
+  },
+  "drift": {
+    "n_features": 71,
+    "z_shift_signed_mean": 0.03311414485735373,
+    "abs_z_shift_mean": 0.5586009342535017,
+    "abs_z_shift_median": 0.2689061116884245,
+    "abs_z_shift_p95": 1.4012984058697793,
+    "abs_z_shift_max": 7.7225721848250855,
+    "n_features_abs_z_gt_1": 10,
+    "n_features_abs_z_gt_3": 2,
+    "n_features_psi_gt_0.25": 62,
+    "n_features_std_ratio_lt_005": 19,
+    "psi_mean": 2.453988172261409,
+    "psi_max": 12.761710100707514,
+    "top_k": [
+      {
+        "feature": "Packet Length Variance",
+        "synth_train_mean": 27072.077434586798,
+        "synth_train_std": 61690.35148411107,
+        "real_mean": 503480.2698778654,
+        "real_std": 7965871.231318449,
+        "z_shift": 7.7225721848250855,
+        "abs_z_shift": 7.7225721848250855,
+        "std_ratio_real_over_synth": 129.1266954990544,
+        "psi": 1.7202865118234987,
+        "synth_train_mean_source": "reconstructed_train",
+        "synth_train_mean_scaler": 27072.077434586638,
+        "synth_train_std_scaler": 61690.35148411102
+      },
+      {
+        "feature": "Bwd Packets/s",
+        "synth_train_mean": 40.28330338483794,
+        "synth_train_std": 258.9789790064525,
+        "real_mean": 1118.11508272726,
+        "real_std": 11388.773799489889,
+        "z_shift": 4.16185044623084,
+        "abs_z_shift": 4.16185044623084,
+        "std_ratio_real_over_synth": 43.9756687711945,
+        "psi": 2.3749216931812973,
+        "synth_train_mean_source": "reconstructed_train",
+        "synth_train_mean_scaler": 40.28330338483802,
+        "synth_train_std_scaler": 258.97897900645495
+      },
+      {
+        "feature": "Bwd Packet Length Std",
+        "synth_train_mean": 64.50396391180286,
+        "synth_train_std": 84.63889376642373,
+        "real_mean": 238.64106340024264,
+        "real_std": 705.4229741670381,
+        "z_shift": 2.0574122810371427,
+        "abs_z_shift": 2.0574122810371427,
+        "std_ratio_real_over_synth": 8.334501347734763,
+        "psi": 1.7138499786785768,
+        "synth_train_mean_source": "reconstructed_train",
+        "synth_train_mean_scaler": 64.50396391180257,
+        "synth_train_std_scaler": 84.63889376642462
+      },
+      {
+        "feature": "Bwd Packet Length Max",
+        "synth_train_mean": 324.99998084809584,
+        "synth_train_std": 370.9549840482399,
+        "real_mean": 856.592993148259,
+        "real_std": 4097.29738186509,
+        "z_shift": 1.4330391426444145,
+        "abs_z_shift": 1.4330391426444145,
+        "std_ratio_real_over_synth": 11.045268450503599,
+        "psi": 1.8014718100227816,
+        "synth_train_mean_source": "reconstructed_train",
+        "synth_train_mean_scaler": 324.9999808480954,
+        "synth_train_std_scaler": 370.9549840482409
+      },
+      {
+        "feature": "Init_Win_bytes_forward",
+        "synth_train_mean": 34989.026497383216,
+        "synth_train_std": 25548.414124461637,
+        "real_mean": -1.0,
+        "real_std": 0.0,
+        "z_shift": -1.3695576690951439,
+        "abs_z_shift": 1.3695576690951439,
+        "std_ratio_real_over_synth": 0.0,
+        "psi": 12.761710100707514,
+        "synth_train_mean_source": "reconstructed_train",
+        "synth_train_mean_scaler": 34989.026497383216,
+        "synth_train_std_scaler": 25548.41412446754
+      },
+      {
+        "feature": "min_seg_size_forward",
+        "synth_train_mean": 15.354850447942505,
+        "synth_train_std": 13.051952704410683,
+        "real_mean": 0.0,
+        "real_std": 0.0,
+        "z_shift": -1.1764408587501103,
+        "abs_z_shift": 1.1764408587501103,
+        "std_ratio_real_over_synth": 0.0,
+        "psi": 6.102978758137763,
+        "synth_train_mean_source": "reconstructed_train",
+        "synth_train_mean_scaler": 15.354850447942638,
+        "synth_train_std_scaler": 13.051952704410606
+      },
+      {
+        "feature": "Flow IAT Std",
+        "synth_train_mean": 560343.2985937181,
+        "synth_train_std": 2345209.4234455647,
+        "real_mean": 3294236.6337993923,
+        "real_std": 7436951.271819888,
+        "z_shift": 1.165735267765149,
+        "abs_z_shift": 1.165735267765149,
+        "std_ratio_real_over_synth": 3.1711245901841774,
+        "psi": 0.9968408052082469,
+        "synth_train_mean_source": "reconstructed_train",
+        "synth_train_mean_scaler": 560343.2985937129,
+        "synth_train_std_scaler": 2345209.4234455763
+      },
+      {
+        "feature": "Packet Length Std",
+        "synth_train_mean": 112.60666542931065,
+        "synth_train_std": 119.96589655180382,
+        "real_mean": 240.20835218229726,
+        "real_std": 667.6603358180126,
+        "z_shift": 1.0636496739545114,
+        "abs_z_shift": 1.0636496739545114,
+        "std_ratio_real_over_synth": 5.565417797963129,
+        "psi": 1.7202865118234987,
+        "synth_train_mean_source": "reconstructed_train",
+        "synth_train_mean_scaler": 112.60666542931091,
+        "synth_train_std_scaler": 119.96589655180343
+      },
+      {
+        "feature": "Fwd PSH Flags",
+        "synth_train_mean": 0.518414421399496,
+        "synth_train_std": 0.49966079402382746,
+        "real_mean": 0.0,
+        "real_std": 0.0,
+        "z_shift": -1.0375327173956626,
+        "abs_z_shift": 1.0375327173956626,
+        "std_ratio_real_over_synth": 0.0,
+        "psi": 0.0,
+        "synth_train_mean_source": "reconstructed_train",
+        "synth_train_mean_scaler": 0.518414421399496,
+        "synth_train_std_scaler": 0.4996607940237117
+      },
+      {
+        "feature": "Max Packet Length",
+        "synth_train_mean": 483.5661911293811,
+        "synth_train_std": 474.715949991097,
+        "real_mean": 965.4439158738107,
+        "real_std": 4172.858163550237,
+        "z_shift": 1.0150864422260744,
+        "abs_z_shift": 1.0150864422260744,
+        "std_ratio_real_over_synth": 8.790221107229485,
+        "psi": 1.8552877831712569,
+        "synth_train_mean_source": "reconstructed_train",
+        "synth_train_mean_scaler": 483.56619112937545,
+        "synth_train_std_scaler": 474.71594999109857
+      }
+    ],
+    "all_features": [
+      {
+        "feature": "Packet Length Variance",
+        "synth_train_mean": 27072.077434586798,
+        "synth_train_std": 61690.35148411107,
+        "real_mean": 503480.2698778654,
+        "real_std": 7965871.231318449,
+        "z_shift": 7.7225721848250855,
+        "abs_z_shift": 7.7225721848250855,
+        "std_ratio_real_over_synth": 129.1266954990544,
+        "psi": 1.7202865118234987
+      },
+      {
+        "feature": "Bwd Packets/s",
+        "synth_train_mean": 40.28330338483794,
+        "synth_train_std": 258.9789790064525,
+        "real_mean": 1118.11508272726,
+        "real_std": 11388.773799489889,
+        "z_shift": 4.16185044623084,
+        "abs_z_shift": 4.16185044623084,
+        "std_ratio_real_over_synth": 43.9756687711945,
+        "psi": 2.3749216931812973
+      },
+      {
+        "feature": "Bwd Packet Length Std",
+        "synth_train_mean": 64.50396391180286,
+        "synth_train_std": 84.63889376642373,
+        "real_mean": 238.64106340024264,
+        "real_std": 705.4229741670381,
+        "z_shift": 2.0574122810371427,
+        "abs_z_shift": 2.0574122810371427,
+        "std_ratio_real_over_synth": 8.334501347734763,
+        "psi": 1.7138499786785768
+      },
+      {
+        "feature": "Bwd Packet Length Max",
+        "synth_train_mean": 324.99998084809584,
+        "synth_train_std": 370.9549840482399,
+        "real_mean": 856.592993148259,
+        "real_std": 4097.29738186509,
+        "z_shift": 1.4330391426444145,
+        "abs_z_shift": 1.4330391426444145,
+        "std_ratio_real_over_synth": 11.045268450503599,
+        "psi": 1.8014718100227816
+      },
+      {
+        "feature": "Init_Win_bytes_forward",
+        "synth_train_mean": 34989.026497383216,
+        "synth_train_std": 25548.414124461637,
+        "real_mean": -1.0,
+        "real_std": 0.0,
+        "z_shift": -1.3695576690951439,
+        "abs_z_shift": 1.3695576690951439,
+        "std_ratio_real_over_synth": 0.0,
+        "psi": 12.761710100707514
+      },
+      {
+        "feature": "min_seg_size_forward",
+        "synth_train_mean": 15.354850447942505,
+        "synth_train_std": 13.051952704410683,
+        "real_mean": 0.0,
+        "real_std": 0.0,
+        "z_shift": -1.1764408587501103,
+        "abs_z_shift": 1.1764408587501103,
+        "std_ratio_real_over_synth": 0.0,
+        "psi": 6.102978758137763
+      },
+      {
+        "feature": "Flow IAT Std",
+        "synth_train_mean": 560343.2985937181,
+        "synth_train_std": 2345209.4234455647,
+        "real_mean": 3294236.6337993923,
+        "real_std": 7436951.271819888,
+        "z_shift": 1.165735267765149,
+        "abs_z_shift": 1.165735267765149,
+        "std_ratio_real_over_synth": 3.1711245901841774,
+        "psi": 0.9968408052082469
+      },
+      {
+        "feature": "Packet Length Std",
+        "synth_train_mean": 112.60666542931065,
+        "synth_train_std": 119.96589655180382,
+        "real_mean": 240.20835218229726,
+        "real_std": 667.6603358180126,
+        "z_shift": 1.0636496739545114,
+        "abs_z_shift": 1.0636496739545114,
+        "std_ratio_real_over_synth": 5.565417797963129,
+        "psi": 1.7202865118234987
+      },
+      {
+        "feature": "Fwd PSH Flags",
+        "synth_train_mean": 0.518414421399496,
+        "synth_train_std": 0.49966079402382746,
+        "real_mean": 0.0,
+        "real_std": 0.0,
+        "z_shift": -1.0375327173956626,
+        "abs_z_shift": 1.0375327173956626,
+        "std_ratio_real_over_synth": 0.0,
+        "psi": 0.0
+      },
+      {
+        "feature": "Max Packet Length",
+        "synth_train_mean": 483.5661911293811,
+        "synth_train_std": 474.715949991097,
+        "real_mean": 965.4439158738107,
+        "real_std": 4172.858163550237,
+        "z_shift": 1.0150864422260744,
+        "abs_z_shift": 1.0150864422260744,
+        "std_ratio_real_over_synth": 8.790221107229485,
+        "psi": 1.8552877831712569
+      },
+      {
+        "feature": "Fwd Packet Length Min",
+        "synth_train_mean": 210.76619851931392,
+        "synth_train_std": 236.4239030051583,
+        "real_mean": 8.062661064767884,
+        "real_std": 43.69275837818909,
+        "z_shift": -0.8573732811192256,
+        "abs_z_shift": 0.8573732811192256,
+        "std_ratio_real_over_synth": 0.18480685676369957,
+        "psi": 3.9722808311201887
+      },
+      {
+        "feature": "Bwd PSH Flags",
+        "synth_train_mean": 0.518414421399496,
+        "synth_train_std": 0.49966079402382746,
+        "real_mean": 0.09380534215958083,
+        "real_std": 0.2915577128835813,
+        "z_shift": -0.849794669340747,
+        "abs_z_shift": 0.849794669340747,
+        "std_ratio_real_over_synth": 0.5835112867984549,
+        "psi": 0.0
+      },
+      {
+        "feature": "Min Packet Length",
+        "synth_train_mean": 225.39577769237442,
+        "synth_train_std": 256.7624775808883,
+        "real_mean": 7.591161131941815,
+        "real_std": 17.609974828088625,
+        "z_shift": -0.8482727640444071,
+        "abs_z_shift": 0.8482727640444071,
+        "std_ratio_real_over_synth": 0.06858468960886595,
+        "psi": 7.110966353822685
+      },
+      {
+        "feature": "Bwd Packet Length Min",
+        "synth_train_mean": 177.7033654606034,
+        "synth_train_std": 204.7818726290348,
+        "real_mean": 8.482895074318796,
+        "real_std": 22.680314900457674,
+        "z_shift": -0.8263449699614188,
+        "abs_z_shift": 0.8263449699614188,
+        "std_ratio_real_over_synth": 0.11075352817748364,
+        "psi": 6.475415456408148
+      },
+      {
+        "feature": "Fwd Packet Length Mean",
+        "synth_train_mean": 383.11946414797114,
+        "synth_train_std": 429.9333681755558,
+        "real_mean": 90.50616508782093,
+        "real_std": 382.689755016574,
+        "z_shift": -0.6806015087916287,
+        "abs_z_shift": 0.6806015087916287,
+        "std_ratio_real_over_synth": 0.8901141045193526,
+        "psi": 1.3243157085320985
+      },
+      {
+        "feature": "Avg Fwd Segment Size",
+        "synth_train_mean": 383.11946414797114,
+        "synth_train_std": 429.9333681755558,
+        "real_mean": 90.50616508782093,
+        "real_std": 382.689755016574,
+        "z_shift": -0.6806015087916287,
+        "abs_z_shift": 0.6806015087916287,
+        "std_ratio_real_over_synth": 0.8901141045193526,
+        "psi": 1.3243157085320985
+      },
+      {
+        "feature": "Init_Win_bytes_backward",
+        "synth_train_mean": 26042.10345028106,
+        "synth_train_std": 22711.755417594028,
+        "real_mean": 10785.086336822307,
+        "real_std": 23754.233394147366,
+        "z_shift": -0.6717674100012443,
+        "abs_z_shift": 0.6717674100012443,
+        "std_ratio_real_over_synth": 1.045900369979582,
+        "psi": 4.149742636017071
+      },
+      {
+        "feature": "Packet Length Mean",
+        "synth_train_mean": 393.00576557830396,
+        "synth_train_std": 394.7964274652695,
+        "real_mean": 139.67477130030372,
+        "real_std": 336.6274455969367,
+        "z_shift": -0.6416749916013001,
+        "abs_z_shift": 0.6416749916013001,
+        "std_ratio_real_over_synth": 0.8526608200540265,
+        "psi": 0.8547076116549834
+      },
+      {
+        "feature": "Average Packet Size",
+        "synth_train_mean": 393.00576557830396,
+        "synth_train_std": 394.7964274652695,
+        "real_mean": 155.20141598493203,
+        "real_std": 356.9613487192891,
+        "z_shift": -0.6023467616466504,
+        "abs_z_shift": 0.6023467616466504,
+        "std_ratio_real_over_synth": 0.9041656000058187,
+        "psi": 0.8481425677809007
+      },
+      {
+        "feature": "Down/Up Ratio",
+        "synth_train_mean": 0.7381198118055793,
+        "synth_train_std": 1.2495096257323985,
+        "real_mean": 1.4905651159666329,
+        "real_std": 1.1387544717427376,
+        "z_shift": 0.6021924830871164,
+        "abs_z_shift": 0.6021924830871164,
+        "std_ratio_real_over_synth": 0.9113611038212355,
+        "psi": 8.321099261881342
+      },
+      {
+        "feature": "Idle Min",
+        "synth_train_mean": 3186224.8330823523,
+        "synth_train_std": 13838932.177924283,
+        "real_mean": 9596995.880943365,
+        "real_std": 22161378.689012073,
+        "z_shift": 0.46324174187997536,
+        "abs_z_shift": 0.46324174187997536,
+        "std_ratio_real_over_synth": 1.6013792396759967,
+        "psi": 6.435276062243426
+      },
+      {
+        "feature": "Bwd IAT Std",
+        "synth_train_mean": 1430358.247315745,
+        "synth_train_std": 6804057.551933869,
+        "real_mean": 4092142.316012062,
+        "real_std": 9473340.567088652,
+        "z_shift": 0.3912054018325713,
+        "abs_z_shift": 0.3912054018325713,
+        "std_ratio_real_over_synth": 1.3923075304376449,
+        "psi": 1.9382167553513185
+      },
+      {
+        "feature": "Bwd Packet Length Mean",
+        "synth_train_mean": 323.09702811018803,
+        "synth_train_std": 372.33067750733596,
+        "real_mean": 178.58196485892336,
+        "real_std": 493.79919030007994,
+        "z_shift": -0.3881363314426811,
+        "abs_z_shift": 0.3881363314426811,
+        "std_ratio_real_over_synth": 1.326238261123006,
+        "psi": 1.4953843589915914
+      },
+      {
+        "feature": "Avg Bwd Segment Size",
+        "synth_train_mean": 323.09702811018803,
+        "synth_train_std": 372.33067750733596,
+        "real_mean": 178.58196485893558,
+        "real_std": 493.79919030017794,
+        "z_shift": -0.3881363314426483,
+        "abs_z_shift": 0.3881363314426483,
+        "std_ratio_real_over_synth": 1.326238261123269,
+        "psi": 1.4953843589915914
+      },
+      {
+        "feature": "Flow IAT Max",
+        "synth_train_mean": 4143125.7288250155,
+        "synth_train_std": 17565769.731919006,
+        "real_mean": 10342559.418023376,
+        "real_std": 22549560.5758288,
+        "z_shift": 0.3529269587277625,
+        "abs_z_shift": 0.3529269587277625,
+        "std_ratio_real_over_synth": 1.283721745187954,
+        "psi": 1.7320745933691357
+      },
+      {
+        "feature": "Total Fwd Packets",
+        "synth_train_mean": 2098.0220585384764,
+        "synth_train_std": 6076.52184402659,
+        "real_mean": 12.812902280249643,
+        "real_std": 2252.1708561079286,
+        "z_shift": -0.34315834119941635,
+        "abs_z_shift": 0.34315834119941635,
+        "std_ratio_real_over_synth": 0.37063486545710067,
+        "psi": 3.097514482230243
+      },
+      {
+        "feature": "Subflow Fwd Packets",
+        "synth_train_mean": 2098.0220585384764,
+        "synth_train_std": 6076.52184402659,
+        "real_mean": 12.812902280249643,
+        "real_std": 2252.1708561079286,
+        "z_shift": -0.34315834119941635,
+        "abs_z_shift": 0.34315834119941635,
+        "std_ratio_real_over_synth": 0.37063486545710067,
+        "psi": 3.097514482230243
+      },
+      {
+        "feature": "act_data_pkt_fwd",
+        "synth_train_mean": 1782.2756541965498,
+        "synth_train_std": 5196.2281388075535,
+        "real_mean": 2.9553171220245003,
+        "real_std": 55.955517773639244,
+        "z_shift": -0.34242536885279395,
+        "abs_z_shift": 0.34242536885279395,
+        "std_ratio_real_over_synth": 0.010768487502644579,
+        "psi": 4.038121321772484
+      },
+      {
+        "feature": "Fwd Header Length",
+        "synth_train_mean": 59876.45006151998,
+        "synth_train_std": 177703.38834421497,
+        "real_mean": 155.1848504464013,
+        "real_std": 1734.6672341040944,
+        "z_shift": -0.33607274328046816,
+        "abs_z_shift": 0.33607274328046816,
+        "std_ratio_real_over_synth": 0.009761587836153185,
+        "psi": 3.2216103452227727
+      },
+      {
+        "feature": "Fwd Packet Length Max",
+        "synth_train_mean": 383.11946414797114,
+        "synth_train_std": 429.9333681755558,
+        "real_mean": 241.6737789611246,
+        "real_std": 950.0065081072707,
+        "z_shift": -0.32899443415401364,
+        "abs_z_shift": 0.32899443415401364,
+        "std_ratio_real_over_synth": 2.209659864594069,
+        "psi": 1.8925660440794718
+      },
+      {
+        "feature": "Fwd IAT Total",
+        "synth_train_mean": 37805208.62492155,
+        "synth_train_std": 105608605.12308155,
+        "real_mean": 6142130.83566203,
+        "real_std": 23322421.820201773,
+        "z_shift": -0.29981532046898657,
+        "abs_z_shift": 0.29981532046898657,
+        "std_ratio_real_over_synth": 0.22083827158800798,
+        "psi": 2.0000442507294713
+      },
+      {
+        "feature": "Fwd Packet Length Std",
+        "synth_train_mean": 76.65568544635812,
+        "synth_train_std": 99.30867787705834,
+        "real_mean": 106.07657122803344,
+        "real_std": 475.0136150761432,
+        "z_shift": 0.29625694763650984,
+        "abs_z_shift": 0.29625694763650984,
+        "std_ratio_real_over_synth": 4.783203494705651,
+        "psi": 1.7854483401867578
+      },
+      {
+        "feature": "Total Length of Fwd Packets",
+        "synth_train_mean": 1792345.9181990349,
+        "synth_train_std": 6453145.736640757,
+        "real_mean": 1532.0954175165186,
+        "real_std": 100930.54785919051,
+        "z_shift": -0.27751020910830326,
+        "abs_z_shift": 0.27751020910830326,
+        "std_ratio_real_over_synth": 0.015640518900124953,
+        "psi": 2.6937837203511004
+      },
+      {
+        "feature": "Subflow Fwd Bytes",
+        "synth_train_mean": 1792345.9181990349,
+        "synth_train_std": 6453145.736640757,
+        "real_mean": 1532.1459139929407,
+        "real_std": 100903.13571740741,
+        "z_shift": -0.2775102012832086,
+        "abs_z_shift": 0.2775102012832086,
+        "std_ratio_real_over_synth": 0.015636271027397165,
+        "psi": 2.6937837203511004
+      },
+      {
+        "feature": "Total Backward Packets",
+        "synth_train_mean": 197.82326032176778,
+        "synth_train_std": 695.8975344787866,
+        "real_mean": 10.692160191506773,
+        "real_std": 153.2813330259458,
+        "z_shift": -0.2689061116884245,
+        "abs_z_shift": 0.2689061116884245,
+        "std_ratio_real_over_synth": 0.22026422775121693,
+        "psi": 1.7982989259102469
+      },
+      {
+        "feature": "Subflow Bwd Packets",
+        "synth_train_mean": 197.82326032176778,
+        "synth_train_std": 695.8975344787866,
+        "real_mean": 10.692160191506773,
+        "real_std": 153.2813330259458,
+        "z_shift": -0.2689061116884245,
+        "abs_z_shift": 0.2689061116884245,
+        "std_ratio_real_over_synth": 0.22026422775121693,
+        "psi": 1.7982989259102469
+      },
+      {
+        "feature": "ACK Flag Count",
+        "synth_train_mean": 1044.2500096918006,
+        "synth_train_std": 3909.873508848129,
+        "real_mean": 0.4340046655348877,
+        "real_std": 0.49562547939834367,
+        "z_shift": -0.2669692517325374,
+        "abs_z_shift": 0.2669692517325374,
+        "std_ratio_real_over_synth": 0.00012676253548272914,
+        "psi": 6.171096616372445
+      },
+      {
+        "feature": "PSH Flag Count",
+        "synth_train_mean": 636.9966854041481,
+        "synth_train_std": 2465.1890882035113,
+        "real_mean": 0.09380534215958083,
+        "real_std": 0.2915577128835813,
+        "z_shift": -0.2583586318427314,
+        "abs_z_shift": 0.2583586318427314,
+        "std_ratio_real_over_synth": 0.00011826991863575538,
+        "psi": 4.9088226289598875
+      },
+      {
+        "feature": "Bwd Header Length",
+        "synth_train_mean": 8373.077411319437,
+        "synth_train_std": 31957.085467196866,
+        "real_mean": 246.51443018185816,
+        "real_std": 3177.1150710900906,
+        "z_shift": -0.25429612439092675,
+        "abs_z_shift": 0.25429612439092675,
+        "std_ratio_real_over_synth": 0.09941817361133631,
+        "psi": 2.037954629276611
+      },
+      {
+        "feature": "Bwd IAT Total",
+        "synth_train_mean": 37714287.58740991,
+        "synth_train_std": 105630247.4282504,
+        "real_mean": 13544519.558563454,
+        "real_std": 29385392.07631924,
+        "z_shift": -0.22881483871619457,
+        "abs_z_shift": 0.22881483871619457,
+        "std_ratio_real_over_synth": 0.27819107492178635,
+        "psi": 2.2361520881860826
+      },
+      {
+        "feature": "Flow Duration",
+        "synth_train_mean": 37805208.62492155,
+        "synth_train_std": 105608605.12308155,
+        "real_mean": 14097381.960226925,
+        "real_std": 29903116.42341428,
+        "z_shift": -0.22448764129650384,
+        "abs_z_shift": 0.22448764129650384,
+        "std_ratio_real_over_synth": 0.2831503776473867,
+        "psi": 2.169339448702745
+      },
+      {
+        "feature": "FIN Flag Count",
+        "synth_train_mean": 50.126284163597596,
+        "synth_train_std": 223.8120372850883,
+        "real_mean": 0.18268256042600486,
+        "real_std": 0.3864060591427157,
+        "z_shift": -0.22314975641618984,
+        "abs_z_shift": 0.22314975641618984,
+        "std_ratio_real_over_synth": 0.001726475768818983,
+        "psi": 4.461733394132048
+      },
+      {
+        "feature": "Idle Std",
+        "synth_train_mean": 2681601.650658441,
+        "synth_train_std": 11302364.379818795,
+        "real_mean": 300037.4719251424,
+        "real_std": 2380241.641856382,
+        "z_shift": -0.2107138027673125,
+        "abs_z_shift": 0.2107138027673125,
+        "std_ratio_real_over_synth": 0.2105967885893397,
+        "psi": 2.4473051590437125
+      },
+      {
+        "feature": "Active Mean",
+        "synth_train_mean": 9043849.630365139,
+        "synth_train_std": 44823428.98548982,
+        "real_mean": 130841.26538086639,
+        "real_std": 1124940.253686815,
+        "z_shift": -0.19884708882646052,
+        "abs_z_shift": 0.19884708882646052,
+        "std_ratio_real_over_synth": 0.02509714850354218,
+        "psi": 2.2435425808025
+      },
+      {
+        "feature": "Total Length of Bwd Packets",
+        "synth_train_mean": 131481.52338923514,
+        "synth_train_std": 582066.8791059278,
+        "real_mean": 17501.12036957876,
+        "real_std": 496855.4966588982,
+        "z_shift": -0.19582011468292734,
+        "abs_z_shift": 0.19582011468292734,
+        "std_ratio_real_over_synth": 0.8536055125178796,
+        "psi": 1.781388949347065
+      },
+      {
+        "feature": "Subflow Bwd Bytes",
+        "synth_train_mean": 131481.52338923514,
+        "synth_train_std": 582066.8791059278,
+        "real_mean": 17505.74698022644,
+        "real_std": 497510.80397599796,
+        "z_shift": -0.19581216609348898,
+        "abs_z_shift": 0.19581216609348898,
+        "std_ratio_real_over_synth": 0.8547313407356033,
+        "psi": 1.781388949347065
+      },
+      {
+        "feature": "Active Max",
+        "synth_train_mean": 15823314.015785996,
+        "synth_train_std": 81497980.86096174,
+        "real_mean": 224896.1993233753,
+        "real_std": 1755571.1027423346,
+        "z_shift": -0.1913963714398535,
+        "abs_z_shift": 0.1913963714398535,
+        "std_ratio_real_over_synth": 0.021541283405995017,
+        "psi": 2.297646563878758
+      },
+      {
+        "feature": "Bwd IAT Min",
+        "synth_train_mean": 295509.9207733085,
+        "synth_train_std": 1397614.7917099837,
+        "real_mean": 35691.89297360675,
+        "real_std": 1342693.6496061585,
+        "z_shift": -0.18590102891070334,
+        "abs_z_shift": 0.18590102891070334,
+        "std_ratio_real_over_synth": 0.96070366281926,
+        "psi": 2.8024586018489037
+      },
+      {
+        "feature": "Active Min",
+        "synth_train_mean": 4019098.444815579,
+        "synth_train_std": 21818487.4054231,
+        "real_mean": 84650.49077274448,
+        "real_std": 954200.6409023969,
+        "z_shift": -0.18032633889482513,
+        "abs_z_shift": 0.18032633889482513,
+        "std_ratio_real_over_synth": 0.04373358350520785,
+        "psi": 2.2511866200275135
+      },
+      {
+        "feature": "Active Std",
+        "synth_train_mean": 2510713.7372200526,
+        "synth_train_std": 13740924.874442562,
+        "real_mean": 65213.42217733447,
+        "real_std": 728204.8423896211,
+        "z_shift": -0.17797203153269803,
+        "abs_z_shift": 0.17797203153269803,
+        "std_ratio_real_over_synth": 0.05299532957523448,
+        "psi": 2.95413963670013
+      },
+      {
+        "feature": "Flow IAT Min",
+        "synth_train_mean": 145369.90220623967,
+        "synth_train_std": 720784.2381870626,
+        "real_mean": 23717.406353432587,
+        "real_std": 924665.3004611423,
+        "z_shift": -0.16877796351206373,
+        "abs_z_shift": 0.16877796351206373,
+        "std_ratio_real_over_synth": 1.2828600453124326,
+        "psi": 2.7874331857927044
+      },
+      {
+        "feature": "Fwd IAT Min",
+        "synth_train_mean": 208519.2584433775,
+        "synth_train_std": 996849.7394257493,
+        "real_mean": 51737.23978040231,
+        "real_std": 1045520.8815916445,
+        "z_shift": -0.15727748371915343,
+        "abs_z_shift": 0.15727748371915343,
+        "std_ratio_real_over_synth": 1.0488249534919205,
+        "psi": 1.3707898314190794
+      },
+      {
+        "feature": "Fwd IAT Mean",
+        "synth_train_mean": 2085192.5771413576,
+        "synth_train_std": 9968497.395782901,
+        "real_mean": 606784.1641097013,
+        "real_std": 2967665.6180728385,
+        "z_shift": -0.14830805028419625,
+        "abs_z_shift": 0.14830805028419625,
+        "std_ratio_real_over_synth": 0.2977044082218738,
+        "psi": 1.1170761647426841
+      },
+      {
+        "feature": "Protocol",
+        "synth_train_mean": 8.885888738127544,
+        "synth_train_std": 5.612085833677356,
+        "real_mean": 8.077506503657926,
+        "real_std": 4.401768406041887,
+        "z_shift": -0.14404309884544172,
+        "abs_z_shift": 0.14404309884544172,
+        "std_ratio_real_over_synth": 0.7843373277770413,
+        "psi": 1.1727650025623713
+      },
+      {
+        "feature": "Bwd IAT Max",
+        "synth_train_mean": 6312452.67484914,
+        "synth_train_std": 29872237.913884774,
+        "real_mean": 10191918.37139856,
+        "real_std": 22540972.07327019,
+        "z_shift": 0.12986859932399591,
+        "abs_z_shift": 0.12986859932399591,
+        "std_ratio_real_over_synth": 0.7545792899163082,
+        "psi": 2.3520232287831124
+      },
+      {
+        "feature": "SYN Flag Count",
+        "synth_train_mean": 258.43890288815663,
+        "synth_train_std": 2005.662291383417,
+        "real_mean": 0.338672643111008,
+        "real_std": 0.47325836909579505,
+        "z_shift": -0.12868578691134655,
+        "abs_z_shift": 0.12868578691134655,
+        "std_ratio_real_over_synth": 0.00023596114417116673,
+        "psi": 0.0
+      },
+      {
+        "feature": "RST Flag Count",
+        "synth_train_mean": 10.026749370032952,
+        "synth_train_std": 88.67820683150684,
+        "real_mean": 0.0013068383062398476,
+        "real_std": 0.036126589651961215,
+        "z_shift": -0.11305418647864543,
+        "abs_z_shift": 0.11305418647864543,
+        "std_ratio_real_over_synth": 0.00040738971775335504,
+        "psi": 0.0
+      },
+      {
+        "feature": "Fwd URG Flags",
+        "synth_train_mean": 0.01060283000581508,
+        "synth_train_std": 0.102422702569708,
+        "real_mean": 0.0,
+        "real_std": 0.0,
+        "z_shift": -0.10352031082752558,
+        "abs_z_shift": 0.10352031082752558,
+        "std_ratio_real_over_synth": 0.0,
+        "psi": 0.0
+      },
+      {
+        "feature": "Idle Max",
+        "synth_train_mean": 17139742.843430724,
+        "synth_train_std": 67974254.36497983,
+        "real_mean": 10142616.595099967,
+        "real_std": 22596920.556287535,
+        "z_shift": -0.10293788896544889,
+        "abs_z_shift": 0.10293788896544889,
+        "std_ratio_real_over_synth": 0.3324335186518708,
+        "psi": 4.408824075268051
+      },
+      {
+        "feature": "Flow Packets/s",
+        "synth_train_mean": 1314.4027306397784,
+        "synth_train_std": 9922.532084932987,
+        "real_mean": 2192.8939986937407,
+        "real_std": 18362.51751517887,
+        "z_shift": 0.08853498890549379,
+        "abs_z_shift": 0.08853498890549379,
+        "std_ratio_real_over_synth": 1.8505878699109175,
+        "psi": 1.3677412691348212
+      },
+      {
+        "feature": "Fwd IAT Max",
+        "synth_train_mean": 4315207.264291821,
+        "synth_train_std": 20459082.652343523,
+        "real_mean": 2575427.224574667,
+        "real_std": 10614808.576443117,
+        "z_shift": -0.0850370502568867,
+        "abs_z_shift": 0.0850370502568867,
+        "std_ratio_real_over_synth": 0.5188311107012036,
+        "psi": 1.4399503700738752
+      },
+      {
+        "feature": "ECE Flag Count",
+        "synth_train_mean": 0.016379143244814886,
+        "synth_train_std": 0.19337544137998366,
+        "real_mean": 0.0,
+        "real_std": 0.0,
+        "z_shift": -0.0847012584841883,
+        "abs_z_shift": 0.0847012584841883,
+        "std_ratio_real_over_synth": 0.0,
+        "psi": 0.0
+      },
+      {
+        "feature": "CWE Flag Count",
+        "synth_train_mean": 0.010467144795503005,
+        "synth_train_std": 0.13122262989602593,
+        "real_mean": 0.0,
+        "real_std": 0.0,
+        "z_shift": -0.07976630862977423,
+        "abs_z_shift": 0.07976630862977423,
+        "std_ratio_real_over_synth": 0.0,
+        "psi": 0.0
+      },
+      {
+        "feature": "Bwd IAT Mean",
+        "synth_train_mean": 2955098.427930798,
+        "synth_train_std": 13976148.081979955,
+        "real_mean": 1859981.1955095334,
+        "real_std": 4528747.595926696,
+        "z_shift": -0.07835615550133247,
+        "abs_z_shift": 0.07835615550133247,
+        "std_ratio_real_over_synth": 0.3240340306472428,
+        "psi": 2.036299867556125
+      },
+      {
+        "feature": "Flow Bytes/s",
+        "synth_train_mean": 819742.3083587415,
+        "synth_train_std": 9444124.500982428,
+        "real_mean": 117916.54538873982,
+        "real_std": 876232.8777303554,
+        "z_shift": -0.07431348060871058,
+        "abs_z_shift": 0.07431348060871058,
+        "std_ratio_real_over_synth": 0.09278074189293088,
+        "psi": 0.6944556903508835
+      },
+      {
+        "feature": "Flow IAT Mean",
+        "synth_train_mean": 947513.2337139306,
+        "synth_train_std": 3776834.5860275654,
+        "real_mean": 1174380.6078700696,
+        "real_std": 2803245.01266959,
+        "z_shift": 0.06006812556616526,
+        "abs_z_shift": 0.06006812556616526,
+        "std_ratio_real_over_synth": 0.7422207536015003,
+        "psi": 1.179572028206401
+      },
+      {
+        "feature": "URG Flag Count",
+        "synth_train_mean": 0.47208761387865866,
+        "synth_train_std": 10.861473608972332,
+        "real_mean": 0.00817689949558484,
+        "real_std": 0.09005574834636569,
+        "z_shift": -0.04271158141929266,
+        "abs_z_shift": 0.04271158141929266,
+        "std_ratio_real_over_synth": 0.008291301124368003,
+        "psi": 0.0
+      },
+      {
+        "feature": "Bwd URG Flags",
+        "synth_train_mean": 0.01060283000581508,
+        "synth_train_std": 0.102422702569708,
+        "real_mean": 0.00817689949558484,
+        "real_std": 0.09005574834636569,
+        "z_shift": -0.023685476455557547,
+        "abs_z_shift": 0.023685476455557547,
+        "std_ratio_real_over_synth": 0.8792557322442701,
+        "psi": 0.0
+      },
+      {
+        "feature": "Fwd Packets/s",
+        "synth_train_mean": 1274.11942725494,
+        "synth_train_std": 9915.476142141872,
+        "real_mean": 1075.2880610325003,
+        "real_std": 8613.171275011071,
+        "z_shift": -0.02005262918009272,
+        "abs_z_shift": 0.02005262918009272,
+        "std_ratio_real_over_synth": 0.8686593716265565,
+        "psi": 0.8247457672239782
+      },
+      {
+        "feature": "Idle Mean",
+        "synth_train_mean": 9776575.246669482,
+        "synth_train_std": 37365096.29315207,
+        "real_mean": 9860445.793455403,
+        "real_std": 22276126.083814252,
+        "z_shift": 0.0022446227925632897,
+        "abs_z_shift": 0.0022446227925632897,
+        "std_ratio_real_over_synth": 0.5961747270512672,
+        "psi": 5.316401205449585
+      },
+      {
+        "feature": "Fwd IAT Std",
+        "synth_train_mean": 974542.1872158872,
+        "synth_train_std": 4641246.365885442,
+        "real_mean": 966892.6260853024,
+        "real_std": 4518360.396572525,
+        "z_shift": -0.0016481695922936823,
+        "abs_z_shift": 0.0016481695922936823,
+        "std_ratio_real_over_synth": 0.9735230669468085,
+        "psi": 0.9789859009457673
+      }
+    ],
+    "reference": "reconstructed_train"
+  },
+  "calibration": {
+    "enabled": true,
+    "design": {
+      "eval_set": "去重后真实数据的评估段（所有级别共用同一批窗口）",
+      "isolation": {
+        "overlap_rows": 0,
+        "split_mode": "按行序连续切分（非随机），窗口不跨段"
+      },
+      "fit_attack_rows_reserved": 6000,
+      "why_reserve_attack_rows": "L3/L4 需要少量目标域正样本；若从评估段取即为数据泄漏。因此从攻击块头部让出少量行给拟合段，让出比例已在报告中标明。",
+      "threshold_rule": "拟合段正常窗口分数的 0.999 分位（绝不使用评估段分位数）"
+    },
+    "sub_split": {
+      "finetune_subsegment": {
+        "normal_rows": 25166,
+        "attack_rows": 4800
+      },
+      "threshold_selection_subsegment": {
+        "normal_rows": 6292,
+        "attack_rows": 1200
+      },
+      "note": "拟合段内部 8:2 按行序切分；微调与定阈值用的是**不同行**，避免阈值在训练样本上被挑出来",
+      "threshold_rows_overlap_finetune_rows": 0
+    },
+    "split": {
+      "rows_total": 163754,
+      "fit": {
+        "normal_rows": 31458,
+        "attack_rows": 6000,
+        "row_range": [
+          0,
+          31457
+        ],
+        "note": "前半段正常流（按行序）+ 攻击块最前面若干行"
+      },
+      "eval": {
+        "normal_rows": 31458,
+        "attack_rows": 94838,
+        "row_range": [
+          31458,
+          163753
+        ],
+        "attack_share_rows": 0.7509184772280991
+      },
+      "isolation": {
+        "overlap_rows": 0,
+        "split_mode": "按行序连续切分（非随机），窗口不跨段"
+      }
+    },
+    "warnings": [],
+    "scaler_refit": {
+      "fit_rows": 31458,
+      "degenerate_features": 0,
+      "synthetic_mean_abs": 2911522.4619012857,
+      "target_mean_abs": 1498758.3977205735
+    },
+    "eval_windows": {
+      "n_windows_total": 42089,
+      "n_windows_normal": 10481,
+      "n_windows_attack": 31608,
+      "attack_share": 0.750980066050512
+    },
+    "finetune_data": {
+      "windows_requested": 500,
+      "negatives_available_and_used": 250,
+      "positives_available_and_used": 250,
+      "positives_requested": 250,
+      "source": "拟合段（正常前半段 + 攻击块头部），与评估段零重叠",
+      "sampling": "在拟合段的候选窗口上等间隔抽取（确定性）"
+    },
+    "finetune_head": {
+      "mode": "head_only",
+      "epochs": 4,
+      "learning_rate": 0.001,
+      "batch_size": 32,
+      "n_train_windows": 500,
+      "n_trainable_layers": 10,
+      "n_frozen_layers": 16,
+      "trainable_layer_names": [
+        "clf_dense_0",
+        "clf_bn_0",
+        "clf_relu_0",
+        "clf_drop_0",
+        "clf_dense_1",
+        "clf_bn_1",
+        "clf_relu_1",
+        "clf_drop_1",
+        "bin",
+        "mc"
+      ],
+      "final_loss": 0.34078919887542725,
+      "fit_seconds": 2.94
+    },
+    "finetune_backbone": {
+      "mode": "unfreeze_backbone",
+      "epochs": 2,
+      "learning_rate": 1e-05,
+      "batch_size": 32,
+      "n_train_windows": 500,
+      "n_trainable_layers": 26,
+      "n_frozen_layers": 0,
+      "trainable_layer_names": [
+        "flow_window",
+        "conv1d_0",
+        "bn_conv_0",
+        "relu_conv_0",
+        "drop_conv_0",
+        "conv1d_1",
+        "bi_lstm",
+        "bn_conv_1",
+        "attn_score",
+        "relu_conv_1",
+        "attn_weights",
+        "drop_conv_1",
+        "attn_weighted",
+        "cnn_pool",
+        "attn_pool",
+        "fuse",
+        "clf_dense_0",
+        "clf_bn_0",
+        "clf_relu_0",
+        "clf_drop_0",
+        "clf_dense_1",
+        "clf_bn_1",
+        "clf_relu_1",
+        "clf_drop_1",
+        "bin",
+        "mc"
+      ],
+      "final_loss": 0.2642137110233307,
+      "fit_seconds": 3.63
+    },
+    "levels": {
+      "L0": {
+        "level": "L0",
+        "desc": "零样本：合成训练集 scaler + 权重 + 默认阈值 0.5",
+        "needs_labels": false,
+        "n_labeled_windows": 0,
+        "scaler": "synthetic_train",
+        "model_state": "zero_shot",
+        "threshold_source": "config_default",
+        "fit_segment_windows": 2488,
+        "fit_segment_f1_at_best_threshold": 0.376355748373102,
+        "variants": {
+          "spec": {
+            "threshold": 0.5,
+            "binary": {
+              "threshold": 0.5,
+              "accuracy": 0.5111074152391362,
+              "balanced_accuracy": 0.6038362758769644,
+              "precision": 0.8566901636163746,
+              "recall": 0.4191027587952417,
+              "f1": 0.5628518620806866,
+              "roc_auc": 0.6696753711643331,
+              "pr_auc": 0.811718473466699,
+              "mcc": 0.1862855319656576,
+              "tn": 8265,
+              "fp": 2216,
+              "fn": 18361,
+              "tp": 13247,
+              "false_positive_rate": 0.21143020704131285,
+              "false_negative_rate": 0.5808972412047583,
+              "tpr_at_fpr_0.01": 0.0,
+              "tpr_at_fpr_0.001": 0.0,
+              "best_f1": 0.8819605444692563,
+              "best_f1_threshold": 0.008652412332594395
+            },
+            "two_class": {
+              "accuracy": 0.5111074152391362,
+              "macro_precision": 0.5835505201015847,
+              "macro_recall": 0.6038362758769644,
+              "macro_f1": 0.5041601860326628,
+              "per_class": {
+                "Normal": {
+                  "precision": 0.31041087658679484,
+                  "recall": 0.7885697929586871,
+                  "f1": 0.445468509984639,
+                  "support": 10481
+                },
+                "Attack": {
+                  "precision": 0.8566901636163746,
+                  "recall": 0.4191027587952417,
+                  "f1": 0.5628518620806866,
+                  "support": 31608
+                }
+              },
+              "note": "2 类宏 F1 按给定阈值硬判后计算（与二分类列同一工作点）"
+            },
+            "trivial_baseline": {
+              "f1_all_attack": 0.8577825420302048,
+              "f1_all_normal": 0.0,
+              "majority_accuracy": 0.750980066050512
+            },
+            "threshold_source": "config_default"
+          },
+          "fit_normal_quantile": {
+            "threshold": 0.9999998807907104,
+            "binary": {
+              "threshold": 0.9999998807907104,
+              "accuracy": 0.24201097673976574,
+              "balanced_accuracy": 0.4853210701308566,
+              "precision": 0.057057057057057055,
+              "recall": 0.00060111364211592,
+              "f1": 0.001189693497385805,
+              "roc_auc": 0.6696753711643331,
+              "pr_auc": 0.811718473466699,
+              "mcc": -0.14329884793484124,
+              "tn": 10167,
+              "fp": 314,
+              "fn": 31589,
+              "tp": 19,
+              "false_positive_rate": 0.029958973380402633,
+              "false_negative_rate": 0.9993988863578841,
+              "tpr_at_fpr_0.01": 0.0,
+              "tpr_at_fpr_0.001": 0.0,
+              "best_f1": 0.8819605444692563,
+              "best_f1_threshold": 0.008652412332594395
+            },
+            "two_class": {
+              "accuracy": 0.24201097673976574,
+              "macro_precision": 0.15027151157288143,
+              "macro_recall": 0.4853210701308566,
+              "macro_f1": 0.19522700403184468,
+              "per_class": {
+                "Normal": {
+                  "precision": 0.24348596608870582,
+                  "recall": 0.9700410266195973,
+                  "f1": 0.38926431456630356,
+                  "support": 10481
+                },
+                "Attack": {
+                  "precision": 0.057057057057057055,
+                  "recall": 0.00060111364211592,
+                  "f1": 0.001189693497385805,
+                  "support": 31608
+                }
+              },
+              "note": "2 类宏 F1 按给定阈值硬判后计算（与二分类列同一工作点）"
+            },
+            "trivial_baseline": {
+              "f1_all_attack": 0.8577825420302048,
+              "f1_all_normal": 0.0,
+              "majority_accuracy": 0.750980066050512
+            },
+            "threshold_source": "fit_normal_scores_q0.999"
+          },
+          "fit_f1_optimal": {
+            "threshold": 0.016285382211208344,
+            "binary": {
+              "threshold": 0.016285382211208344,
+              "accuracy": 0.7246311387773527,
+              "balanced_accuracy": 0.6244479651757306,
+              "precision": 0.8120596121469102,
+              "recall": 0.8240318906605922,
+              "f1": 0.818001947175026,
+              "roc_auc": 0.6696753711643331,
+              "pr_auc": 0.811718473466699,
+              "mcc": 0.25276423612740573,
+              "tn": 4453,
+              "fp": 6028,
+              "fn": 5562,
+              "tp": 26046,
+              "false_positive_rate": 0.5751359603091308,
+              "false_negative_rate": 0.17596810933940774,
+              "tpr_at_fpr_0.01": 0.0,
+              "tpr_at_fpr_0.001": 0.0,
+              "best_f1": 0.8819605444692563,
+              "best_f1_threshold": 0.008652412332594395
+            },
+            "two_class": {
+              "accuracy": 0.7246311387773527,
+              "macro_precision": 0.6283463312856369,
+              "macro_recall": 0.6244479651757306,
+              "macro_f1": 0.6262628783494177,
+              "per_class": {
+                "Normal": {
+                  "precision": 0.44463305042436346,
+                  "recall": 0.42486403969086917,
+                  "f1": 0.43452380952380953,
+                  "support": 10481
+                },
+                "Attack": {
+                  "precision": 0.8120596121469102,
+                  "recall": 0.8240318906605922,
+                  "f1": 0.818001947175026,
+                  "support": 31608
+                }
+              },
+              "note": "2 类宏 F1 按给定阈值硬判后计算（与二分类列同一工作点）"
+            },
+            "trivial_baseline": {
+              "f1_all_attack": 0.8577825420302048,
+              "f1_all_normal": 0.0,
+              "majority_accuracy": 0.750980066050512
+            },
+            "threshold_source": "fit_segment_f1_max"
+          }
+        },
+        "fpr_budget_operating_points": {
+          "fpr_0.01": {
+            "target_fpr_budget": 0.01,
+            "threshold": 0.9999998807907104,
+            "eval_false_positive_rate": 0.029958973380402633,
+            "eval_recall": 0.00060111364211592,
+            "eval_precision": 0.057057057057057055,
+            "eval_binary_f1": 0.001189693497385805,
+            "eval_macro_f1": 0.19522700403184468,
+            "eval_roc_auc": 0.6696753711643331
+          },
+          "fpr_0.001": {
+            "target_fpr_budget": 0.001,
+            "threshold": 0.9999998807907104,
+            "eval_false_positive_rate": 0.029958973380402633,
+            "eval_recall": 0.00060111364211592,
+            "eval_precision": 0.057057057057057055,
+            "eval_binary_f1": 0.001189693497385805,
+            "eval_macro_f1": 0.19522700403184468,
+            "eval_roc_auc": 0.6696753711643331
+          }
+        },
+        "threshold": 0.5,
+        "binary": {
+          "threshold": 0.5,
+          "accuracy": 0.5111074152391362,
+          "balanced_accuracy": 0.6038362758769644,
+          "precision": 0.8566901636163746,
+          "recall": 0.4191027587952417,
+          "f1": 0.5628518620806866,
+          "roc_auc": 0.6696753711643331,
+          "pr_auc": 0.811718473466699,
+          "mcc": 0.1862855319656576,
+          "tn": 8265,
+          "fp": 2216,
+          "fn": 18361,
+          "tp": 13247,
+          "false_positive_rate": 0.21143020704131285,
+          "false_negative_rate": 0.5808972412047583,
+          "tpr_at_fpr_0.01": 0.0,
+          "tpr_at_fpr_0.001": 0.0,
+          "best_f1": 0.8819605444692563,
+          "best_f1_threshold": 0.008652412332594395
+        },
+        "two_class": {
+          "accuracy": 0.5111074152391362,
+          "macro_precision": 0.5835505201015847,
+          "macro_recall": 0.6038362758769644,
+          "macro_f1": 0.5041601860326628,
+          "per_class": {
+            "Normal": {
+              "precision": 0.31041087658679484,
+              "recall": 0.7885697929586871,
+              "f1": 0.445468509984639,
+              "support": 10481
+            },
+            "Attack": {
+              "precision": 0.8566901636163746,
+              "recall": 0.4191027587952417,
+              "f1": 0.5628518620806866,
+              "support": 31608
+            }
+          },
+          "note": "2 类宏 F1 按给定阈值硬判后计算（与二分类列同一工作点）"
+        },
+        "trivial_baseline": {
+          "f1_all_attack": 0.8577825420302048,
+          "f1_all_normal": 0.0,
+          "majority_accuracy": 0.750980066050512
+        },
+        "eval_seconds": 1.9
+      },
+      "L1": {
+        "level": "L1",
+        "desc": "只重拟合标准化器：用目标域前半段正常流重算 mean/std，权重与阈值不动",
+        "needs_labels": false,
+        "n_labeled_windows": 0,
+        "scaler": "target_normal_refit",
+        "model_state": "zero_shot",
+        "threshold_source": "config_default",
+        "fit_segment_windows": 2488,
+        "fit_segment_f1_at_best_threshold": 0.3573305307409353,
+        "variants": {
+          "spec": {
+            "threshold": 0.5,
+            "binary": {
+              "threshold": 0.5,
+              "accuracy": 0.7368195965691748,
+              "balanced_accuracy": 0.5184090015266927,
+              "precision": 0.7582710644828541,
+              "recall": 0.9535244241964059,
+              "f1": 0.8447621049681172,
+              "roc_auc": 0.4741663640255278,
+              "pr_auc": 0.6880704762852434,
+              "mcc": 0.0694567527809001,
+              "tn": 873,
+              "fp": 9608,
+              "fn": 1469,
+              "tp": 30139,
+              "false_positive_rate": 0.9167064211430207,
+              "false_negative_rate": 0.04647557580359403,
+              "tpr_at_fpr_0.01": 6.327512022272843e-05,
+              "tpr_at_fpr_0.001": 0.0,
+              "best_f1": 0.8587976180765152,
+              "best_f1_threshold": 0.030018478631973267
+            },
+            "two_class": {
+              "accuracy": 0.7368195965691748,
+              "macro_precision": 0.5655146953498813,
+              "macro_recall": 0.5184090015266927,
+              "macro_f1": 0.4904618448103473,
+              "per_class": {
+                "Normal": {
+                  "precision": 0.37275832621690863,
+                  "recall": 0.0832935788569793,
+                  "f1": 0.1361615846525774,
+                  "support": 10481
+                },
+                "Attack": {
+                  "precision": 0.7582710644828541,
+                  "recall": 0.9535244241964059,
+                  "f1": 0.8447621049681172,
+                  "support": 31608
+                }
+              },
+              "note": "2 类宏 F1 按给定阈值硬判后计算（与二分类列同一工作点）"
+            },
+            "trivial_baseline": {
+              "f1_all_attack": 0.8577825420302048,
+              "f1_all_normal": 0.0,
+              "majority_accuracy": 0.750980066050512
+            },
+            "threshold_source": "config_default"
+          },
+          "fit_normal_quantile": {
+            "threshold": 0.9999973609447479,
+            "binary": {
+              "threshold": 0.9999973609447479,
+              "accuracy": 0.24859226876381002,
+              "balanced_accuracy": 0.4991413033107528,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0,
+              "roc_auc": 0.4741663640255278,
+              "pr_auc": 0.6880704762852434,
+              "mcc": -0.0359204677120511,
+              "tn": 10463,
+              "fp": 18,
+              "fn": 31608,
+              "tp": 0,
+              "false_positive_rate": 0.0017173933784944185,
+              "false_negative_rate": 1.0,
+              "tpr_at_fpr_0.01": 6.327512022272843e-05,
+              "tpr_at_fpr_0.001": 0.0,
+              "best_f1": 0.8587976180765152,
+              "best_f1_threshold": 0.030018478631973267
+            },
+            "two_class": {
+              "accuracy": 0.24859226876381002,
+              "macro_precision": 0.12434931425447458,
+              "macro_recall": 0.4991413033107528,
+              "macro_f1": 0.19909803623078093,
+              "per_class": {
+                "Normal": {
+                  "precision": 0.24869862850894917,
+                  "recall": 0.9982826066215056,
+                  "f1": 0.39819607246156186,
+                  "support": 10481
+                },
+                "Attack": {
+                  "precision": 0.0,
+                  "recall": 0.0,
+                  "f1": 0.0,
+                  "support": 31608
+                }
+              },
+              "note": "2 类宏 F1 按给定阈值硬判后计算（与二分类列同一工作点）"
+            },
+            "trivial_baseline": {
+              "f1_all_attack": 0.8577825420302048,
+              "f1_all_normal": 0.0,
+              "majority_accuracy": 0.750980066050512
+            },
+            "threshold_source": "fit_normal_scores_q0.999"
+          },
+          "fit_f1_optimal": {
+            "threshold": 0.9927734136581421,
+            "binary": {
+              "threshold": 0.9927734136581421,
+              "accuracy": 0.5824562237164105,
+              "balanced_accuracy": 0.5074039980409767,
+              "precision": 0.7552193205790354,
+              "recall": 0.6569222981523665,
+              "f1": 0.7026496565260059,
+              "roc_auc": 0.4741663640255278,
+              "pr_auc": 0.6880704762852434,
+              "mcc": 0.013454734918570115,
+              "tn": 3751,
+              "fp": 6730,
+              "fn": 10844,
+              "tp": 20764,
+              "false_positive_rate": 0.6421143020704131,
+              "false_negative_rate": 0.34307770184763353,
+              "tpr_at_fpr_0.01": 6.327512022272843e-05,
+              "tpr_at_fpr_0.001": 0.0,
+              "best_f1": 0.8587976180765152,
+              "best_f1_threshold": 0.030018478631973267
+            },
+            "two_class": {
+              "accuracy": 0.5824562237164105,
+              "macro_precision": 0.5061125722456671,
+              "macro_recall": 0.5074039980409767,
+              "macro_f1": 0.5009100890701492,
+              "per_class": {
+                "Normal": {
+                  "precision": 0.25700582391229876,
+                  "recall": 0.35788569792958685,
+                  "f1": 0.29917052161429253,
+                  "support": 10481
+                },
+                "Attack": {
+                  "precision": 0.7552193205790354,
+                  "recall": 0.6569222981523665,
+                  "f1": 0.7026496565260059,
+                  "support": 31608
+                }
+              },
+              "note": "2 类宏 F1 按给定阈值硬判后计算（与二分类列同一工作点）"
+            },
+            "trivial_baseline": {
+              "f1_all_attack": 0.8577825420302048,
+              "f1_all_normal": 0.0,
+              "majority_accuracy": 0.750980066050512
+            },
+            "threshold_source": "fit_segment_f1_max"
+          }
+        },
+        "fpr_budget_operating_points": {
+          "fpr_0.01": {
+            "target_fpr_budget": 0.01,
+            "threshold": 0.9999947595596314,
+            "eval_false_positive_rate": 0.0482778360843431,
+            "eval_recall": 0.00018982536066818528,
+            "eval_precision": 0.01171875,
+            "eval_binary_f1": 0.00037359900373599005,
+            "eval_macro_f1": 0.19180000016266943,
+            "eval_roc_auc": 0.4741663640255278
+          },
+          "fpr_0.001": {
+            "target_fpr_budget": 0.001,
+            "threshold": 0.9999973609447479,
+            "eval_false_positive_rate": 0.0017173933784944185,
+            "eval_recall": 0.0,
+            "eval_precision": 0.0,
+            "eval_binary_f1": 0.0,
+            "eval_macro_f1": 0.19909803623078093,
+            "eval_roc_auc": 0.4741663640255278
+          }
+        },
+        "threshold": 0.5,
+        "binary": {
+          "threshold": 0.5,
+          "accuracy": 0.7368195965691748,
+          "balanced_accuracy": 0.5184090015266927,
+          "precision": 0.7582710644828541,
+          "recall": 0.9535244241964059,
+          "f1": 0.8447621049681172,
+          "roc_auc": 0.4741663640255278,
+          "pr_auc": 0.6880704762852434,
+          "mcc": 0.0694567527809001,
+          "tn": 873,
+          "fp": 9608,
+          "fn": 1469,
+          "tp": 30139,
+          "false_positive_rate": 0.9167064211430207,
+          "false_negative_rate": 0.04647557580359403,
+          "tpr_at_fpr_0.01": 6.327512022272843e-05,
+          "tpr_at_fpr_0.001": 0.0,
+          "best_f1": 0.8587976180765152,
+          "best_f1_threshold": 0.030018478631973267
+        },
+        "two_class": {
+          "accuracy": 0.7368195965691748,
+          "macro_precision": 0.5655146953498813,
+          "macro_recall": 0.5184090015266927,
+          "macro_f1": 0.4904618448103473,
+          "per_class": {
+            "Normal": {
+              "precision": 0.37275832621690863,
+              "recall": 0.0832935788569793,
+              "f1": 0.1361615846525774,
+              "support": 10481
+            },
+            "Attack": {
+              "precision": 0.7582710644828541,
+              "recall": 0.9535244241964059,
+              "f1": 0.8447621049681172,
+              "support": 31608
+            }
+          },
+          "note": "2 类宏 F1 按给定阈值硬判后计算（与二分类列同一工作点）"
+        },
+        "trivial_baseline": {
+          "f1_all_attack": 0.8577825420302048,
+          "f1_all_normal": 0.0,
+          "majority_accuracy": 0.750980066050512
+        },
+        "eval_seconds": 1.89
+      },
+      "L2": {
+        "level": "L2",
+        "desc": "L1 + 按拟合段正常流量的分数 99.9% 分位重定阈值（不需要标签）",
+        "needs_labels": false,
+        "n_labeled_windows": 0,
+        "scaler": "target_normal_refit",
+        "model_state": "zero_shot",
+        "threshold_source": "fit_normal_scores_q0.999",
+        "fit_segment_windows": 2488,
+        "fit_segment_f1_at_best_threshold": 0.3573305307409353,
+        "variants": {
+          "spec": {
+            "threshold": 0.9999973609447479,
+            "binary": {
+              "threshold": 0.9999973609447479,
+              "accuracy": 0.24859226876381002,
+              "balanced_accuracy": 0.4991413033107528,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0,
+              "roc_auc": 0.4741663640255278,
+              "pr_auc": 0.6880704762852434,
+              "mcc": -0.0359204677120511,
+              "tn": 10463,
+              "fp": 18,
+              "fn": 31608,
+              "tp": 0,
+              "false_positive_rate": 0.0017173933784944185,
+              "false_negative_rate": 1.0,
+              "tpr_at_fpr_0.01": 6.327512022272843e-05,
+              "tpr_at_fpr_0.001": 0.0,
+              "best_f1": 0.8587976180765152,
+              "best_f1_threshold": 0.030018478631973267
+            },
+            "two_class": {
+              "accuracy": 0.24859226876381002,
+              "macro_precision": 0.12434931425447458,
+              "macro_recall": 0.4991413033107528,
+              "macro_f1": 0.19909803623078093,
+              "per_class": {
+                "Normal": {
+                  "precision": 0.24869862850894917,
+                  "recall": 0.9982826066215056,
+                  "f1": 0.39819607246156186,
+                  "support": 10481
+                },
+                "Attack": {
+                  "precision": 0.0,
+                  "recall": 0.0,
+                  "f1": 0.0,
+                  "support": 31608
+                }
+              },
+              "note": "2 类宏 F1 按给定阈值硬判后计算（与二分类列同一工作点）"
+            },
+            "trivial_baseline": {
+              "f1_all_attack": 0.8577825420302048,
+              "f1_all_normal": 0.0,
+              "majority_accuracy": 0.750980066050512
+            },
+            "threshold_source": "fit_normal_scores_q0.999"
+          },
+          "fit_normal_quantile": {
+            "threshold": 0.9999973609447479,
+            "binary": {
+              "threshold": 0.9999973609447479,
+              "accuracy": 0.24859226876381002,
+              "balanced_accuracy": 0.4991413033107528,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0,
+              "roc_auc": 0.4741663640255278,
+              "pr_auc": 0.6880704762852434,
+              "mcc": -0.0359204677120511,
+              "tn": 10463,
+              "fp": 18,
+              "fn": 31608,
+              "tp": 0,
+              "false_positive_rate": 0.0017173933784944185,
+              "false_negative_rate": 1.0,
+              "tpr_at_fpr_0.01": 6.327512022272843e-05,
+              "tpr_at_fpr_0.001": 0.0,
+              "best_f1": 0.8587976180765152,
+              "best_f1_threshold": 0.030018478631973267
+            },
+            "two_class": {
+              "accuracy": 0.24859226876381002,
+              "macro_precision": 0.12434931425447458,
+              "macro_recall": 0.4991413033107528,
+              "macro_f1": 0.19909803623078093,
+              "per_class": {
+                "Normal": {
+                  "precision": 0.24869862850894917,
+                  "recall": 0.9982826066215056,
+                  "f1": 0.39819607246156186,
+                  "support": 10481
+                },
+                "Attack": {
+                  "precision": 0.0,
+                  "recall": 0.0,
+                  "f1": 0.0,
+                  "support": 31608
+                }
+              },
+              "note": "2 类宏 F1 按给定阈值硬判后计算（与二分类列同一工作点）"
+            },
+            "trivial_baseline": {
+              "f1_all_attack": 0.8577825420302048,
+              "f1_all_normal": 0.0,
+              "majority_accuracy": 0.750980066050512
+            },
+            "threshold_source": "fit_normal_scores_q0.999"
+          },
+          "fit_f1_optimal": {
+            "threshold": 0.9927734136581421,
+            "binary": {
+              "threshold": 0.9927734136581421,
+              "accuracy": 0.5824562237164105,
+              "balanced_accuracy": 0.5074039980409767,
+              "precision": 0.7552193205790354,
+              "recall": 0.6569222981523665,
+              "f1": 0.7026496565260059,
+              "roc_auc": 0.4741663640255278,
+              "pr_auc": 0.6880704762852434,
+              "mcc": 0.013454734918570115,
+              "tn": 3751,
+              "fp": 6730,
+              "fn": 10844,
+              "tp": 20764,
+              "false_positive_rate": 0.6421143020704131,
+              "false_negative_rate": 0.34307770184763353,
+              "tpr_at_fpr_0.01": 6.327512022272843e-05,
+              "tpr_at_fpr_0.001": 0.0,
+              "best_f1": 0.8587976180765152,
+              "best_f1_threshold": 0.030018478631973267
+            },
+            "two_class": {
+              "accuracy": 0.5824562237164105,
+              "macro_precision": 0.5061125722456671,
+              "macro_recall": 0.5074039980409767,
+              "macro_f1": 0.5009100890701492,
+              "per_class": {
+                "Normal": {
+                  "precision": 0.25700582391229876,
+                  "recall": 0.35788569792958685,
+                  "f1": 0.29917052161429253,
+                  "support": 10481
+                },
+                "Attack": {
+                  "precision": 0.7552193205790354,
+                  "recall": 0.6569222981523665,
+                  "f1": 0.7026496565260059,
+                  "support": 31608
+                }
+              },
+              "note": "2 类宏 F1 按给定阈值硬判后计算（与二分类列同一工作点）"
+            },
+            "trivial_baseline": {
+              "f1_all_attack": 0.8577825420302048,
+              "f1_all_normal": 0.0,
+              "majority_accuracy": 0.750980066050512
+            },
+            "threshold_source": "fit_segment_f1_max"
+          }
+        },
+        "fpr_budget_operating_points": {
+          "fpr_0.01": {
+            "target_fpr_budget": 0.01,
+            "threshold": 0.9999947595596314,
+            "eval_false_positive_rate": 0.0482778360843431,
+            "eval_recall": 0.00018982536066818528,
+            "eval_precision": 0.01171875,
+            "eval_binary_f1": 0.00037359900373599005,
+            "eval_macro_f1": 0.19180000016266943,
+            "eval_roc_auc": 0.4741663640255278
+          },
+          "fpr_0.001": {
+            "target_fpr_budget": 0.001,
+            "threshold": 0.9999973609447479,
+            "eval_false_positive_rate": 0.0017173933784944185,
+            "eval_recall": 0.0,
+            "eval_precision": 0.0,
+            "eval_binary_f1": 0.0,
+            "eval_macro_f1": 0.19909803623078093,
+            "eval_roc_auc": 0.4741663640255278
+          }
+        },
+        "threshold": 0.9999973609447479,
+        "binary": {
+          "threshold": 0.9999973609447479,
+          "accuracy": 0.24859226876381002,
+          "balanced_accuracy": 0.4991413033107528,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "roc_auc": 0.4741663640255278,
+          "pr_auc": 0.6880704762852434,
+          "mcc": -0.0359204677120511,
+          "tn": 10463,
+          "fp": 18,
+          "fn": 31608,
+          "tp": 0,
+          "false_positive_rate": 0.0017173933784944185,
+          "false_negative_rate": 1.0,
+          "tpr_at_fpr_0.01": 6.327512022272843e-05,
+          "tpr_at_fpr_0.001": 0.0,
+          "best_f1": 0.8587976180765152,
+          "best_f1_threshold": 0.030018478631973267
+        },
+        "two_class": {
+          "accuracy": 0.24859226876381002,
+          "macro_precision": 0.12434931425447458,
+          "macro_recall": 0.4991413033107528,
+          "macro_f1": 0.19909803623078093,
+          "per_class": {
+            "Normal": {
+              "precision": 0.24869862850894917,
+              "recall": 0.9982826066215056,
+              "f1": 0.39819607246156186,
+              "support": 10481
+            },
+            "Attack": {
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0,
+              "support": 31608
+            }
+          },
+          "note": "2 类宏 F1 按给定阈值硬判后计算（与二分类列同一工作点）"
+        },
+        "trivial_baseline": {
+          "f1_all_attack": 0.8577825420302048,
+          "f1_all_normal": 0.0,
+          "majority_accuracy": 0.750980066050512
+        },
+        "eval_seconds": 0.0
+      },
+      "L3": {
+        "level": "L3",
+        "desc": "L2 + 冻结主干、只用少量标注重训分类头",
+        "needs_labels": true,
+        "n_labeled_windows": 500,
+        "scaler": "target_normal_refit",
+        "model_state": "head_finetuned",
+        "threshold_source": "沿用 L2 阈值（fit_normal_scores_q0.999）",
+        "fit_segment_windows": 2488,
+        "fit_segment_f1_at_best_threshold": 0.8666666666666666,
+        "variants": {
+          "spec": {
+            "threshold": 0.9999973609447479,
+            "binary": {
+              "threshold": 0.9999973609447479,
+              "accuracy": 0.249019933949488,
+              "balanced_accuracy": 0.5,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0,
+              "roc_auc": 0.703429614147218,
+              "pr_auc": 0.9006399873516844,
+              "mcc": 0.0,
+              "tn": 10481,
+              "fp": 0,
+              "fn": 31608,
+              "tp": 0,
+              "false_positive_rate": 0.0,
+              "false_negative_rate": 1.0,
+              "tpr_at_fpr_0.01": 0.4371045304986079,
+              "tpr_at_fpr_0.001": 0.4133447228549734,
+              "best_f1": 0.8633842361158667,
+              "best_f1_threshold": 0.0026825517416000366
+            },
+            "two_class": {
+              "accuracy": 0.249019933949488,
+              "macro_precision": 0.124509966974744,
+              "macro_recall": 0.5,
+              "macro_f1": 0.19937226555069432,
+              "per_class": {
+                "Normal": {
+                  "precision": 0.249019933949488,
+                  "recall": 1.0,
+                  "f1": 0.39874453110138863,
+                  "support": 10481
+                },
+                "Attack": {
+                  "precision": 0.0,
+                  "recall": 0.0,
+                  "f1": 0.0,
+                  "support": 31608
+                }
+              },
+              "note": "2 类宏 F1 按给定阈值硬判后计算（与二分类列同一工作点）"
+            },
+            "trivial_baseline": {
+              "f1_all_attack": 0.8577825420302048,
+              "f1_all_normal": 0.0,
+              "majority_accuracy": 0.750980066050512
+            },
+            "threshold_source": "沿用 L2 阈值（fit_normal_scores_q0.999）"
+          },
+          "fit_normal_quantile": {
+            "threshold": 0.0224525768011808,
+            "binary": {
+              "threshold": 0.0224525768011808,
+              "accuracy": 0.249019933949488,
+              "balanced_accuracy": 0.5,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0,
+              "roc_auc": 0.703429614147218,
+              "pr_auc": 0.9006399873516844,
+              "mcc": 0.0,
+              "tn": 10481,
+              "fp": 0,
+              "fn": 31608,
+              "tp": 0,
+              "false_positive_rate": 0.0,
+              "false_negative_rate": 1.0,
+              "tpr_at_fpr_0.01": 0.4371045304986079,
+              "tpr_at_fpr_0.001": 0.4133447228549734,
+              "best_f1": 0.8633842361158667,
+              "best_f1_threshold": 0.0026825517416000366
+            },
+            "two_class": {
+              "accuracy": 0.249019933949488,
+              "macro_precision": 0.124509966974744,
+              "macro_recall": 0.5,
+              "macro_f1": 0.19937226555069432,
+              "per_class": {
+                "Normal": {
+                  "precision": 0.249019933949488,
+                  "recall": 1.0,
+                  "f1": 0.39874453110138863,
+                  "support": 10481
+                },
+                "Attack": {
+                  "precision": 0.0,
+                  "recall": 0.0,
+                  "f1": 0.0,
+                  "support": 31608
+                }
+              },
+              "note": "2 类宏 F1 按给定阈值硬判后计算（与二分类列同一工作点）"
+            },
+            "trivial_baseline": {
+              "f1_all_attack": 0.8577825420302048,
+              "f1_all_normal": 0.0,
+              "majority_accuracy": 0.750980066050512
+            },
+            "threshold_source": "fit_normal_scores_q0.999"
+          },
+          "fit_f1_optimal": {
+            "threshold": 0.00662669911980629,
+            "binary": {
+              "threshold": 0.00662669911980629,
+              "accuracy": 0.5599087647603888,
+              "balanced_accuracy": 0.7066060979297704,
+              "precision": 0.9990845983675337,
+              "recall": 0.4143571247785371,
+              "f1": 0.5857727486190935,
+              "roc_auc": 0.703429614147218,
+              "pr_auc": 0.9006399873516844,
+              "mcc": 0.385868234210031,
+              "tn": 10469,
+              "fp": 12,
+              "fn": 18511,
+              "tp": 13097,
+              "false_positive_rate": 0.001144928918996279,
+              "false_negative_rate": 0.585642875221463,
+              "tpr_at_fpr_0.01": 0.4371045304986079,
+              "tpr_at_fpr_0.001": 0.4133447228549734,
+              "best_f1": 0.8633842361158667,
+              "best_f1_threshold": 0.0026825517416000366
+            },
+            "two_class": {
+              "accuracy": 0.5599087647603888,
+              "macro_precision": 0.6801668678518138,
+              "macro_recall": 0.7066060979297704,
+              "macro_f1": 0.5581862906826747,
+              "per_class": {
+                "Normal": {
+                  "precision": 0.3612491373360939,
+                  "recall": 0.9988550710810037,
+                  "f1": 0.5305998327462558,
+                  "support": 10481
+                },
+                "Attack": {
+                  "precision": 0.9990845983675337,
+                  "recall": 0.4143571247785371,
+                  "f1": 0.5857727486190935,
+                  "support": 31608
+                }
+              },
+              "note": "2 类宏 F1 按给定阈值硬判后计算（与二分类列同一工作点）"
+            },
+            "trivial_baseline": {
+              "f1_all_attack": 0.8577825420302048,
+              "f1_all_normal": 0.0,
+              "majority_accuracy": 0.750980066050512
+            },
+            "threshold_source": "fit_segment_f1_max"
+          }
+        },
+        "fpr_budget_operating_points": {
+          "fpr_0.01": {
+            "target_fpr_budget": 0.01,
+            "threshold": 0.006102072224020954,
+            "eval_false_positive_rate": 0.004865947905734185,
+            "eval_recall": 0.4256517337382941,
+            "eval_precision": 0.9962236208811551,
+            "eval_binary_f1": 0.5964577837873783,
+            "eval_macro_f1": 0.565219804475284,
+            "eval_roc_auc": 0.703429614147218
+          },
+          "fpr_0.001": {
+            "target_fpr_budget": 0.001,
+            "threshold": 0.0224525768011808,
+            "eval_false_positive_rate": 0.0,
+            "eval_recall": 0.0,
+            "eval_precision": 0.0,
+            "eval_binary_f1": 0.0,
+            "eval_macro_f1": 0.19937226555069432,
+            "eval_roc_auc": 0.703429614147218
+          }
+        },
+        "threshold": 0.9999973609447479,
+        "binary": {
+          "threshold": 0.9999973609447479,
+          "accuracy": 0.249019933949488,
+          "balanced_accuracy": 0.5,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "roc_auc": 0.703429614147218,
+          "pr_auc": 0.9006399873516844,
+          "mcc": 0.0,
+          "tn": 10481,
+          "fp": 0,
+          "fn": 31608,
+          "tp": 0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0,
+          "tpr_at_fpr_0.01": 0.4371045304986079,
+          "tpr_at_fpr_0.001": 0.4133447228549734,
+          "best_f1": 0.8633842361158667,
+          "best_f1_threshold": 0.0026825517416000366
+        },
+        "two_class": {
+          "accuracy": 0.249019933949488,
+          "macro_precision": 0.124509966974744,
+          "macro_recall": 0.5,
+          "macro_f1": 0.19937226555069432,
+          "per_class": {
+            "Normal": {
+              "precision": 0.249019933949488,
+              "recall": 1.0,
+              "f1": 0.39874453110138863,
+              "support": 10481
+            },
+            "Attack": {
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0,
+              "support": 31608
+            }
+          },
+          "note": "2 类宏 F1 按给定阈值硬判后计算（与二分类列同一工作点）"
+        },
+        "trivial_baseline": {
+          "f1_all_attack": 0.8577825420302048,
+          "f1_all_normal": 0.0,
+          "majority_accuracy": 0.750980066050512
+        },
+        "eval_seconds": 2.91
+      },
+      "L3_recal": {
+        "level": "L3′",
+        "desc": "L3 + 用拟合段正常窗口重新校准阈值（微调后分数分布已变）",
+        "needs_labels": true,
+        "n_labeled_windows": 500,
+        "scaler": "target_normal_refit",
+        "model_state": "head_finetuned",
+        "threshold_source": "fit_normal_scores_q0.999",
+        "fit_segment_windows": 2488,
+        "fit_segment_f1_at_best_threshold": 0.8666666666666666,
+        "variants": {
+          "spec": {
+            "threshold": 0.0224525768011808,
+            "binary": {
+              "threshold": 0.0224525768011808,
+              "accuracy": 0.249019933949488,
+              "balanced_accuracy": 0.5,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0,
+              "roc_auc": 0.703429614147218,
+              "pr_auc": 0.9006399873516844,
+              "mcc": 0.0,
+              "tn": 10481,
+              "fp": 0,
+              "fn": 31608,
+              "tp": 0,
+              "false_positive_rate": 0.0,
+              "false_negative_rate": 1.0,
+              "tpr_at_fpr_0.01": 0.4371045304986079,
+              "tpr_at_fpr_0.001": 0.4133447228549734,
+              "best_f1": 0.8633842361158667,
+              "best_f1_threshold": 0.0026825517416000366
+            },
+            "two_class": {
+              "accuracy": 0.249019933949488,
+              "macro_precision": 0.124509966974744,
+              "macro_recall": 0.5,
+              "macro_f1": 0.19937226555069432,
+              "per_class": {
+                "Normal": {
+                  "precision": 0.249019933949488,
+                  "recall": 1.0,
+                  "f1": 0.39874453110138863,
+                  "support": 10481
+                },
+                "Attack": {
+                  "precision": 0.0,
+                  "recall": 0.0,
+                  "f1": 0.0,
+                  "support": 31608
+                }
+              },
+              "note": "2 类宏 F1 按给定阈值硬判后计算（与二分类列同一工作点）"
+            },
+            "trivial_baseline": {
+              "f1_all_attack": 0.8577825420302048,
+              "f1_all_normal": 0.0,
+              "majority_accuracy": 0.750980066050512
+            },
+            "threshold_source": "fit_normal_scores_q0.999"
+          },
+          "fit_normal_quantile": {
+            "threshold": 0.0224525768011808,
+            "binary": {
+              "threshold": 0.0224525768011808,
+              "accuracy": 0.249019933949488,
+              "balanced_accuracy": 0.5,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0,
+              "roc_auc": 0.703429614147218,
+              "pr_auc": 0.9006399873516844,
+              "mcc": 0.0,
+              "tn": 10481,
+              "fp": 0,
+              "fn": 31608,
+              "tp": 0,
+              "false_positive_rate": 0.0,
+              "false_negative_rate": 1.0,
+              "tpr_at_fpr_0.01": 0.4371045304986079,
+              "tpr_at_fpr_0.001": 0.4133447228549734,
+              "best_f1": 0.8633842361158667,
+              "best_f1_threshold": 0.0026825517416000366
+            },
+            "two_class": {
+              "accuracy": 0.249019933949488,
+              "macro_precision": 0.124509966974744,
+              "macro_recall": 0.5,
+              "macro_f1": 0.19937226555069432,
+              "per_class": {
+                "Normal": {
+                  "precision": 0.249019933949488,
+                  "recall": 1.0,
+                  "f1": 0.39874453110138863,
+                  "support": 10481
+                },
+                "Attack": {
+                  "precision": 0.0,
+                  "recall": 0.0,
+                  "f1": 0.0,
+                  "support": 31608
+                }
+              },
+              "note": "2 类宏 F1 按给定阈值硬判后计算（与二分类列同一工作点）"
+            },
+            "trivial_baseline": {
+              "f1_all_attack": 0.8577825420302048,
+              "f1_all_normal": 0.0,
+              "majority_accuracy": 0.750980066050512
+            },
+            "threshold_source": "fit_normal_scores_q0.999"
+          },
+          "fit_f1_optimal": {
+            "threshold": 0.00662669911980629,
+            "binary": {
+              "threshold": 0.00662669911980629,
+              "accuracy": 0.5599087647603888,
+              "balanced_accuracy": 0.7066060979297704,
+              "precision": 0.9990845983675337,
+              "recall": 0.4143571247785371,
+              "f1": 0.5857727486190935,
+              "roc_auc": 0.703429614147218,
+              "pr_auc": 0.9006399873516844,
+              "mcc": 0.385868234210031,
+              "tn": 10469,
+              "fp": 12,
+              "fn": 18511,
+              "tp": 13097,
+              "false_positive_rate": 0.001144928918996279,
+              "false_negative_rate": 0.585642875221463,
+              "tpr_at_fpr_0.01": 0.4371045304986079,
+              "tpr_at_fpr_0.001": 0.4133447228549734,
+              "best_f1": 0.8633842361158667,
+              "best_f1_threshold": 0.0026825517416000366
+            },
+            "two_class": {
+              "accuracy": 0.5599087647603888,
+              "macro_precision": 0.6801668678518138,
+              "macro_recall": 0.7066060979297704,
+              "macro_f1": 0.5581862906826747,
+              "per_class": {
+                "Normal": {
+                  "precision": 0.3612491373360939,
+                  "recall": 0.9988550710810037,
+                  "f1": 0.5305998327462558,
+                  "support": 10481
+                },
+                "Attack": {
+                  "precision": 0.9990845983675337,
+                  "recall": 0.4143571247785371,
+                  "f1": 0.5857727486190935,
+                  "support": 31608
+                }
+              },
+              "note": "2 类宏 F1 按给定阈值硬判后计算（与二分类列同一工作点）"
+            },
+            "trivial_baseline": {
+              "f1_all_attack": 0.8577825420302048,
+              "f1_all_normal": 0.0,
+              "majority_accuracy": 0.750980066050512
+            },
+            "threshold_source": "fit_segment_f1_max"
+          }
+        },
+        "fpr_budget_operating_points": {
+          "fpr_0.01": {
+            "target_fpr_budget": 0.01,
+            "threshold": 0.006102072224020954,
+            "eval_false_positive_rate": 0.004865947905734185,
+            "eval_recall": 0.4256517337382941,
+            "eval_precision": 0.9962236208811551,
+            "eval_binary_f1": 0.5964577837873783,
+            "eval_macro_f1": 0.565219804475284,
+            "eval_roc_auc": 0.703429614147218
+          },
+          "fpr_0.001": {
+            "target_fpr_budget": 0.001,
+            "threshold": 0.0224525768011808,
+            "eval_false_positive_rate": 0.0,
+            "eval_recall": 0.0,
+            "eval_precision": 0.0,
+            "eval_binary_f1": 0.0,
+            "eval_macro_f1": 0.19937226555069432,
+            "eval_roc_auc": 0.703429614147218
+          }
+        },
+        "threshold": 0.0224525768011808,
+        "binary": {
+          "threshold": 0.0224525768011808,
+          "accuracy": 0.249019933949488,
+          "balanced_accuracy": 0.5,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "roc_auc": 0.703429614147218,
+          "pr_auc": 0.9006399873516844,
+          "mcc": 0.0,
+          "tn": 10481,
+          "fp": 0,
+          "fn": 31608,
+          "tp": 0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0,
+          "tpr_at_fpr_0.01": 0.4371045304986079,
+          "tpr_at_fpr_0.001": 0.4133447228549734,
+          "best_f1": 0.8633842361158667,
+          "best_f1_threshold": 0.0026825517416000366
+        },
+        "two_class": {
+          "accuracy": 0.249019933949488,
+          "macro_precision": 0.124509966974744,
+          "macro_recall": 0.5,
+          "macro_f1": 0.19937226555069432,
+          "per_class": {
+            "Normal": {
+              "precision": 0.249019933949488,
+              "recall": 1.0,
+              "f1": 0.39874453110138863,
+              "support": 10481
+            },
+            "Attack": {
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0,
+              "support": 31608
+            }
+          },
+          "note": "2 类宏 F1 按给定阈值硬判后计算（与二分类列同一工作点）"
+        },
+        "trivial_baseline": {
+          "f1_all_attack": 0.8577825420302048,
+          "f1_all_normal": 0.0,
+          "majority_accuracy": 0.750980066050512
+        },
+        "eval_seconds": 0.0
+      },
+      "L4": {
+        "level": "L4",
+        "desc": "L3 + 解冻主干、低学习率再训 1~2 epoch",
+        "needs_labels": true,
+        "n_labeled_windows": 500,
+        "scaler": "target_normal_refit",
+        "model_state": "backbone_finetuned",
+        "threshold_source": "沿用 L2 阈值（fit_normal_scores_q0.999）",
+        "fit_segment_windows": 2488,
+        "fit_segment_f1_at_best_threshold": 0.8845070422535212,
+        "variants": {
+          "spec": {
+            "threshold": 0.9999973609447479,
+            "binary": {
+              "threshold": 0.9999973609447479,
+              "accuracy": 0.249019933949488,
+              "balanced_accuracy": 0.5,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0,
+              "roc_auc": 0.7656922569823048,
+              "pr_auc": 0.9194894248510443,
+              "mcc": 0.0,
+              "tn": 10481,
+              "fp": 0,
+              "fn": 31608,
+              "tp": 0,
+              "false_positive_rate": 0.0,
+              "false_negative_rate": 1.0,
+              "tpr_at_fpr_0.01": 0.4505821311060491,
+              "tpr_at_fpr_0.001": 0.4158440901037712,
+              "best_f1": 0.8620973947455205,
+              "best_f1_threshold": 0.003451410448178649
+            },
+            "two_class": {
+              "accuracy": 0.249019933949488,
+              "macro_precision": 0.124509966974744,
+              "macro_recall": 0.5,
+              "macro_f1": 0.19937226555069432,
+              "per_class": {
+                "Normal": {
+                  "precision": 0.249019933949488,
+                  "recall": 1.0,
+                  "f1": 0.39874453110138863,
+                  "support": 10481
+                },
+                "Attack": {
+                  "precision": 0.0,
+                  "recall": 0.0,
+                  "f1": 0.0,
+                  "support": 31608
+                }
+              },
+              "note": "2 类宏 F1 按给定阈值硬判后计算（与二分类列同一工作点）"
+            },
+            "trivial_baseline": {
+              "f1_all_attack": 0.8577825420302048,
+              "f1_all_normal": 0.0,
+              "majority_accuracy": 0.750980066050512
+            },
+            "threshold_source": "沿用 L2 阈值（fit_normal_scores_q0.999）"
+          },
+          "fit_normal_quantile": {
+            "threshold": 0.007600228819996113,
+            "binary": {
+              "threshold": 0.007600228819996113,
+              "accuracy": 0.5725486469148708,
+              "balanced_accuracy": 0.7142245241301642,
+              "precision": 0.9972974947045504,
+              "recall": 0.43197924576056695,
+              "f1": 0.6028389147663303,
+              "roc_auc": 0.7656922569823048,
+              "pr_auc": 0.9194894248510443,
+              "mcc": 0.39549189581198513,
+              "tn": 10444,
+              "fp": 37,
+              "fn": 17954,
+              "tp": 13654,
+              "false_positive_rate": 0.003530197500238527,
+              "false_negative_rate": 0.5680207542394331,
+              "tpr_at_fpr_0.01": 0.4505821311060491,
+              "tpr_at_fpr_0.001": 0.4158440901037712,
+              "best_f1": 0.8620973947455205,
+              "best_f1_threshold": 0.003451410448178649
+            },
+            "two_class": {
+              "accuracy": 0.5725486469148708,
+              "macro_precision": 0.6825349365205264,
+              "macro_recall": 0.7142245241301642,
+              "macro_f1": 0.5700477657244292,
+              "per_class": {
+                "Normal": {
+                  "precision": 0.36777237833650256,
+                  "recall": 0.9964698024997615,
+                  "f1": 0.5372566166825279,
+                  "support": 10481
+                },
+                "Attack": {
+                  "precision": 0.9972974947045504,
+                  "recall": 0.43197924576056695,
+                  "f1": 0.6028389147663303,
+                  "support": 31608
+                }
+              },
+              "note": "2 类宏 F1 按给定阈值硬判后计算（与二分类列同一工作点）"
+            },
+            "trivial_baseline": {
+              "f1_all_attack": 0.8577825420302048,
+              "f1_all_normal": 0.0,
+              "majority_accuracy": 0.750980066050512
+            },
+            "threshold_source": "fit_normal_scores_q0.999"
+          },
+          "fit_f1_optimal": {
+            "threshold": 0.007709861267358065,
+            "binary": {
+              "threshold": 0.007709861267358065,
+              "accuracy": 0.5708855045261232,
+              "balanced_accuracy": 0.7133723022588198,
+              "precision": 0.9978684307239986,
+              "recall": 0.42951151607188054,
+              "f1": 0.6005352442881472,
+              "roc_auc": 0.7656922569823048,
+              "pr_auc": 0.9194894248510443,
+              "mcc": 0.3945646254134532,
+              "tn": 10452,
+              "fp": 29,
+              "fn": 18032,
+              "tp": 13576,
+              "false_positive_rate": 0.0027669115542410076,
+              "false_negative_rate": 0.5704884839281195,
+              "tpr_at_fpr_0.01": 0.4505821311060491,
+              "tpr_at_fpr_0.001": 0.4158440901037712,
+              "best_f1": 0.8620973947455205,
+              "best_f1_threshold": 0.003451410448178649
+            },
+            "two_class": {
+              "accuracy": 0.5708855045261232,
+              "macro_precision": 0.6824056379150115,
+              "macro_recall": 0.7133723022588198,
+              "macro_f1": 0.5685083510033062,
+              "per_class": {
+                "Normal": {
+                  "precision": 0.36694284510602443,
+                  "recall": 0.997233088445759,
+                  "f1": 0.5364814577184653,
+                  "support": 10481
+                },
+                "Attack": {
+                  "precision": 0.9978684307239986,
+                  "recall": 0.42951151607188054,
+                  "f1": 0.6005352442881472,
+                  "support": 31608
+                }
+              },
+              "note": "2 类宏 F1 按给定阈值硬判后计算（与二分类列同一工作点）"
+            },
+            "trivial_baseline": {
+              "f1_all_attack": 0.8577825420302048,
+              "f1_all_normal": 0.0,
+              "majority_accuracy": 0.750980066050512
+            },
+            "threshold_source": "fit_segment_f1_max"
+          }
+        },
+        "fpr_budget_operating_points": {
+          "fpr_0.01": {
+            "target_fpr_budget": 0.01,
+            "threshold": 0.00716705348342657,
+            "eval_false_positive_rate": 0.008396145405972713,
+            "eval_recall": 0.4452670210073399,
+            "eval_precision": 0.9937861883914701,
+            "eval_binary_f1": 0.6149879833952371,
+            "eval_macro_f1": 0.5780886594751649,
+            "eval_roc_auc": 0.7656922569823048
+          },
+          "fpr_0.001": {
+            "target_fpr_budget": 0.001,
+            "threshold": 0.007600228819996113,
+            "eval_false_positive_rate": 0.003530197500238527,
+            "eval_recall": 0.43197924576056695,
+            "eval_precision": 0.9972974947045504,
+            "eval_binary_f1": 0.6028389147663303,
+            "eval_macro_f1": 0.5700477657244292,
+            "eval_roc_auc": 0.7656922569823048
+          }
+        },
+        "threshold": 0.9999973609447479,
+        "binary": {
+          "threshold": 0.9999973609447479,
+          "accuracy": 0.249019933949488,
+          "balanced_accuracy": 0.5,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "roc_auc": 0.7656922569823048,
+          "pr_auc": 0.9194894248510443,
+          "mcc": 0.0,
+          "tn": 10481,
+          "fp": 0,
+          "fn": 31608,
+          "tp": 0,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 1.0,
+          "tpr_at_fpr_0.01": 0.4505821311060491,
+          "tpr_at_fpr_0.001": 0.4158440901037712,
+          "best_f1": 0.8620973947455205,
+          "best_f1_threshold": 0.003451410448178649
+        },
+        "two_class": {
+          "accuracy": 0.249019933949488,
+          "macro_precision": 0.124509966974744,
+          "macro_recall": 0.5,
+          "macro_f1": 0.19937226555069432,
+          "per_class": {
+            "Normal": {
+              "precision": 0.249019933949488,
+              "recall": 1.0,
+              "f1": 0.39874453110138863,
+              "support": 10481
+            },
+            "Attack": {
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0,
+              "support": 31608
+            }
+          },
+          "note": "2 类宏 F1 按给定阈值硬判后计算（与二分类列同一工作点）"
+        },
+        "trivial_baseline": {
+          "f1_all_attack": 0.8577825420302048,
+          "f1_all_normal": 0.0,
+          "majority_accuracy": 0.750980066050512
+        },
+        "eval_seconds": 2.91
+      },
+      "L4_recal": {
+        "level": "L4′",
+        "desc": "L4 + 用拟合段正常窗口重新校准阈值",
+        "needs_labels": true,
+        "n_labeled_windows": 500,
+        "scaler": "target_normal_refit",
+        "model_state": "backbone_finetuned",
+        "threshold_source": "fit_normal_scores_q0.999",
+        "fit_segment_windows": 2488,
+        "fit_segment_f1_at_best_threshold": 0.8845070422535212,
+        "variants": {
+          "spec": {
+            "threshold": 0.007600228819996113,
+            "binary": {
+              "threshold": 0.007600228819996113,
+              "accuracy": 0.5725486469148708,
+              "balanced_accuracy": 0.7142245241301642,
+              "precision": 0.9972974947045504,
+              "recall": 0.43197924576056695,
+              "f1": 0.6028389147663303,
+              "roc_auc": 0.7656922569823048,
+              "pr_auc": 0.9194894248510443,
+              "mcc": 0.39549189581198513,
+              "tn": 10444,
+              "fp": 37,
+              "fn": 17954,
+              "tp": 13654,
+              "false_positive_rate": 0.003530197500238527,
+              "false_negative_rate": 0.5680207542394331,
+              "tpr_at_fpr_0.01": 0.4505821311060491,
+              "tpr_at_fpr_0.001": 0.4158440901037712,
+              "best_f1": 0.8620973947455205,
+              "best_f1_threshold": 0.003451410448178649
+            },
+            "two_class": {
+              "accuracy": 0.5725486469148708,
+              "macro_precision": 0.6825349365205264,
+              "macro_recall": 0.7142245241301642,
+              "macro_f1": 0.5700477657244292,
+              "per_class": {
+                "Normal": {
+                  "precision": 0.36777237833650256,
+                  "recall": 0.9964698024997615,
+                  "f1": 0.5372566166825279,
+                  "support": 10481
+                },
+                "Attack": {
+                  "precision": 0.9972974947045504,
+                  "recall": 0.43197924576056695,
+                  "f1": 0.6028389147663303,
+                  "support": 31608
+                }
+              },
+              "note": "2 类宏 F1 按给定阈值硬判后计算（与二分类列同一工作点）"
+            },
+            "trivial_baseline": {
+              "f1_all_attack": 0.8577825420302048,
+              "f1_all_normal": 0.0,
+              "majority_accuracy": 0.750980066050512
+            },
+            "threshold_source": "fit_normal_scores_q0.999"
+          },
+          "fit_normal_quantile": {
+            "threshold": 0.007600228819996113,
+            "binary": {
+              "threshold": 0.007600228819996113,
+              "accuracy": 0.5725486469148708,
+              "balanced_accuracy": 0.7142245241301642,
+              "precision": 0.9972974947045504,
+              "recall": 0.43197924576056695,
+              "f1": 0.6028389147663303,
+              "roc_auc": 0.7656922569823048,
+              "pr_auc": 0.9194894248510443,
+              "mcc": 0.39549189581198513,
+              "tn": 10444,
+              "fp": 37,
+              "fn": 17954,
+              "tp": 13654,
+              "false_positive_rate": 0.003530197500238527,
+              "false_negative_rate": 0.5680207542394331,
+              "tpr_at_fpr_0.01": 0.4505821311060491,
+              "tpr_at_fpr_0.001": 0.4158440901037712,
+              "best_f1": 0.8620973947455205,
+              "best_f1_threshold": 0.003451410448178649
+            },
+            "two_class": {
+              "accuracy": 0.5725486469148708,
+              "macro_precision": 0.6825349365205264,
+              "macro_recall": 0.7142245241301642,
+              "macro_f1": 0.5700477657244292,
+              "per_class": {
+                "Normal": {
+                  "precision": 0.36777237833650256,
+                  "recall": 0.9964698024997615,
+                  "f1": 0.5372566166825279,
+                  "support": 10481
+                },
+                "Attack": {
+                  "precision": 0.9972974947045504,
+                  "recall": 0.43197924576056695,
+                  "f1": 0.6028389147663303,
+                  "support": 31608
+                }
+              },
+              "note": "2 类宏 F1 按给定阈值硬判后计算（与二分类列同一工作点）"
+            },
+            "trivial_baseline": {
+              "f1_all_attack": 0.8577825420302048,
+              "f1_all_normal": 0.0,
+              "majority_accuracy": 0.750980066050512
+            },
+            "threshold_source": "fit_normal_scores_q0.999"
+          },
+          "fit_f1_optimal": {
+            "threshold": 0.007709861267358065,
+            "binary": {
+              "threshold": 0.007709861267358065,
+              "accuracy": 0.5708855045261232,
+              "balanced_accuracy": 0.7133723022588198,
+              "precision": 0.9978684307239986,
+              "recall": 0.42951151607188054,
+              "f1": 0.6005352442881472,
+              "roc_auc": 0.7656922569823048,
+              "pr_auc": 0.9194894248510443,
+              "mcc": 0.3945646254134532,
+              "tn": 10452,
+              "fp": 29,
+              "fn": 18032,
+              "tp": 13576,
+              "false_positive_rate": 0.0027669115542410076,
+              "false_negative_rate": 0.5704884839281195,
+              "tpr_at_fpr_0.01": 0.4505821311060491,
+              "tpr_at_fpr_0.001": 0.4158440901037712,
+              "best_f1": 0.8620973947455205,
+              "best_f1_threshold": 0.003451410448178649
+            },
+            "two_class": {
+              "accuracy": 0.5708855045261232,
+              "macro_precision": 0.6824056379150115,
+              "macro_recall": 0.7133723022588198,
+              "macro_f1": 0.5685083510033062,
+              "per_class": {
+                "Normal": {
+                  "precision": 0.36694284510602443,
+                  "recall": 0.997233088445759,
+                  "f1": 0.5364814577184653,
+                  "support": 10481
+                },
+                "Attack": {
+                  "precision": 0.9978684307239986,
+                  "recall": 0.42951151607188054,
+                  "f1": 0.6005352442881472,
+                  "support": 31608
+                }
+              },
+              "note": "2 类宏 F1 按给定阈值硬判后计算（与二分类列同一工作点）"
+            },
+            "trivial_baseline": {
+              "f1_all_attack": 0.8577825420302048,
+              "f1_all_normal": 0.0,
+              "majority_accuracy": 0.750980066050512
+            },
+            "threshold_source": "fit_segment_f1_max"
+          }
+        },
+        "fpr_budget_operating_points": {
+          "fpr_0.01": {
+            "target_fpr_budget": 0.01,
+            "threshold": 0.00716705348342657,
+            "eval_false_positive_rate": 0.008396145405972713,
+            "eval_recall": 0.4452670210073399,
+            "eval_precision": 0.9937861883914701,
+            "eval_binary_f1": 0.6149879833952371,
+            "eval_macro_f1": 0.5780886594751649,
+            "eval_roc_auc": 0.7656922569823048
+          },
+          "fpr_0.001": {
+            "target_fpr_budget": 0.001,
+            "threshold": 0.007600228819996113,
+            "eval_false_positive_rate": 0.003530197500238527,
+            "eval_recall": 0.43197924576056695,
+            "eval_precision": 0.9972974947045504,
+            "eval_binary_f1": 0.6028389147663303,
+            "eval_macro_f1": 0.5700477657244292,
+            "eval_roc_auc": 0.7656922569823048
+          }
+        },
+        "threshold": 0.007600228819996113,
+        "binary": {
+          "threshold": 0.007600228819996113,
+          "accuracy": 0.5725486469148708,
+          "balanced_accuracy": 0.7142245241301642,
+          "precision": 0.9972974947045504,
+          "recall": 0.43197924576056695,
+          "f1": 0.6028389147663303,
+          "roc_auc": 0.7656922569823048,
+          "pr_auc": 0.9194894248510443,
+          "mcc": 0.39549189581198513,
+          "tn": 10444,
+          "fp": 37,
+          "fn": 17954,
+          "tp": 13654,
+          "false_positive_rate": 0.003530197500238527,
+          "false_negative_rate": 0.5680207542394331,
+          "tpr_at_fpr_0.01": 0.4505821311060491,
+          "tpr_at_fpr_0.001": 0.4158440901037712,
+          "best_f1": 0.8620973947455205,
+          "best_f1_threshold": 0.003451410448178649
+        },
+        "two_class": {
+          "accuracy": 0.5725486469148708,
+          "macro_precision": 0.6825349365205264,
+          "macro_recall": 0.7142245241301642,
+          "macro_f1": 0.5700477657244292,
+          "per_class": {
+            "Normal": {
+              "precision": 0.36777237833650256,
+              "recall": 0.9964698024997615,
+              "f1": 0.5372566166825279,
+              "support": 10481
+            },
+            "Attack": {
+              "precision": 0.9972974947045504,
+              "recall": 0.43197924576056695,
+              "f1": 0.6028389147663303,
+              "support": 31608
+            }
+          },
+          "note": "2 类宏 F1 按给定阈值硬判后计算（与二分类列同一工作点）"
+        },
+        "trivial_baseline": {
+          "f1_all_attack": 0.8577825420302048,
+          "f1_all_normal": 0.0,
+          "majority_accuracy": 0.750980066050512
+        },
+        "eval_seconds": 0.0
+      }
+    },
+    "threshold_sweep_L1": [
+      {
+        "quantile": 0.5,
+        "threshold": 0.9971250891685486,
+        "target_fpr_budget": 0.5,
+        "macro_f1": 0.5126993834900608,
+        "binary_f1": 0.6882892323814515,
+        "roc_auc": 0.4741663640255278,
+        "recall": 0.6233864844343204,
+        "false_positive_rate": 0.5670260471329072,
+        "precision": 0.7682769914609896
+      },
+      {
+        "quantile": 0.9,
+        "threshold": 0.9999810338020325,
+        "target_fpr_budget": 0.09999999999999998,
+        "macro_f1": 0.16981792336388504,
+        "binary_f1": 0.004921580835482819,
+        "roc_auc": 0.4741663640255278,
+        "recall": 0.0026259174892432294,
+        "false_positive_rate": 0.19444709474286806,
+        "precision": 0.039132484677039135
+      },
+      {
+        "quantile": 0.95,
+        "threshold": 0.999988853931427,
+        "target_fpr_budget": 0.050000000000000044,
+        "macro_f1": 0.17824860827451122,
+        "binary_f1": 0.0038004464016408277,
+        "roc_auc": 0.4741663640255278,
+        "recall": 0.0019931662870159455,
+        "false_positive_rate": 0.14149413223929014,
+        "precision": 0.0407503234152652
+      },
+      {
+        "quantile": 0.99,
+        "threshold": 0.9999947595596314,
+        "target_fpr_budget": 0.010000000000000009,
+        "macro_f1": 0.19180000016266943,
+        "binary_f1": 0.00037359900373599005,
+        "roc_auc": 0.4741663640255278,
+        "recall": 0.00018982536066818528,
+        "false_positive_rate": 0.0482778360843431,
+        "precision": 0.01171875
+      },
+      {
+        "quantile": 0.999,
+        "threshold": 0.9999973609447479,
+        "target_fpr_budget": 0.0010000000000000009,
+        "macro_f1": 0.19909803623078093,
+        "binary_f1": 0.0,
+        "roc_auc": 0.4741663640255278,
+        "recall": 0.0,
+        "false_positive_rate": 0.0017173933784944185,
+        "precision": 0.0
+      }
+    ],
+    "cost": {
+      "L0": {
+        "needs_labels": false,
+        "labeled_windows": 0,
+        "extra_fit_seconds": 0.0
+      },
+      "L1": {
+        "needs_labels": false,
+        "labeled_windows": 0,
+        "extra_fit_seconds": 0.0,
+        "note": "只需目标域正常流量的原始特征，无需标签"
+      },
+      "L2": {
+        "needs_labels": false,
+        "labeled_windows": 0,
+        "extra_fit_seconds": 0.0,
+        "note": "只需「这批是正常流量」的先验，不需要攻击样本"
+      },
+      "L3": {
+        "needs_labels": true,
+        "labeled_windows": 500,
+        "extra_fit_seconds": 2.94
+      },
+      "L4": {
+        "needs_labels": true,
+        "labeled_windows": 500,
+        "extra_fit_seconds": 6.57
+      }
+    },
+    "zshift": {
+      "reference_before": "合成训练集统计量（scaler.joblib）",
+      "reference_after": "目标域拟合段正常流统计量（Level 1 重拟合）",
+      "eval_all_before": {
+        "n_features": 71,
+        "signed_mean": -0.06574383965780196,
+        "abs_mean": 0.49560994554150234,
+        "abs_median": 0.26695834057082574,
+        "abs_p95": 1.3267815871610478,
+        "abs_max": 4.664015645819448,
+        "n_abs_gt_1": 7,
+        "n_abs_gt_3": 2,
+        "per_feature": [
+          -0.2566892113937412,
+          -0.229193434406687,
+          -0.3445399120712388,
+          -0.27344372985633186,
+          -0.2776216475207875,
+          -0.21061533426463705,
+          -0.4472257752148888,
+          -0.8688545539944103,
+          -0.7170642335079769,
+          0.15035977774231463,
+          0.6049099547072355,
+          -0.8421181456927219,
+          -0.5374387351105325,
+          1.284005505226952,
+          -0.0783228396897831,
+          0.08995766728224985,
+          0.1010502856654195,
+          1.379297741368704,
+          0.4237524646327435,
+          -0.18164624100568513,
+          -0.32517810755031745,
+          -0.17089681307985632,
+          -0.07692388367025411,
+          -0.13351498571783024,
+          -0.17699638386337252,
+          -0.23149906657089764,
+          -0.06096590989838552,
+          0.48611376660630373,
+          0.1734955483388787,
+          -0.19043104137697242,
+          -1.0375327173956626,
+          -0.8662788918557911,
+          -0.10352031082752558,
+          -7.34550996006744e-06,
+          -0.3363330700969733,
+          -0.25612965635556256,
+          -0.012958369023780327,
+          3.9427765245505713,
+          -0.8586573551146235,
+          0.29983310138116964,
+          -0.7422288727762406,
+          0.49873690231857387,
+          4.664015645819448,
+          -0.22291994698110532,
+          -0.12868201283721978,
+          -0.11305160145029546,
+          -0.25836197297374247,
+          -0.26695834057082574,
+          -0.042488298810453545,
+          -0.07976630862977423,
+          -0.0847012584841883,
+          0.5506652576095324,
+          -0.7129141480008059,
+          -0.7170642335079769,
+          -0.5374387351105325,
+          -0.3445399120712388,
+          -0.2776216475207875,
+          -0.27344372985633186,
+          -0.21061407506756463,
+          -1.3695576690951439,
+          -0.8658348965665414,
+          -0.34270263692771336,
+          -1.1764408587501103,
+          -0.19940311902037927,
+          -0.17997634495824388,
+          -0.19221023572290416,
+          -0.18060363205471816,
+          0.03948517796331337,
+          -0.2218285609446723,
+          -0.08410862424860834,
+          0.5717914376579567
+        ]
+      },
+      "eval_all_after": {
+        "n_features": 71,
+        "signed_mean": -0.04420425858273963,
+        "abs_mean": 0.20893494106675156,
+        "abs_median": 0.14775508654808583,
+        "abs_p95": 0.5079085508061785,
+        "abs_max": 2.2021725574197233,
+        "n_abs_gt_1": 1,
+        "n_abs_gt_3": 0,
+        "per_feature": [
+          -0.6423320356028791,
+          -0.1259171475232679,
+          -0.07431824619305027,
+          -0.05715580276774852,
+          -0.01699604372751396,
+          -0.05091631776136898,
+          -0.18874010734853816,
+          -0.2490445501609319,
+          -0.14775508654808583,
+          -0.1143528774939603,
+          -0.20310475209388693,
+          -0.46367528285019,
+          -0.3286174887091684,
+          -0.2509908734045423,
+          -0.14092533316098718,
+          0.0073251683341197735,
+          0.2532150049403213,
+          0.40666324737982396,
+          0.2662531352860307,
+          -0.03348734255037471,
+          -0.37517929363682695,
+          -0.25903137658269154,
+          -0.2778898137781871,
+          -0.3236094990966969,
+          -0.06272093838224051,
+          -0.10423198265485664,
+          0.24859647967913534,
+          0.4155539186448431,
+          0.2853223472736805,
+          -0.02845073671248214,
+          0.0,
+          -0.1660552082339289,
+          0.0,
+          0.010602077658833217,
+          -0.05613545049645337,
+          -0.047398956635090216,
+          0.023364026735943455,
+          -0.004944464447864135,
+          -0.5521418187621671,
+          -0.2255324458331249,
+          -0.3576001437454389,
+          -0.2934749132757654,
+          -0.08432575543197227,
+          2.2021725574197233,
+          0.3155475510032014,
+          0.035717301136546864,
+          -0.1660552082339289,
+          0.34532856983249627,
+          0.010602077658833217,
+          0.0,
+          0.0,
+          -0.15438142552667367,
+          -0.37382033506550677,
+          -0.14775508654808583,
+          -0.32861748870912116,
+          -0.07431824619305027,
+          -0.017002570051074768,
+          -0.05715580276774852,
+          -0.050838466254673954,
+          0.0,
+          -0.75120295611118,
+          -0.040501175432974316,
+          0.0,
+          -0.08803894802812517,
+          -0.1284112701445691,
+          -0.13144637399142028,
+          -0.013193788104308992,
+          0.34311958758820155,
+          -0.1566503607922153,
+          0.27856636305363186,
+          0.3999898145570589
+        ]
+      },
+      "eval_normal_after": {
+        "n_features": 71,
+        "signed_mean": -0.05597537759080941,
+        "abs_mean": 0.06692215878773748,
+        "abs_median": 0.03869609082659067,
+        "abs_p95": 0.18022947776137224,
+        "abs_max": 0.18960612620972173,
+        "n_abs_gt_1": 0,
+        "n_abs_gt_3": 0,
+        "per_feature": [
+          0.17268649081911772,
+          -0.18960612620972173,
+          -0.033136387512255804,
+          -0.024271426445388017,
+          -0.007636308447461174,
+          -0.022473854045633856,
+          -0.024610126001873418,
+          0.017233690304110226,
+          -0.0015508856355149134,
+          -0.0016442483308378518,
+          -0.08304973320597722,
+          -0.05322782072599156,
+          -0.07027382164921275,
+          -0.06658442910007929,
+          -0.016729937914969156,
+          -0.03268721127631969,
+          -0.13904013343936605,
+          -0.14540422200015501,
+          -0.1520871488552825,
+          -0.02986117397979147,
+          -0.18566455652815791,
+          -0.14258255466024036,
+          -0.13343435776156262,
+          -0.15428621031848444,
+          -0.04148294523919412,
+          -0.1815712041282461,
+          -0.16179821144377451,
+          -0.1486836342075953,
+          -0.15841784802588568,
+          -0.04428701631244316,
+          0.0,
+          -0.1644993502439674,
+          0.0,
+          0.0,
+          -0.030411008053475533,
+          -0.0253345325120818,
+          -0.03869609082659067,
+          -0.027558420086424538,
+          0.003004738410215741,
+          -0.08392726180427353,
+          -0.061773972708223344,
+          -0.061487797994246245,
+          -0.013717586504665076,
+          -0.015960397149988703,
+          -0.008724277897435887,
+          0.005044493173861089,
+          -0.1644993502439674,
+          -0.1686661801991181,
+          0.0,
+          0.0,
+          0.0,
+          0.18512869964336445,
+          -0.05950479930075462,
+          -0.0015508856355149134,
+          -0.0702738216492667,
+          -0.033136387512255804,
+          -0.007639914551948512,
+          -0.024271426445388017,
+          -0.02244960163340888,
+          0.0,
+          -0.1788877513944984,
+          -0.01289166067948235,
+          0.0,
+          -0.020487176481779855,
+          -0.04682829648992136,
+          -0.04391305384826748,
+          0.005512620140277424,
+          -0.15362293684718015,
+          -0.07885527995589972,
+          -0.1550776308851926,
+          -0.14213215850178124
+        ]
+      },
+      "eval_attack_after": {
+        "n_features": 71,
+        "signed_mean": -0.040299749190345686,
+        "abs_mean": 0.274843063064654,
+        "abs_median": 0.16657129019103695,
+        "abs_p95": 0.6694991125781167,
+        "abs_max": 2.9379327641391177,
+        "n_abs_gt_1": 1,
+        "n_abs_gt_3": 0,
+        "per_feature": [
+          -0.9126757037968855,
+          -0.10479135520881101,
+          -0.08797837093609032,
+          -0.06806363201708757,
+          -0.020100691151963026,
+          -0.060350753573697326,
+          -0.24318242955275357,
+          -0.3373697034597077,
+          -0.1962513828882412,
+          -0.15173860954454665,
+          -0.24292729985086056,
+          -0.5998217248196858,
+          -0.4143107243148548,
+          -0.312158948700624,
+          -0.182121254032887,
+          0.020597373966726985,
+          0.3833270079680971,
+          0.5897853972749652,
+          0.4050176459095932,
+          -0.034690151665849586,
+          -0.43804180233549744,
+          -0.2976577398551822,
+          -0.32580604709574945,
+          -0.37977445426640744,
+          -0.06976563342319406,
+          -0.07857837092633134,
+          0.3847254173765193,
+          0.6027129154354969,
+          0.4325120714742516,
+          -0.02319780346151129,
+          0.0,
+          -0.16657129019103695,
+          0.0,
+          0.014118813133975833,
+          -0.064668311906133,
+          -0.05471778088340417,
+          0.04394952177255538,
+          0.002556640768165664,
+          -0.7362853097207366,
+          -0.2725032368576046,
+          -0.45572641895673316,
+          -0.37042561523622464,
+          -0.10774666032363205,
+          2.9379327641391177,
+          0.4231093215335401,
+          0.04589154767158733,
+          -0.16657129019103695,
+          0.515821904218444,
+          0.014118813133975833,
+          0.0,
+          0.0,
+          -0.2669977767529655,
+          -0.478079578449884,
+          -0.1962513828882412,
+          -0.41431072431477395,
+          -0.08797837093609032,
+          -0.020108186119438858,
+          -0.06806363201708757,
+          -0.06025512311432679,
+          0.0,
+          -0.9410413300749644,
+          -0.04965932000704115,
+          0.0,
+          -0.11044603832215215,
+          -0.15547254500515142,
+          -0.1604813935517579,
+          -0.01939875015072709,
+          0.5078903159216569,
+          -0.18245518220292425,
+          0.4224071522027867,
+          0.579813018636489
+        ]
+      },
+      "eval_attack_before": {
+        "n_features": 71,
+        "signed_mean": -0.17760226154184516,
+        "abs_mean": 0.4569550641668448,
+        "abs_median": 0.2574692175180283,
+        "abs_p95": 1.1543945384146719,
+        "abs_max": 4.404307408939083,
+        "n_abs_gt_1": 6,
+        "n_abs_gt_3": 1,
+        "per_feature": [
+          -0.5239918872691708,
+          -0.2215327227066994,
+          -0.3448652218600802,
+          -0.2778193101808611,
+          -0.27772503354327827,
+          -0.22532046656348173,
+          -0.6402866886115932,
+          -0.8914619292710835,
+          -0.7847264623605555,
+          -0.12903243134154835,
+          -0.18053086043174185,
+          -0.8675801558986209,
+          -0.7171076686721539,
+          0.478801058886874,
+          -0.08438260802033842,
+          0.12656659596167621,
+          0.1804977556840725,
+          1.7488266332157574,
+          0.5549448774542317,
+          -0.18380475954346376,
+          -0.3478074939539451,
+          -0.18892436682846925,
+          -0.14717597259709392,
+          -0.17866490140256797,
+          -0.18842314703016677,
+          -0.22246669496010466,
+          -0.026667384865001857,
+          0.6501918624001719,
+          0.253878936032471,
+          -0.1853479115122989,
+          -1.0375327173956626,
+          -0.8666413550816497,
+          -0.10352031082752558,
+          0.034328162018245685,
+          -0.3364955782946504,
+          -0.2574692175180283,
+          0.011622041305794887,
+          4.404307408939083,
+          -0.8778304525635604,
+          -0.431370170316416,
+          -0.871984670745429,
+          -0.16955889550357134,
+          0.16464610331110255,
+          -0.22258602252358314,
+          -0.12865993187587288,
+          -0.11304870946088189,
+          -0.2583620464401813,
+          -0.266938065857189,
+          -0.042164518115333324,
+          -0.07976630862977423,
+          -0.0847012584841883,
+          0.44352533733932065,
+          -0.8573531584280987,
+          -0.7847264623605555,
+          -0.7171076686721539,
+          -0.3448652218600802,
+          -0.27772503354327827,
+          -0.2778193101808611,
+          -0.22532046656348173,
+          -1.3695576690951439,
+          -1.1323482180792332,
+          -0.34284135792214937,
+          -1.1764408587501103,
+          -0.20004154485143477,
+          -0.18219496257770046,
+          -0.19310287050811648,
+          -0.18086230159583494,
+          0.10615790164807103,
+          -0.23122794929188997,
+          -0.04897369932055228,
+          0.7587298189906133
+        ]
+      },
+      "eval_normal_before": {
+        "n_features": 71,
+        "signed_mean": 0.27148131816020576,
+        "abs_mean": 0.7279497303277692,
+        "abs_median": 0.22392664568103818,
+        "abs_p95": 2.532428956746592,
+        "abs_max": 18.228489187443397,
+        "n_abs_gt_1": 9,
+        "n_abs_gt_3": 2,
+        "per_feature": [
+          0.5491614839675022,
+          -0.25228856366485425,
+          -0.3435591844422052,
+          -0.26025244983796764,
+          -0.2773099645275592,
+          -0.16628303923768578,
+          0.1348045796937721,
+          -0.8006989733316491,
+          -0.5130795409044786,
+          0.9926573912299929,
+          2.9728175148239098,
+          -0.7653565548761713,
+          0.004218150931716309,
+          3.711495469051742,
+          -0.060054154174708836,
+          -0.020409094053481763,
+          -0.13846396068301373,
+          0.26526057927986135,
+          0.028240161016356766,
+          -0.17513884762130444,
+          -0.25695616884641886,
+          -0.11654824856809613,
+          0.13486858913932173,
+          0.0026007146988891107,
+          -0.14254755160409238,
+          -0.25872940730534943,
+          -0.16436738224615205,
+          -0.008540644001454397,
+          -0.0688402556564454,
+          -0.2057554062477813,
+          -1.0375327173956626,
+          -0.8651861559090053,
+          -0.10352031082752558,
+          -0.10352031082752558,
+          -0.33584314853643843,
+          -0.2520912145752229,
+          -0.08706215676731936,
+          2.551376371532656,
+          -0.8008552629325943,
+          2.504228036890599,
+          -0.3510476035346519,
+          2.513481541960528,
+          18.228489187443397,
+          -0.22392664568103818,
+          -0.12874858141157977,
+          -0.1130603200748744,
+          -0.258361751490809,
+          -0.26701946376021735,
+          -0.04346441660445861,
+          -0.07976630862977423,
+          -0.0847012584841883,
+          0.8736653135122072,
+          -0.27746666656830554,
+          -0.5130795409044786,
+          0.004218150931716309,
+          -0.3435591844422052,
+          -0.2773099645275592,
+          -0.26025244983796764,
+          -0.1662779838764595,
+          -1.3695576690951439,
+          -0.062363907132353694,
+          -0.3422844278339909,
+          -1.1764408587501103,
+          -0.1974784248578248,
+          -0.17328776787788208,
+          -0.18951916516025033,
+          -0.17982380810086124,
+          -0.16151640410849816,
+          -0.19349175656825196,
+          -0.1900316330326053,
+          0.008218985218943084
+        ]
+      }
+    }
+  },
+  "conclusions": {
+    "headline": "同一模型、同一阈值、零样本直接迁移：2 类宏 F1 由同域的 0.993 掉到 0.608（去重后），二分类 F1 由 0.991 掉到 0.558，误报率由 0.008 升到 0.204；10/71 个特征的真实均值偏离合成训练集超过 1 个标准差。结论：**这套模型目前不具备跨域直接上线能力**，必须在目标域做轻量校准后才能进生产。",
+    "numbers": "| 指标 | 同域（合成测试集） | 跨域 去重前 | 跨域 去重后 | 衰减（去重后） |\n|---|---|---|---|---|\n| 2 类宏 F1（同口径） | 0.9934 | 0.7259 | 0.6078 | **-0.3856** |\n| 二分类 F1 | 0.9907 | 0.8299 | 0.5579 | **-0.4328** |\n| ROC-AUC | 1.0000 | 0.8171 | 0.6485 | **-0.3514** |\n| 误报率 FPR | 0.0076 | 0.2250 | 0.2036 | **+0.1960** |\n\n两个版本的差距本身也是一个发现（二分类 F1：去重前 0.8299、去重后 0.5579）。去重前那一版里，攻击行只有 **0.3661** 能存活到去重后，也就是说大量攻击窗口其实是**同一批近重复流反复计分**，指标被这种「重复计分」抬高了；去重后又把攻击类先验从 0.8010 削到 0.6158，指标偏低也有一部分来自先验变化。**真实水平落在两者之间**，但两版都远低于同域，衰减本身是真实的。\n\n对照平凡基线：**两个版本的模型 F1 都不高于「全判为攻击」的平凡基线** —— 去重前 0.8299 vs 0.8895，去重后 0.5579 vs 0.7622。这是整份报告里最硬的一条负面证据：在真实数据上，一个「什么都不看、把所有窗口都判成攻击」的空模型，F1 反而更高。换句话说，模型在固定阈值 0.5 下**没有提供任何超过常量的判别增益**，反而额外付了 0.2036 的真实误报（把正常窗口报成攻击）。\n\nROC-AUC = 0.6485（去重前 0.8171）。AUC 只依赖排序、不依赖阈值，因此要单独说：AUC 只比 0.5 高一点，说明**排序能力也已严重退化**：问题不只是阈值选得不对，而是特征分布整体偏离训练支撑集。这种情况下单纯调阈值只能小幅改善，必须先解决分布漂移。",
+    "causes": [
+      "**① 特征层面的分布漂移（主因，有第 5 节数据支撑）**：|z-shift| 均值 0.5586、P95 1.4013、最大 7.7226；10/71 个特征的真实均值偏离合成训练集超过 1σ，2 个超过 3σ——也就是说模型输入里有相当一部分维度落在训练分布**之外**，第一层卷积/BN 收到的是从未见过的激活值。漂移最大的三个特征是 `Packet Length Variance`（z-shift +7.72）、`Bwd Packets/s`（z-shift +4.16）、`Bwd Packet Length Std`（z-shift +2.06）。",
+      "**② 采集口径差异（漂移的物理来源）**：合成数据由本工程的仿真器按参数生成，真实数据由 CICFlowMeter v3 在实验床抓包统计。两者在流超时切分、头部长度统计、活动/空闲超时、TCP 选项记录上都不一致，这类差异会成体系地体现在 IAT / 速率 / subflow 族特征上——而这几族恰好是漂移榜的前排（见 5.1 与 5.2）。",
+      "**③ 类别先验偏移**：真实窗口里攻击占 0.8010，合成测试集里攻击占 0.2884。先验一变，同一阈值下的 FPR/FNR 组合就完全变了；这部分不是模型的错，但上线时必须按目标域的流量比例重新定阈值。",
+      "**④ 时间结构假设失效**：真实 inSDN 以「正常块 + 攻击块」拼接发布，相邻 16 行并不构成真实的相邻流量。CNN 分支拿到的「局部组合模式」因此含义被削弱；模型侧 8 类归因也印证了这一点——预测高度集中（最大单类占比 0.3907，平均归一化熵仅 0.1168，均匀分布为 1.0），而且归因与真实标签几乎无关（被判为 Normal 的 44,780 个窗口里，24,151 个的真值其实是攻击）。",
+      "　　- 漂移榜里的 *length* 族（`Packet Length Variance`、`Bwd Packet Length Std`、`Bwd Packet Length Max`、`Packet Length Std`、`Max Packet Length`）：**报文长度族**：真实流里包含大量小包（ACK、keepalive）与少量 MSS 满包，合成数据的长度分布是按参数抽样的近似高斯，矩（均值/方差）能对上、形状对不上。",
+      "　　- 漂移榜里的 *rate* 族（`Bwd Packets/s`）：**速率族（Bytes/s、Packets/s）**：分母（时长）的漂移 + 真实流量突发度更高，使速率类特征出现量级差；这类特征在训练集里被标准化到 N(0,1)，真实值却常常落在 ±5σ 之外，网络的第一层卷积直接进入未训练区域。",
+      "　　- 漂移榜里的 *tcpopt* 族（`Init_Win_bytes_forward`、`min_seg_size_forward`）：**TCP 选项 / 窗口族（Init Win、Seg Size）**：真实主机（Linux/Windows 各种版本）的初始窗口与 MSS 分布远比合成数据丰富；合成数据基本固定几个取值。",
+      "　　- 漂移榜里的 *iat* 族（`Flow IAT Std`）：**到达间隔（IAT）族**：inSDN 是容器/虚拟机实验床上短时间采集的流，而合成数据的 IAT 由仿真器的「规律性 / 突发数」参数生成。真实流的 IAT 呈重尾（大量 0 与极少数超大值），合成流偏平滑，两者在标准化空间里几乎是两个不同的分布。"
+    ],
+    "production_verdict": "**零样本跨域直接迁移在当前设置下不可用**——这一点第 3 节已经用硬指标钉死：跨域二分类 F1 去重后 0.5579、去重前 0.8299，**两版都不高于「全判某一类」的平凡基线**（0.7622 / 0.8895）；误报率由同域的 0.0076 升到 0.2036；在 1% 误报预算下（第 6.5 节口径）召回只有 **0.000601**，等于检不出攻击。\n\n**但衰减的主因是「量纲/分布漂移 + 采集口径差异」，属于可校准的工程问题，不是模型结构失效。** 证据是第 6 节的校准阶梯：同一套模型结构、同一份评估数据，只改变「标准化统计量 + 一个阈值 + 少量头参数」，指标就能实质变化。\n\n第 6.5 节给出了每一级的实测恢复幅度（统一按 1% 误报预算，与攻击先验无关）：\n\n| 上线姿势 | 需要的代价 | 1% 预算下召回 | 二分类 F1 | ROC-AUC |\n|---|---|---|---|---|\n| **A. 零样本**（现状） | 0 标注 | 0.000601 | 0.0012 | 0.6697 |\n| **B. 零成本定标**（L1 重定标 + L2 重定阈值） | **0 标注**、0 秒训练 | 0.00019 | 0.000374 | 0.4742 |\n| **C. 少量标注微调分类头**（L3） | 500 个标注窗口、2.94 秒 | **0.4257** | **0.5965** | **0.7034** |\n| **D.（可选）解冻主干再训**（L4） | 额外 2 epoch、3.63 秒 | **0.4453** | **0.6150** | **0.7657** |\n\n**实测这两个零成本的级别基本没有救回来**：在 1% 误报预算下，召回从 L0 的 0.000601 变成 L1/L2 的 0.00019（AUC 反而由 0.6697 掉到 0.4742）。原因在 6.4 已经查清：零样本那点 AUC 有很大一部分是「漂移幅度」造的假信号，把量纲拉回目标域口径反而把它抹掉了。**只重定标 + 只重定阈值救不回来。**\n\n付少量标注后**显著恢复**：召回 0.00019 → **0.4257**，精确率 0.9962，二分类 F1 0.000374 → **0.5965**，AUC 0.4742 → **0.7034**。这是整条阶梯里性价比最高的一级。\n\n解冻主干再训还能再涨：1% 预算下召回 0.4257 → 0.4453，二分类 F1 0.5965 → 0.6150，AUC 0.7034 → **0.7657**。代价很低（额外 3.63 秒），值得做；不过它是在只花了这么点算力的前提下成立的，标注量大时应当重新评估这一级的收益。\n\n**校准后能达到的水平是 L4**：1% 误报预算下召回 0.4453、精确率 0.9938、二分类 F1 0.6150、AUC 0.7657（同域参照：二分类 F1 0.9907、AUC 1.0000、宏 F1 0.9934）。注意：**线上推理的模型结构、输入维度、时延完全没有变化**，变的只是「标准化统计量 + 一个阈值 + 少量头参数」。\n\n**最后必须一起说的一句**：本项目在**有目标域数据**时按正常流程（同域训练/评估）在同一份真实 inSDN 上拿到过 **0.9976–1.0000** 的宏 F1（见 `results/metrics_real_insdn*.json`）；本次的 L3/L4 只用了 500 个标注窗口、6.6 秒训练，就已经把 1% 预算下的召回从 0 拉到 0.4 以上。这说明**流水线与模型本身是可用的，问题只出在「零样本迁移」这个最苛刻的设定上**。把跨域当成一个**可测量、可付代价解决的工程约束**（本节的阶梯），而不是模型能力的判决书，才是准确的结论。",
+    "remediation": [
+      "**第 0 步：先跑校准阶梯，拿到本项目的真实恢复曲线**（`tools/cross_dataset.py` 默认就会跑，产物见第 6 节与 `results/cross_dataset.json` 的 `calibration` 字段）。下面的 1~4 步就是阶梯对应的工程动作，每一步的实测效果都在第 6 节表里。  ⚠️ 本项目的实测结论是：**第 1、2 步（零成本）在这份数据上几乎无效，真正起作用的是第 3 步。** 顺序仍按成本从低到高排，但不要把希望押在前两步上。",
+      "**只重拟合标准化器（零成本，但别指望它 = Level 1）**：漂移里有一部分纯粹是「量纲/取值范围」差异。用目标域**仅正常流量**的 N 条流重算 mean/std，替换 `data/processed/scaler.joblib`（不碰权重）。它能把均值偏移（当前 |z-shift| 均值 0.5586、P95 1.4013）压下去，但**有明确边界**：真实侧已有 19/71 个特征退化成常量（标准差比 < 0.05），重定标救不回这些维度丢失的信息量；而且第 6 节的实测显示它**并不能提高排序能力**（零样本那点 AUC 有很大一部分是漂移幅度造的假信号）。这一步不需要任何攻击样本，也不涉及标签泄漏，做了没有坏处，但不要当成解决方案。",
+      "**按目标域正常流量的误报预算定阈值（零成本，仍不足以救回）= Level 2**：现在阈值 0.5 是合成测试集上的默认值。正确做法是用纯正常流量估计分数分位，把阈值定到运维能接受的误报预算上（本项目 `tools/operating_point.py` 是同一套思路）。**但要小心一个陷阱**：本项目实测「99.9% 分位」这条规则会退化——模型对目标域正常窗口也会给出接近 1.0 的分数，于是分位数几乎等于 1.0，召回直接归零。所以阈值必须在**真实的误报预算曲线**上看（第 6.3 节的敏感性表），并接受「单独调阈值只能换个取舍点、不能提升判别力」这个事实。",
+      "**少量目标域标注微调分类头（这才是真正有效的一步）= Level 3**：冻结 CNN/BiLSTM 主干（只留 `clf_*` 与 `mc`/`bin` 可训练），用 250 个正常 + 250 个攻击窗口（本报告用的是 500 个标注窗口、正负各半）、微调 4 个 epoch。关键是**隔离**：微调窗口与定阈值窗口、评估窗口必须是**不同的行**（本脚本用三层行级切分保证）。本项目实测：1% 误报预算下的召回由「几乎为 0」升到 0.4 量级，二分类 F1 提升一个数量级。",
+      "**加显式域自适应**：在特征提取层后接一个梯度反转层（DANN）做无监督域对齐，或对窗口级表示做 CORAL/MMD 对齐，让「合成域」与「真实域」的特征分布在训练时就被拉近；也可以用本工程的生成器反过来做「按真实统计量重标定参数」的域随机化训练，把真实数据的取值范围包进训练分布（domain randomization）。这类方法的价值在于**不需要目标域攻击标签**，与本报告 L3 的「少量标签路线」互补。",
+      "**补齐模型看不到的输入维度**：真实数据里有 6 个 Bulk-rate 统计量（`Fwd Byts/b Avg` 等）合成生成器没有产。若要长线做，应当在生成器里补上这些量，并在控制器侧（Ryu/OVS 采集脚本）保证字段口径与 CICFlowMeter v3 一致——**采集口径不一致是跨域问题的根，靠模型补是补不回来的**。",
+      "**在控制器侧建立在线自监控**：上线后持续统计输入特征的 z-shift 与分数分布（本脚本第 5 节就是离线版），一旦 |z-shift| 超阈值就触发重标定/再微调。把「漂移检测」和「模型推理」放进同一个运维闭环，比一次性调好模型更重要。",
+      "**换更合适的评测数据**：inSDN 的 `target` 只有 0/1 且按块拼接，既不能评 8 类，也不适合评在线时延（第 6 节的全部窗口都不是真实相邻流量）。要做严肃的跨域论证，建议补一个**带多类标签且保留时间序**的公开集（如 CIC-IDS2017 原始 pcap 重导）做第二次跨域验证。"
+    ]
+  },
+  "runtime_sec": 41.7
+}

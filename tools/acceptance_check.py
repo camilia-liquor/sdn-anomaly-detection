@@ -372,6 +372,24 @@ def check_deployable(r: Report) -> None:
     r.warn(has_ryu, "本机 Ryu 环境（未安装属正常，适配层需在真实 SDN 环境验证）",
            "已安装" if has_ryu else "未安装：ryu_guard.py 只在有 Ryu 的机器上运行")
 
+    # 跨域适用边界报告（零样本跨域 + 校准阶梯）：回答"换个网络还能不能用"
+    cross = RESULT_DIR / "cross_dataset.json"
+    if cross.exists():
+        c = json.loads(cross.read_text(encoding="utf-8"))
+        mp = c.get("mapping") or {}
+        cal = (c.get("calibration") or {}).get("levels") or {}
+        r.check(float(mp.get("coverage", 0) or 0) > 0.5, "跨域特征映射覆盖率达标",
+                f"{mp.get('n_mapped', '?')}/{mp.get('n_features', '?')}"
+                f"（{float(mp.get('coverage', 0) or 0) * 100:.1f}%）")
+        r.check(bool(cal), "跨域校准阶梯已实测（零样本 → 重定标 → 微调分类头 → 解冻主干）",
+                f"级别：{'、'.join(sorted(cal))}")
+        r.check(bool(c.get("no_training") is True or c.get("no_real_data_fitting") is True),
+                "跨域实验声明了「不在真实数据上训练/拟合」（防泄漏）")
+    else:
+        r.warn(False, "跨域适用边界报告（可选）",
+               "未生成 results/cross_dataset.json：需要真实数据集 data/real/insdn/Dataset.csv"
+               "（未标注许可证、依规不再分发），公开仓库中默认不生成，不影响交付")
+
     # 部署样例：环境变量驱动的初始策略必须真的生效（否则 systemd/服务化配置就是摆设）
     env = dict(os.environ)
     try:
