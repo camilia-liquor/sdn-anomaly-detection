@@ -57,7 +57,7 @@ then `python app/app.py` for the live dashboard. See sections below for details.
 | 10 | **未知攻击（开集）检测：直面"新型攻击"这个真问题** | 把整类攻击从训练中拿掉再评估：**不做拒识时 100% 的未知攻击被自信地错判成已知类**（U2R→WebAttack 84%、Botnet→Normal 96%，后者连告警都不触发）；加入 OOD 拒识后 U2R 在 1% 误报预算下可检出 **70%**、Botnet **44%**，且已知类精度几乎不受损。诚实指出 **AUROC 会骗人**（三者都在 0.978，但低误报预算下的尾部表现差一个数量级） |
 | 11 | **一条命令看一场攻防 + 直接吃真实抓包** | `python tools/live_demo.py`：一条命令在屏幕上演完"安静→攻击爆发→告警→处置→恢复"，自动出事件报告，**检测时延 0.4 毫秒（8 条流记录）、227/227 个窗口与离线评估逐窗口一致（最大 Δp 4.94e-05）**；`python tools/pcap_to_flows.py`：**零依赖**解析 pcap/pcapng（含 VLAN/SLL/分片/纳秒时基），往返 **17 个特征 × 800 条流逐位一致** |
 | 12 | **可核验的方法学** | 错误分析（**漏报 0**、误报集中在 4 组混淆对、错例特征画像）、性能基准（单窗口 **p50 0.92 ms**）、泄漏诊断（公开数据集 **85% 近似重复**）、多种子均值±标准差、分布漂移测试 |
-| 13 | **一键复现 + 现场演示 + 工程规范** | `python run_all.py` 一条命令跑完全流程；**102 项交付验收自检 + 10 项单元测试 + 25 项 Ryu 行为测试 + 58 项 pcap 测试 + CI**；`python app/app.py` 起一个离线可用的实时大屏（迷你 SOC 控制台：攻击拓扑动画 + 处置控制台 + 审计台账 + 服务状态条） |
+| 13 | **一键复现 + 现场演示 + 工程规范** | `python run_all.py` 一条命令跑完全流程；**104 项交付验收自检 + 10 项单元测试 + 25 项 Ryu 行为测试 + 58 项 pcap 测试 + CI**；`python app/app.py` 起一个离线可用的实时大屏（迷你 SOC 控制台：攻击拓扑动画 + 处置控制台 + 审计台账 + 服务状态条） |
 
 ---
 
@@ -106,7 +106,7 @@ python tools/make_report.py
 python tests/test_core.py                 # 单元测试（10 项，不依赖 TensorFlow）
 python tests/test_ryu_guard.py            # Ryu 适配层行为测试（25 项，不需要安装 Ryu）
 python tests/test_pcap_tools.py           # pcap 往返一致性测试（58 项，不需要真实抓包）
-python tools/acceptance_check.py          # 102 项全过 = 可以直接提交
+python tools/acceptance_check.py          # 104 项全过 = 可以直接提交
 
 # 7) 启动演示大屏
 python app/app.py            # 浏览器打开 http://127.0.0.1:5000
@@ -129,7 +129,7 @@ python app/app.py            # 浏览器打开 http://127.0.0.1:5000
 > 行号泄漏回归测试、滑窗纯窗口/多数投票、类别逆频加权、评估口径边界），无需 pytest；
 > `python tests/test_ryu_guard.py` 再跑 25 项 **Ryu 适配层行为测试**（桩件替代 Ryu，验证接口契约、
 > 演练默认、白名单与规则下发路径），**同样不需要安装 Ryu**；
-> `acceptance_check.py` 会把两者一并纳入 102 项验收。
+> `acceptance_check.py` 会把两者一并纳入 104 项验收。
 
 ---
 
@@ -617,6 +617,23 @@ CPU 单进程实测（`python tools/benchmark_latency.py`）：
 > 该面板**不需要 TensorFlow**（数据来自窗口级预测缓存），因此断网、没装 TF 的机器上照样能演示。
 > ⚠️ 改动 `app/templates/index.html` 后**必须重启** `app.py`（Jinja 会缓存模板，否则浏览器拿到旧页面）。
 
+> **「真实 Ryu 控制器」这条边界的当前状态（如实记录，不粉饰）**
+> 我们写好了一个**可直接运行的真机验证脚本** `tools/ryu_live_check.py`：①启动检测服务 →
+> ②用官方 `ryu-manager` 加载本作品的适配层（**不是桩件**）→ ③起一个**模拟 OpenFlow 1.3 交换机**，
+> 与 Ryu 完成 HELLO/FEATURES 握手、用**真实线协议**上报流表统计，并逐字段校验控制器回发的
+> `OFPFlowMod`（阻断）/ `OFPMeterMod`+`OFPFlowMod`（限速）是否指向那条可疑源 IP、以及审计台账是否留痕。
+> 脚本自带**离线自检**（`python tools/ryu_live_check.py --self-test`，8 项全过，不需要 ryu、不联网），
+> 用来保证它的 OF1.3 编解码本身是对的——写自检时确实抓出了 3 个真 bug（OXM 字符串编码、
+> match 长度与补齐不一致、把指令填充当成 action）。
+> **但本机没能真正跑成这一次**：装 Ryu 要联网，而本机系统代理 `127.0.0.1:8086` 已失效、pip 会走这个死代理，
+> `pip install ryu` 卡在"创建隔离构建环境"一步（换 Ryu 的官方维护分支 `os-ken` 同样卡死）。
+> 因此这条边界**仍然成立**：适配层判定逻辑由 **25 项桩件测试**覆盖，**端到端线协议验证脚本已就绪、但未在本机执行**。
+> 在有 Ryu 的机器上执行（把解释器换成装了 `ryu` 的那个即可）：
+> ```bash
+> python tools/ryu_live_check.py --ryu-python /path/to/ryu_venv/bin/python \
+>     --model-tag sdn_ctrl_s0 --processed-dir data/processed_sdn
+> ```
+
 ### 3.16 包序列复研：把「卷积到底有没有用」问到底（`results/packet_seq.md`）
 
 3.4 的困难基准已经把"数据太简单"这个借口排除掉了，但它留下最后一个可能性：**卷积要找的"局部组合模式"
@@ -795,7 +812,7 @@ generate_normal_traffic/
 ├─ deploy/                     ★ 部署样例（systemd 单元 / 环境变量模板 / nginx 反代 / Windows 服务脚本）
 ├─ tools/
 │  ├─ check_env.py             环境自检
-│  ├─ acceptance_check.py      ★ 交付验收自检（提交前跑这个：102 项全过才算完整）
+│  ├─ acceptance_check.py      ★ 交付验收自检（提交前跑这个：104 项全过才算完整）
 │  ├─ smoke_test.py            无 TF 依赖的全链路自检（独立目录，不污染正式结果）
 │  ├─ reevaluate.py            改口径/阈值后重新评估（不用重训）
 │  ├─ operating_point.py       ★ 检测工作点选择器（阈值×窗口×确认次数的 Pareto 表与图）
@@ -811,6 +828,7 @@ generate_normal_traffic/
 │  ├─ domain_randomization.py  ★ 域随机化跨域（多域留一域零样本 + 等预算对照）
 │  ├─ controller_fields.py     ★ 控制器原生字段扩展（只加 OpenFlow 可推导量，17→30 列）
 │  ├─ openset_ood_plus.py      ★ 开集拒识改进（特征空间马氏距离/KNN + 范数自我怀疑诊断）
+│  ├─ ryu_live_check.py        ★ 真实 Ryu 进程 + 模拟 OF1.3 交换机的处置链路验证（含 --self-test 离线自检）
 │  ├─ per_class_online.py      ★ 逐类在线指标（每类片段召回与检测时延，自动与合并片段口径对账）
 │  ├─ openset_calibrate.py     ★ 未知判定的阈值标定（按误报预算把熵阈值定到 1%）
 │  ├─ cross_dataset.py         ★ 跨域迁移诊断（零样本跨域 + 逐特征漂移 + 四级校准阶梯）
@@ -1106,7 +1124,7 @@ python app/app.py --processed-dir data/processed_sdn --model-tag sdn_ctrl
 - [x] 可现场演示的实时大屏（**迷你 SOC 控制台**：攻击拓扑动画 + 处置控制台 + 审计台账 + 服务状态条；离线可用）
 - [x] 文档：README、**部署与对接指南 DEPLOYMENT.md**、原代码问题清单、实验报告（自动生成）、答辩要点、配置速查
 - [x] 工具（33 个，含交付验收自检）：环境自检、无 TF 自检、重新评估、漂移测试、工作点选择、运维换算、**窗口消融**、**困难基准复测**、跨域诊断、开集评估与阈值标定、实况演示、多攻击连演、逐类在线指标、pcap 转换、报告生成、命令行推理、**一页纸/运维 SLO 卡**、大文件下载器
-- [x] 测试：10 项单元测试 + 25 项 Ryu 行为测试 + **58 项 pcap 测试** + **102 项交付验收自检** + CI
+- [x] 测试：10 项单元测试 + 25 项 Ryu 行为测试 + **58 项 pcap 测试** + **104 项交付验收自检** + CI
 
 > **目录体积提示**：`data/`（原始 CSV + 预处理张量，约 200MB）、`artifacts/`（模型，约 190MB，
 > 其中未剪枝的 ET/RF 基线占了 140MB）、`.venv/`（依赖，约 1.8GB）都是**可再生成的**，

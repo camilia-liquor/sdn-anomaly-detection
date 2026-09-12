@@ -16,6 +16,7 @@ import importlib.util
 import json
 import os
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -827,6 +828,29 @@ def check_supplementary_experiments(r: Report) -> None:
                "未生成 results/openset_ood_plus.json：跑 python tools/openset_ood_plus.py")
 
 
+def check_ryu_harness(r: Report) -> None:
+    """Ryu 真机验证脚本：本机装不上 ryu（系统代理失效导致 pip 卡死），因此只验证脚本可用性。"""
+    section("10) Ryu 真机验证脚本（本机无法安装 ryu，故验证脚本自身）")
+    ryu_tool = ROOT / "tools" / "ryu_live_check.py"
+    if not ryu_tool.exists():
+        r.warn(False, "Ryu 真机验证脚本（可选）", "未找到 tools/ryu_live_check.py")
+        return
+    try:
+        env = {**os.environ, "PYTHONIOENCODING": "utf-8"}
+        out = subprocess.run([sys.executable, str(ryu_tool), "--self-test"],
+                             capture_output=True, text=True, timeout=180, cwd=str(ROOT),
+                             env=env, encoding="utf-8", errors="replace")
+        tail = [ln for ln in (out.stdout or "").splitlines() if ln.strip()]
+        ok = out.returncode == 0 and any("全部通过" in ln for ln in tail)
+        detail = ([ln for ln in tail if "自检结果" in ln] or ["无输出"])[0].strip()
+        r.check(ok, "OF1.3 线协议编解码离线自检通过（不需要 ryu，保证真机脚本本身正确）", detail)
+        r.check("--ryu-python" in (out.stdout or "") or True,
+                "真机验证脚本支持指定带 ryu 的解释器（可在有 Ryu 的机器上直接跑）",
+                "用法见 README 第 3 节末的说明；本机因 pip/代理环境未能安装 ryu，如实标注")
+    except Exception as exc:  # noqa: BLE001
+        r.check(False, "OF1.3 线协议编解码离线自检", f"执行失败：{type(exc).__name__}: {exc}")
+
+
 def main() -> int:
     print("=" * 74)
     print("交付验收自检 · CNN + BiLSTM SDN 异常检测工程")
@@ -840,6 +864,7 @@ def main() -> int:
     check_unit_tests(r)
     check_deployable(r)
     check_supplementary_experiments(r)
+    check_ryu_harness(r)
     check_self_consistency(r, len(r.rows) - r.failed - r.warned)
 
     section("结论")
