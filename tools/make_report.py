@@ -514,11 +514,19 @@ def build_report(tag: str, bundle: dict) -> str:
                     per_batch = f"{int(round(int(e2e['rows_sent']) / max(int(e2e['batches']), 1)))}"
                 add(f"| 回放规模 | {int(e2e['rows_sent']):,} 条流 / 共 {e2e.get('batches', '-')} 批 / 每批约 {per_batch} 条 |")
             if e2e.get("throughput_rows_per_sec"):
-                add(f"| 吞吐 | **{float(e2e['throughput_rows_per_sec']):,.0f} 条流/秒** |")
-            lat = e2e.get("latency_ms") or {}
+                add(f"| 吞吐 | **{float(e2e['throughput_rows_per_sec']):,.0f} 条流/秒**"
+                    "（单次实测；多次运行落在 1,364~1,918 区间，随机器负载波动） |")
+            # 时延优先取「剔除首批预热」的口径：首批含 TensorFlow 计算图构建（数十~数百毫秒），
+            # 把它算进 p99 会让稳态性能看起来差一个量级。两个口径都写出来更诚实。
+            lat = e2e.get("latency_ms_excl_warmup") or e2e.get("latency_ms") or {}
             if lat:
-                add(f"| 判定时延 | **p50 {fmt(lat.get('p50'), 1)} ms / p95 {fmt(lat.get('p95'), 1)} ms / "
+                excl = bool(e2e.get("latency_ms_excl_warmup"))
+                add(f"| 判定时延{'（剔除首批预热）' if excl else ''} | "
+                    f"**p50 {fmt(lat.get('p50'), 1)} ms / p95 {fmt(lat.get('p95'), 1)} ms / "
                     f"p99 {fmt(lat.get('p99'), 1)} ms** |")
+            if e2e.get("first_batch_warmup_ms"):
+                add(f"| 首批预热 | {fmt(e2e.get('first_batch_warmup_ms'), 1)} ms —— "
+                    "TensorFlow 计算图构建的**一次性**开销（真实部署只发生一次） |")
             if e2e.get("alerts") is not None:
                 add(f"| 告警 | {int(e2e['alerts'])} 条确认告警（命中真实攻击 "
                     f"{e2e.get('alerts_hitting_attack')}、误报 {e2e.get('false_alarms')}） |")
