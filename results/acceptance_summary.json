@@ -1,0 +1,13 @@
+{
+  "passed": 111,
+  "warned": 1,
+  "failed": 0,
+  "ts": "2026-09-12 22:43:06",
+  "tools": 34,
+  "tests": {
+    "test_core": 10,
+    "test_ryu_guard": 25,
+    "test_pcap_tools": 58
+  },
+  "note": "由 tools/acceptance_check.py 生成；评审视图 /api/judge 读取本文件显示真实项数"
+}

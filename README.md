@@ -1,4 +1,4 @@
-﻿# SDN 流量异常检测：CNN + BiLSTM 混合模型（开源工程版）
+# SDN 流量异常检测：CNN + BiLSTM 混合模型（开源工程版）
 
 [![CI](https://github.com/OWNER/REPO/actions/workflows/ci.yml/badge.svg)](./.github/workflows/ci.yml)
 
@@ -57,7 +57,7 @@ then `python app/app.py` for the live dashboard. See sections below for details.
 | 10 | **未知攻击（开集）检测：直面"新型攻击"这个真问题** | 把整类攻击从训练中拿掉再评估：**不做拒识时 100% 的未知攻击被自信地错判成已知类**（U2R→WebAttack 84%、Botnet→Normal 96%，后者连告警都不触发）；加入 OOD 拒识后 U2R 在 1% 误报预算下可检出 **70%**、Botnet **44%**，且已知类精度几乎不受损。诚实指出 **AUROC 会骗人**（三者都在 0.978，但低误报预算下的尾部表现差一个数量级） |
 | 11 | **一条命令看一场攻防 + 直接吃真实抓包** | `python tools/live_demo.py`：一条命令在屏幕上演完"安静→攻击爆发→告警→处置→恢复"，自动出事件报告，**检测时延 0.4 毫秒（8 条流记录）、227/227 个窗口与离线评估逐窗口一致（最大 Δp 4.94e-05）**；`python tools/pcap_to_flows.py`：**零依赖**解析 pcap/pcapng（含 VLAN/SLL/分片/纳秒时基），往返 **17 个特征 × 800 条流逐位一致** |
 | 12 | **可核验的方法学** | 错误分析（**漏报 0**、误报集中在 4 组混淆对、错例特征画像）、性能基准（单窗口 **p50 0.92 ms**）、泄漏诊断（公开数据集 **85% 近似重复**）、多种子均值±标准差、分布漂移测试 |
-| 13 | **一键复现 + 现场演示 + 工程规范** | `python run_all.py` 一条命令跑完全流程；**106 项交付验收自检 + 10 项单元测试 + 25 项 Ryu 行为测试 + 58 项 pcap 测试 + CI**；`python app/app.py` 起一个离线可用的实时大屏（迷你 SOC 控制台：攻击拓扑动画 + 处置控制台 + 审计台账 + 服务状态条） |
+| 13 | **一键复现 + 现场演示 + 工程规范** | `python run_all.py` 一条命令跑完全流程；**111 项交付验收自检 + 10 项单元测试 + 25 项 Ryu 行为测试 + 58 项 pcap 测试 + CI**；`python app/app.py` 起一个离线可用的实时大屏（迷你 SOC 控制台：攻击拓扑动画 + 处置控制台 + 审计台账 + 服务状态条） |
 
 ---
 
@@ -117,7 +117,7 @@ python tools/make_report.py
 python tests/test_core.py                 # 单元测试（10 项，不依赖 TensorFlow）
 python tests/test_ryu_guard.py            # Ryu 适配层行为测试（25 项，不需要安装 Ryu）
 python tests/test_pcap_tools.py           # pcap 往返一致性测试（58 项，不需要真实抓包）
-python tools/acceptance_check.py          # 106 项全过 = 可以直接提交
+python tools/acceptance_check.py          # 111 项全过 = 可以直接提交
 
 # 7) 启动演示大屏
 python app/app.py            # 浏览器打开 http://127.0.0.1:5000
@@ -140,7 +140,7 @@ python app/app.py            # 浏览器打开 http://127.0.0.1:5000
 > 行号泄漏回归测试、滑窗纯窗口/多数投票、类别逆频加权、评估口径边界），无需 pytest；
 > `python tests/test_ryu_guard.py` 再跑 25 项 **Ryu 适配层行为测试**（桩件替代 Ryu，验证接口契约、
 > 演练默认、白名单与规则下发路径），**同样不需要安装 Ryu**；
-> `acceptance_check.py` 会把两者一并纳入 106 项验收。
+> `acceptance_check.py` 会把两者一并纳入 111 项验收。
 
 ---
 
@@ -823,7 +823,7 @@ generate_normal_traffic/
 ├─ deploy/                     ★ 部署样例（systemd 单元 / 环境变量模板 / nginx 反代 / Windows 服务脚本）
 ├─ tools/
 │  ├─ check_env.py             环境自检
-│  ├─ acceptance_check.py      ★ 交付验收自检（提交前跑这个：106 项全过才算完整）
+│  ├─ acceptance_check.py      ★ 交付验收自检（提交前跑这个：111 项全过才算完整）
 │  ├─ smoke_test.py            无 TF 依赖的全链路自检（独立目录，不污染正式结果）
 │  ├─ reevaluate.py            改口径/阈值后重新评估（不用重训）
 │  ├─ operating_point.py       ★ 检测工作点选择器（阈值×窗口×确认次数的 Pareto 表与图）
@@ -1034,6 +1034,13 @@ python run_all.py --set window_size=16 --set conv_filters=96,192 --set learning_
 
 ## 8. 可视化演示大屏 + 在线检测服务
 
+> **给评委看的「评审视图」**：`python app/app.py` → 打开 <http://127.0.0.1:5000/judge>
+> （主大屏右上角也有「🎯 评审视图」按钮）。它把**创新点、优势、可验证性、诚实边界**放到一屏：
+> ① 核心数字 → ② **工作点选择器（可拖动：阈值 × 确认次数，实时换算成告警/天与人工工时/天）** →
+> ③ 三次自我证伪 → ④ 稳健性（对抗 / 开集 / 字段补平）→ ⑤ 诚实边界清单 →
+> ⑥ 可验证性（自检项数、测试、工具数、一条命令列表）→ ⑦ AI 与开源融合 + 开放成果。
+> 页面数据全部来自 `results/` 下的真实产物（接口 `/api/judge`），**缺项显示「未测」，不补零不估算**。
+
 ```bash
 python app/app.py                 # http://127.0.0.1:5000
 python app/app.py --port 8000
@@ -1135,7 +1142,7 @@ python app/app.py --processed-dir data/processed_sdn --model-tag sdn_ctrl
 - [x] 可现场演示的实时大屏（**迷你 SOC 控制台**：攻击拓扑动画 + 处置控制台 + 审计台账 + 服务状态条；离线可用）
 - [x] 文档：README、**部署与对接指南 DEPLOYMENT.md**、原代码问题清单、实验报告（自动生成）、答辩要点、配置速查
 - [x] 工具（34 个，含交付验收自检）：环境自检、无 TF 自检、重新评估、漂移测试、工作点选择、运维换算、**窗口消融**、**困难基准复测**、跨域诊断、开集评估与阈值标定、实况演示、多攻击连演、逐类在线指标、pcap 转换、报告生成、命令行推理、**一页纸/运维 SLO 卡**、大文件下载器
-- [x] 测试：10 项单元测试 + 25 项 Ryu 行为测试 + **58 项 pcap 测试** + **106 项交付验收自检** + CI
+- [x] 测试：10 项单元测试 + 25 项 Ryu 行为测试 + **58 项 pcap 测试** + **111 项交付验收自检** + CI
 
 > **目录体积提示**：`data/`（原始 CSV + 预处理张量，约 200MB）、`artifacts/`（模型，约 190MB，
 > 其中未剪枝的 ET/RF 基线占了 140MB）、`.venv/`（依赖，约 1.8GB）都是**可再生成的**，

@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>评审视图 · 创新点、优势与可验证性</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+  <style>
+    /* 评审视图：一屏看完"创新点 / 优势 / 可验证性 / 诚实边界"
+       —— 所有数字都来自 /api/judge（读 results/ 下的真实产物），缺项灰显，绝不编造。 */
+    body.judge { background: var(--bg); color: var(--text); margin: 0;
+                 font-family: "Microsoft YaHei", "PingFang SC", system-ui, sans-serif; }
+    .j-wrap { max-width: 1320px; margin: 0 auto; padding: 22px 20px 60px; }
+    .j-head { display: flex; justify-content: space-between; align-items: flex-start;
+              gap: 18px; flex-wrap: wrap; margin-bottom: 6px; }
+    .j-head h1 { font-size: 24px; margin: 0 0 6px; letter-spacing: .3px; }
+    .j-head .sub { color: var(--muted); font-size: 13px; margin: 0; line-height: 1.7; }
+    .j-head code { font-family: var(--mono); font-size: 12px; color: var(--accent); }
+    .j-nav { display: flex; gap: 10px; align-items: center; }
+    .j-nav a { color: var(--accent); text-decoration: none; font-size: 13px;
+               border: 1px solid var(--border); border-radius: 8px; padding: 6px 12px; }
+    .j-nav a:hover { border-color: var(--accent); }
+
+    .j-section { margin-top: 22px; }
+    .j-title { font-size: 15px; font-weight: 700; margin: 0 0 10px; display: flex;
+               align-items: baseline; gap: 10px; flex-wrap: wrap; }
+    .j-title .j-hint { font-size: 12px; font-weight: 400; color: var(--muted); }
+
+    .j-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
+              gap: 10px; }
+    .j-kpi { background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+             padding: 12px 13px; }
+    .j-kpi .k { font-size: 11.5px; color: var(--muted); }
+    .j-kpi .v { font-size: 21px; font-weight: 700; margin-top: 5px; font-family: var(--mono); }
+    .j-kpi .s { font-size: 11px; color: var(--muted); margin-top: 3px; }
+    .j-kpi.hi .v { color: var(--accent); }
+    .j-kpi.ok .v { color: var(--ok); }
+    .j-kpi.warn .v { color: var(--warn); }
+
+    .j-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 12px; }
+    .j-card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+              padding: 13px 15px; }
+    .j-card h3 { margin: 0 0 8px; font-size: 13.5px; }
+    .j-card .row { font-size: 12.5px; color: var(--text); margin: 5px 0; line-height: 1.65; }
+    .j-card .row b { color: var(--accent); }
+    .j-card .k { color: var(--muted); }
+    .j-card .honest { margin-top: 8px; padding: 7px 9px; border-left: 2px solid var(--warn);
+                      background: rgba(245,158,11,.07); color: #fcd34d; font-size: 11.5px;
+                      line-height: 1.6; border-radius: 0 6px 6px 0; }
+    .j-card .src { margin-top: 7px; font-family: var(--mono); font-size: 11px; color: var(--muted); }
+
+    .j-wp { display: grid; grid-template-columns: 300px 1fr; gap: 14px; align-items: start; }
+    @media (max-width: 900px) { .j-wp { grid-template-columns: 1fr; } }
+    .j-wp-ctl { background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+                padding: 13px 15px; }
+    .j-wp-ctl label { display: block; font-size: 12px; color: var(--muted); margin: 12px 0 6px; }
+    .j-wp-ctl input[type=range] { width: 100%; }
+    .j-wp-ctl .seg { display: flex; gap: 7px; flex-wrap: wrap; }
+    .j-wp-ctl .seg button { background: #1b2740; color: var(--text); border: 1px solid var(--border);
+                            border-radius: 8px; padding: 6px 13px; font-size: 12.5px; cursor: pointer; }
+    .j-wp-ctl .seg button.on { background: rgba(56,189,248,.18); border-color: var(--accent);
+                               color: var(--accent); font-weight: 700; }
+    .j-wp-ctl .cur { font-family: var(--mono); font-size: 13px; color: var(--accent); margin-top: 4px; }
+    .j-wp-out { background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+                padding: 13px 15px; }
+    .j-wp-out .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+                      gap: 10px; }
+    .j-wp-out .cell { background: #0f1728; border: 1px solid var(--border); border-radius: 10px;
+                      padding: 10px 11px; }
+    .j-wp-out .cell .k { font-size: 11px; color: var(--muted); }
+    .j-wp-out .cell .v { font-size: 18px; font-weight: 700; font-family: var(--mono); margin-top: 4px; }
+    .j-wp-out .cell.good .v { color: var(--ok); }
+    .j-wp-out .cell.bad .v { color: var(--danger); }
+    .j-wp-out .cmp { margin-top: 10px; font-size: 12.5px; color: var(--muted); line-height: 1.8; }
+    .j-wp-out .cmp b { color: var(--text); }
+
+    table.j-tab { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 12px; }
+    table.j-tab th, table.j-tab td { border-bottom: 1px solid var(--border); padding: 6px 8px;
+                                     text-align: right; font-family: var(--mono); }
+    table.j-tab th { color: var(--muted); font-weight: 600; text-align: right; }
+    table.j-tab td:first-child, table.j-tab th:first-child { text-align: left; font-family: inherit; }
+    table.j-tab tr.on { background: rgba(56,189,248,.10); }
+    table.j-tab tr.rec td { color: var(--ok); }
+    table.j-tab tr.bad td { color: #fca5a5; }
+
+    .j-list { background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+              padding: 13px 15px; }
+    .j-list .item { display: flex; gap: 12px; padding: 8px 0; border-bottom: 1px dashed var(--border);
+                    font-size: 12.5px; }
+    .j-list .item:last-child { border-bottom: 0; }
+    .j-list .item .st { min-width: 168px; font-weight: 700; }
+    .j-list .item .st.no { color: #fca5a5; }
+    .j-list .item .st.yes { color: var(--ok); }
+    .j-list .item .dt { color: var(--muted); line-height: 1.7; }
+
+    .j-cmds { background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+              padding: 13px 15px; }
+    .j-cmds .c { display: flex; gap: 10px; align-items: baseline; padding: 5px 0; font-size: 12.5px; }
+    .j-cmds .c .what { min-width: 210px; color: var(--muted); }
+    .j-cmds .c code { font-family: var(--mono); font-size: 12px; color: var(--accent);
+                      background: #0f1728; border: 1px solid var(--border); border-radius: 6px;
+                      padding: 2px 8px; }
+    .j-foot { margin-top: 26px; padding-top: 14px; border-top: 1px solid var(--border);
+              color: var(--muted); font-size: 12px; line-height: 1.8; }
+    .j-foot b { color: var(--warn); }
+  </style>
+</head>
+<body class="judge">
+  <div class="j-wrap">
+    <div class="j-head">
+      <div>
+        <h1>SDN 异常流量检测 · 评审视图</h1>
+        <p class="sub">
+          一个能接进 <b>SDN 控制平面</b>的检测系统 —— 不是课题。<br />
+          本页每个数字都来自 <code>results/</code> 下的真实产物，可一条命令复跑；
+          缺项灰显、不编造。
+        </p>
+      </div>
+      <div class="j-nav">
+        <span class="badge" id="src-badge">读取产物…</span>
+        <a href="/">← 回到实时大屏</a>
+      </div>
+    </div>
+
+    <div class="j-section">
+      <div class="j-title">核心数字 <span class="j-hint">主实验（3 个随机种子）+ 在线告警级口径</span></div>
+      <div class="j-kpis" id="kpis"></div>
+    </div>
+
+    <div class="j-section">
+      <div class="j-title">① 核心设计：工作点选择器
+        <span class="j-hint">召回不变的前提下，把误报换算成「每天多少告警、多少人工小时」—— 拖一下看代价</span>
+      </div>
+      <div class="j-wp">
+        <div class="j-wp-ctl">
+          <label>判定阈值 <span class="cur" id="wp-thr-v">—</span></label>
+          <input type="range" id="wp-thr" min="0" max="3" step="1" value="1" />
+          <label>连续确认窗口数（去抖）</label>
+          <div class="seg" id="wp-cfm"></div>
+          <div class="cur" id="wp-cur">—</div>
+          <div style="font-size:11.5px;color:var(--muted);line-height:1.7;margin-top:10px">
+            这两个旋钮**不用重训**，运行中的服务可通过 <code>POST /api/policy</code> 热更新。
+          </div>
+        </div>
+        <div class="j-wp-out">
+          <div class="grid" id="wp-cells"></div>
+          <div class="cmp" id="wp-cmp"></div>
+        </div>
+      </div>
+      <table class="j-tab" id="wp-table"></table>
+    </div>
+
+    <div class="j-section">
+      <div class="j-title">② 我们主动测穿自己 <span class="j-hint">三次自我证伪 —— 这是本作品区别于「只报好数字」的地方</span></div>
+      <div class="j-cards" id="fals"></div>
+    </div>
+
+    <div class="j-section">
+      <div class="j-title">③ 稳健性与上线边界 <span class="j-hint">主动暴露脆弱性，并给出代价与缓解</span></div>
+      <div class="j-cards" id="robust"></div>
+    </div>
+
+    <div class="j-section">
+      <div class="j-title">④ 诚实边界 <span class="j-hint">这些是我们自己写进报告的"做不到"</span></div>
+      <div class="j-list" id="bounds"></div>
+    </div>
+
+    <div class="j-section">
+      <div class="j-title">⑤ 可验证性 <span class="j-hint">评委不用相信我们，照命令跑一遍即可</span></div>
+      <div class="j-cmds" id="cmds"></div>
+    </div>
+
+    <div class="j-section">
+      <div class="j-title">⑥ AI 与开源融合 · 开放成果</div>
+      <div class="j-cards" id="oss"></div>
+    </div>
+
+    <div class="j-foot" id="foot"></div>
+  </div>
+  <script src="{{ url_for('static', filename='judge.js') }}"></script>
+</body>
+</html>
