@@ -652,31 +652,44 @@ def check_deployable(r: Report) -> None:
 
 
 def check_self_consistency(r: Report, n_passed: int) -> None:
-    """防止"一页纸/文档里写死的自检项数"与真实项数漂移（踩过：图上写着 73 项，实际已是 89 项）。
+    """防止「对外材料里写死的数字」与真实情况漂移。
 
-    只做一件事：把 `tools/make_onepager.py` 里写死的「N 项交付自检」与本次真实通过数对齐。
-
-    ⚠️ 这一步**故意不占用自检项数**（不调用 `r.check`）：否则"项数"会把自己算进去，
-    每加一个检查就要把所有对外文档里的数字再改一遍，反而制造新的漂移源。
-    判定失败时直接计入 `r.failed`，所以它仍然是"不过就不许提交"的硬约束。
+    两条守卫（**都不占用自检项数**，否则项数会把自己算进去、每加一个检查就要改一遍所有文档）：
+      1. 一页纸 `make_onepager.py` 里写死的「N 项交付自检」== 本次真实通过数；
+      2. README 里写死的「工具（N 个，含交付验收自检）」== `tools/*.py` 实际文件数。
+    踩过的坑：一页纸写 73 项（实际一路涨到 106）、README 写 26 个工具（实际 34）、
+    技术报告里漏改一处「26 工具」。
+    判定失败时直接计入 `r.failed`，所以它仍然是「不过就不许提交」的硬约束。
     """
-    section("8) 对外材料里的数字与真实自检结果一致（防漂移）")
+    section("12) 对外材料里的数字与真实情况一致（防漂移）")
     onepager = ROOT / "tools" / "make_onepager.py"
-    if not onepager.exists():
+    if onepager.exists():
+        m = re.search(r"(\d+)\s*项交付自检", onepager.read_text(encoding="utf-8"))
+        if not m:
+            print(f"  {WARN} 一页纸标注了自检项数（可选）  —— 未找到「N 项交付自检」字样")
+        elif int(m.group(1)) == n_passed:
+            print(f"  {PASS} 满屏结论页上标注的自检项数与实际一致  —— 图上写 {n_passed} 项 / 实际 {n_passed} 项")
+        else:
+            r.failed += 1
+            print(f"  {FAIL} 满屏结论页上标注的自检项数与实际不一致  —— 图上写 {m.group(1)} 项 / "
+                  f"实际 {n_passed} 项 → 请改 tools/make_onepager.py 后重跑 python tools/make_onepager.py")
+    else:
         print(f"  {WARN} 一页纸生成脚本存在（可选）  —— 未找到 tools/make_onepager.py")
+
+    n_tools = len(list((ROOT / "tools").glob("*.py")))
+    readme = ROOT / "README.md"
+    if not readme.exists():
+        print(f"  {WARN} README 存在（可选）  —— 未找到 README.md")
         return
-    txt = onepager.read_text(encoding="utf-8")
-    m = re.search(r"(\d+)\s*项交付自检", txt)
-    if not m:
-        print(f"  {WARN} 一页纸标注了自检项数（可选）  —— 未在 make_onepager.py 找到「N 项交付自检」字样")
-        return
-    claimed = int(m.group(1))
-    if claimed == n_passed:
-        print(f"  {PASS} 满屏结论页上标注的自检项数与实际一致  —— 图上写 {claimed} 项 / 实际 {n_passed} 项")
-        return
-    r.failed += 1
-    print(f"  {FAIL} 满屏结论页上标注的自检项数与实际不一致  —— 图上写 {claimed} 项 / 实际 {n_passed} 项"
-          f" → 请改 tools/make_onepager.py 后重跑 python tools/make_onepager.py")
+    m2 = re.search(r"工具（(\d+) 个，含交付验收自检）", readme.read_text(encoding="utf-8"))
+    if not m2:
+        print(f"  {WARN} README 标注了工具脚本数（可选）  —— 未找到「工具（N 个，含交付验收自检）」字样")
+    elif int(m2.group(1)) == n_tools:
+        print(f"  {PASS} README 标注的工具脚本数与实际一致  —— 写 {n_tools} 个 / 实际 {n_tools} 个")
+    else:
+        r.failed += 1
+        print(f"  {FAIL} README 标注的工具脚本数与实际不一致  —— 写 {m2.group(1)} 个 / 实际 {n_tools} 个"
+              f" → 请同步更新 README 与 competition/ 下各文档")
 
 
 def check_supplementary_experiments(r: Report) -> None:
