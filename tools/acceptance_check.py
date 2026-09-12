@@ -15,6 +15,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -647,6 +648,34 @@ def check_deployable(r: Report) -> None:
         os.environ.update(env)
 
 
+def check_self_consistency(r: Report, n_passed: int) -> None:
+    """防止"一页纸/文档里写死的自检项数"与真实项数漂移（踩过：图上写着 73 项，实际已是 89 项）。
+
+    只做一件事：把 `tools/make_onepager.py` 里写死的「N 项交付自检」与本次真实通过数对齐。
+
+    ⚠️ 这一步**故意不占用自检项数**（不调用 `r.check`）：否则"项数"会把自己算进去，
+    每加一个检查就要把所有对外文档里的数字再改一遍，反而制造新的漂移源。
+    判定失败时直接计入 `r.failed`，所以它仍然是"不过就不许提交"的硬约束。
+    """
+    section("8) 对外材料里的数字与真实自检结果一致（防漂移）")
+    onepager = ROOT / "tools" / "make_onepager.py"
+    if not onepager.exists():
+        print(f"  {WARN} 一页纸生成脚本存在（可选）  —— 未找到 tools/make_onepager.py")
+        return
+    txt = onepager.read_text(encoding="utf-8")
+    m = re.search(r"(\d+)\s*项交付自检", txt)
+    if not m:
+        print(f"  {WARN} 一页纸标注了自检项数（可选）  —— 未在 make_onepager.py 找到「N 项交付自检」字样")
+        return
+    claimed = int(m.group(1))
+    if claimed == n_passed:
+        print(f"  {PASS} 满屏结论页上标注的自检项数与实际一致  —— 图上写 {claimed} 项 / 实际 {n_passed} 项")
+        return
+    r.failed += 1
+    print(f"  {FAIL} 满屏结论页上标注的自检项数与实际不一致  —— 图上写 {claimed} 项 / 实际 {n_passed} 项"
+          f" → 请改 tools/make_onepager.py 后重跑 python tools/make_onepager.py")
+
+
 def main() -> int:
     print("=" * 74)
     print("交付验收自检 · CNN + BiLSTM SDN 异常检测工程")
@@ -659,6 +688,7 @@ def main() -> int:
     check_demo(r)
     check_unit_tests(r)
     check_deployable(r)
+    check_self_consistency(r, len(r.rows) - r.failed - r.warned)
 
     section("结论")
     print(f"  通过 {len(r.rows) - r.failed - r.warned} 项 | 警告 {r.warned} 项 | 失败 {r.failed} 项")
