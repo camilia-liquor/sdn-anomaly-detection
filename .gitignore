@@ -24,7 +24,8 @@ __pycache__/
 .ipynb_checkpoints/
 
 # ---------- 自研数据与产物（可再生成；如需随仓库发布小规模样例，请单独挑选）----------
-data/raw/*.csv
+# data/raw*/ 同时覆盖 data/raw 与困难基准的 data/raw_hard（两者都是可再生的 CSV，各 ~90 MB）
+data/raw*/*.csv
 data/processed/*.npz
 data/processed/*.joblib
 data/processed_*/*.npz
@@ -42,10 +43,13 @@ artifacts/*.npy
 artifacts/*/*.npy
 artifacts/*/*.joblib
 artifacts/*.npz
-# 消融实验（ws10/16/24/32/48 及其多种子）的窗口级预测缓存：每个约 450 KB、合计约 8 MB，
-# 属可再生的中间产物，且没有任何交付工具会读它们（消融报告只读 results/metrics_ws*.json）
+# 消融实验（ws10/16/24/32/48 及其多种子、困难基准 hard10/16/24/32）的窗口级预测缓存：
+# 每个约 450 KB、合计约 47 MB，属可再生的中间产物，且没有任何交付工具会读它们
+# （消融报告只读 results/metrics_ws*.json 与 results/metrics_hard*.json）
 artifacts/predictions_windows_ws*.csv
 artifacts/predictions_ws*.csv
+artifacts/predictions_*_hard*.csv
+artifacts/predictions_hard*.csv
 artifacts/_smoke/
 results/_smoke/
 # `run_all.py --smoke` 会用 `<tag>_smoke` 后缀把产物写在正式目录里（数据目录已隔离，

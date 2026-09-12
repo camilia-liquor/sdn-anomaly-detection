@@ -86,7 +86,9 @@ def check_files(r: Report) -> None:
         "tools/controller_simulator.py", "tools/ops_impact.py", "tools/acceptance_check.py",
         "tools/cross_dataset.py", "tools/live_demo.py", "tools/live_demo_campaign.py",
         "tools/openset_eval.py", "tools/openset_calibrate.py", "tools/pcap_to_flows.py",
-        "tools/per_class_online.py", "tools/window_ablation.py", "tools/make_onepager.py",
+        "tools/per_class_online.py", "tools/window_ablation.py",
+        "tools/hard_ablation.py",
+        "tools/make_onepager.py", "tools/make_ops_card.py",
         "docs/01_原始代码问题清单.md", "docs/02_实验报告.md", "docs/03_答辩要点与配置清单.md",
         "competition/README.md", "competition/01_开源及第三方资源使用清单.md",
         "competition/02_技术报告.md", "competition/02_技术报告_精简稿.md",
@@ -470,6 +472,50 @@ def check_deployable(r: Report) -> None:
         r.warn(False, "窗口长度消融扩展报告（可选）",
                f"未生成 {wa}：运行 python tools/window_ablation.py")
 
+    # ---- 困难基准复测：难度拉满后卷积是否翻身（结论必须能被复算，且不许"残缺集合算 Δ"） ----
+    ha = RESULT_DIR / "hard_ablation.json"
+    if ha.exists():
+        h = json.loads(ha.read_text(encoding="utf-8"))
+        hrows = [x for x in (h.get("hard_rows") or []) if x.get("measured")]
+        hws = sorted(int(x.get("window") or 0) for x in hrows)
+        ans = h.get("answers") or {}
+        comp = h.get("completeness") or {}
+        r.check(len(hws) >= 4, "困难基准复测覆盖到至少 4 个窗口长度", f"T={hws}")
+        # 完备性闸门：三结构不齐时工具必须拒绝给 Δ（残缺集合会把 best_single 选错、使 Δ 符号反转）
+        inc = [int(x.get("window") or 0) for x in hrows if not x.get("complete", True)]
+        r.check(not inc, "困难基准消融：每个 T 的三结构指标齐全（Δ 均基于完整集合计算）",
+                f"残缺档位 {inc}（Δ 应为 null）" if inc else f"{len(hws)}/{len(hws)} 档 complete=true")
+        r.check(not (comp.get("binding_errors") or []),
+                "困难基准消融：产物 tag 与模型变体绑定校验通过（无错配记录）",
+                json.dumps(comp.get("binding_errors") or [], ensure_ascii=False)[:110] or "0 条错配")
+        # 结论必须是明确判定而不是含糊表述；正面/负面都行，但不能空着
+        r.check(bool(ans.get("q1_case")) and bool(ans.get("q2_case")) and "saturation_solved" in ans,
+                "困难基准消融给出了明确结论（是否有增益 / 趋势方向 / 饱和是否解决）",
+                f"q1={ans.get('q1_case')}、q2={ans.get('q2_case')}、"
+                f"saturation_solved={ans.get('saturation_solved')}")
+        # 饱和是否解决：困难基准最高宏 F1 必须 < 1.0，否则这个基准回答不了架构差异
+        best = ans.get("hard_max_f1_overall")
+        r.check(best is not None and float(best) < 1.0,
+                "困难基准未饱和（最高宏 F1 < 1.0000，具备区分架构差异的判别力）",
+                f"最高宏 F1 = {best}（{ans.get('hard_top_f1')}）；"
+                f"正增益档位 {ans.get('positive_windows')}")
+        # 逐种子配对证据必须在（这是"卷积无增益"最贴题的一层证据）
+        po = ans.get("paired_overall") or {}
+        r.check(int(po.get("n") or 0) > 0 and int(po.get("n_positive") or 0) == 0,
+                "困难基准逐种子配对：没有任何一个种子下混合模型更好",
+                f"{int(po.get('n_negative') or 0)}/{int(po.get('n') or 0)} 对为负，"
+                f"符号检验双侧 p={float(po.get('sign_test_p_two_sided') or 0):.3f}")
+        fp = FIGURE_DIR / "hard_ablation_compare.png"
+        if fp.exists():
+            r.check(fp.stat().st_size > 50_000, "困难基准对比图已生成",
+                    f"{fp.name} {fp.stat().st_size // 1024} KB")
+        else:
+            r.warn(False, "困难基准对比图（可选）",
+                   "未生成 results/figures/hard_ablation_compare.png：运行 python tools/hard_ablation.py")
+    else:
+        r.warn(False, "困难基准复测报告（可选）",
+               f"未生成 {ha}：运行 python tools/hard_ablation.py（需要 data/raw_hard 与 artifacts/hard* 产物）")
+
     # ---- 大屏漂移面板（离线可用，不依赖 TensorFlow） ----
     nv = client.get("/api/novelty?bins=60")
     nvj = nv.get_json() or {}
@@ -498,6 +544,17 @@ def check_deployable(r: Report) -> None:
     else:
         r.warn(False, "逐类在线指标表（可选）",
                f"未生成 {pco}：运行 python tools/per_class_online.py")
+
+    # ---- 两张一页纸（视频路演/答辩首屏用的满屏结论页） ----
+    for name, label in (("onepager.png", "作品一页纸结论图"), ("ops_card.png", "运维 SLO 卡")):
+        fp = FIGURE_DIR / name
+        if fp.exists():
+            r.check(fp.stat().st_size > 50_000, f"{label}已生成（可作为满屏结论页）",
+                    f"{fp.name} {fp.stat().st_size // 1024} KB")
+        else:
+            r.warn(False, f"{label}（可选）",
+                   f"未生成 results/figures/{name}：运行 python tools/make_"
+                   f"{'onepager' if name.startswith('one') else 'ops_card'}.py")
 
     # ---- 多攻击连演：每类攻击的检出对比 ----
     camp = RESULT_DIR / "live_demo_campaign.json"

@@ -1,0 +1,376 @@
+{
+  "tag": "hard32_cnn_s1",
+  "model": {
+    "variant": "cnn_bilstm_cnn",
+    "n_params": 65289,
+    "input_shape": [
+      32,
+      71
+    ]
+  },
+  "data": {
+    "input_mode": "sequence",
+    "input_shape": [
+      32,
+      71
+    ],
+    "window_size": 32,
+    "n_features": 71,
+    "n_classes": 8,
+    "class_names": [
+      "Botnet",
+      "BruteForce",
+      "DDoS",
+      "DoS",
+      "Normal",
+      "Probe",
+      "U2R",
+      "WebAttack"
+    ],
+    "train": 4946,
+    "val": 1172,
+    "test": 2151,
+    "class_weight": {
+      "0": 2.3963178294573644,
+      "1": 3.10678391959799,
+      "2": 1.93203125,
+      "3": 2.124570446735395,
+      "4": 0.18843340444986284,
+      "5": 2.9440476190476192,
+      "6": 6.1825,
+      "7": 2.1541811846689893
+    },
+    "train_class_counts": {
+      "Botnet": 258,
+      "BruteForce": 199,
+      "DDoS": 320,
+      "DoS": 291,
+      "Normal": 3281,
+      "Probe": 210,
+      "U2R": 100,
+      "WebAttack": 287
+    },
+    "split": {
+      "train": 51793,
+      "val": 12836,
+      "test": 21544,
+      "purge_rows": 64,
+      "windows": {
+        "train": {
+          "n_candidates": 10353,
+          "n_kept": 4946,
+          "n_skipped_mixed": 5407,
+          "window_size": 32,
+          "stride": 5
+        },
+        "val": {
+          "n_candidates": 2561,
+          "n_kept": 1172,
+          "n_skipped_mixed": 1389,
+          "window_size": 32,
+          "stride": 5
+        },
+        "test": {
+          "n_candidates": 4303,
+          "n_kept": 2151,
+          "n_skipped_mixed": 2152,
+          "window_size": 32,
+          "stride": 5
+        }
+      },
+      "time_ordered_split": true,
+      "split_mode": "time"
+    }
+  },
+  "multiclass": {
+    "accuracy": 0.8768014876801488,
+    "macro_precision": 0.782951261115818,
+    "macro_recall": 0.9734266621553037,
+    "macro_f1": 0.8457699194618394,
+    "weighted_f1": 0.8924471136496978,
+    "cohen_kappa": 0.7776959217635036,
+    "top2_accuracy": 0.9632728963272896,
+    "n_classes_present": 8,
+    "confusion_matrix": [
+      [
+        29,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        84,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        114,
+        1,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        146,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        16,
+        152,
+        6,
+        48,
+        1279,
+        34,
+        0,
+        7
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        54,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        40,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        140
+      ]
+    ],
+    "confusion_matrix_normalized": [
+      [
+        0.9666666666666667,
+        0.03333333333333333,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        0.991304347826087,
+        0.008695652173913044,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.010376134889753566,
+        0.09857328145265888,
+        0.0038910505836575876,
+        0.0311284046692607,
+        0.8294422827496758,
+        0.02204928664072633,
+        0.0,
+        0.004539559014267186
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    ],
+    "per_class": {
+      "Botnet": {
+        "precision": 0.6444444444444445,
+        "recall": 0.9666666666666667,
+        "f1": 0.7733333333333333,
+        "support": 30
+      },
+      "BruteForce": {
+        "precision": 0.35443037974683544,
+        "recall": 1.0,
+        "f1": 0.5233644859813084,
+        "support": 84
+      },
+      "DDoS": {
+        "precision": 0.95,
+        "recall": 0.991304347826087,
+        "f1": 0.9702127659574468,
+        "support": 115
+      },
+      "DoS": {
+        "precision": 0.7487179487179487,
+        "recall": 1.0,
+        "f1": 0.8563049853372434,
+        "support": 146
+      },
+      "Normal": {
+        "precision": 1.0,
+        "recall": 0.8294422827496758,
+        "f1": 0.9067706487061326,
+        "support": 1542
+      },
+      "Probe": {
+        "precision": 0.6136363636363636,
+        "recall": 1.0,
+        "f1": 0.7605633802816901,
+        "support": 54
+      },
+      "U2R": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 40
+      },
+      "WebAttack": {
+        "precision": 0.9523809523809523,
+        "recall": 1.0,
+        "f1": 0.975609756097561,
+        "support": 140
+      }
+    },
+    "macro_roc_auc_ovr": 0.9992608950179092
+  },
+  "binary": {
+    "threshold": 0.5,
+    "accuracy": 0.7945141794514179,
+    "balanced_accuracy": 0.8566796368352789,
+    "precision": 0.5794481446241675,
+    "recall": 1.0,
+    "f1": 0.7337349397590361,
+    "roc_auc": 0.9976466278626483,
+    "pr_auc": 0.9943022127358868,
+    "mcc": 0.6429266735630498,
+    "tn": 1100,
+    "fp": 442,
+    "fn": 0,
+    "tp": 609,
+    "false_positive_rate": 0.28664072632944226,
+    "false_negative_rate": 0.0,
+    "tpr_at_fpr_0.01": 0.9474548440065681,
+    "tpr_at_fpr_0.001": 0.7733990147783252,
+    "best_f1": 0.9715215622457283,
+    "best_f1_threshold": 0.9853724837303162
+  },
+  "binary_best_threshold": {
+    "threshold": 0.9853724837303162,
+    "accuracy": 0.9837284983728498,
+    "balanced_accuracy": 0.9826899362992212,
+    "precision": 0.9629032258064516,
+    "recall": 0.9802955665024631,
+    "f1": 0.9715215622457283,
+    "roc_auc": 0.9976466278626483,
+    "pr_auc": 0.9943022127358868,
+    "mcc": 0.9602086919727515,
+    "tn": 1519,
+    "fp": 23,
+    "fn": 12,
+    "tp": 597,
+    "false_positive_rate": 0.014915693904020753,
+    "false_negative_rate": 0.019704433497536946,
+    "tpr_at_fpr_0.01": 0.9474548440065681,
+    "tpr_at_fpr_0.001": 0.7733990147783252,
+    "best_f1": 0.9715215622457283,
+    "best_f1_threshold": 0.9853724837303162
+  },
+  "online": {
+    "threshold": 0.5,
+    "confirm_windows": 3,
+    "stream_rows": 21544,
+    "stream_hours": 3.1579,
+    "min_segment_rows": 32,
+    "n_raw_attack_segments": 327,
+    "n_ignored_short_segments": 299,
+    "n_attack_segments": 28,
+    "n_segments_detected": 28,
+    "segment_recall": 1.0,
+    "n_segments_missed": 0,
+    "mean_detection_delay_rows": 11.5,
+    "median_detection_delay_rows": 11.5,
+    "mean_detection_delay_sec": 0.03907160248075213,
+    "p95_detection_delay_sec": 0.17587312459945673,
+    "false_alarms": 505,
+    "false_alarms_per_hour": 159.91472403980515,
+    "n_windows": 7171,
+    "n_alarmed_windows": 3109,
+    "n_raw_alarmed_windows": 3627,
+    "alarm_rate": 0.43355180588481385
+  },
+  "attention_file": null
+}
