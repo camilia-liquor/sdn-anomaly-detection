@@ -34,6 +34,9 @@ data/processed_smoke/
 data/processed_real*/
 artifacts/*/*.keras
 artifacts/*/*/*.keras
+artifacts/*.weights.h5
+artifacts/*/*.weights.h5
+artifacts/*/*/*.weights.h5
 artifacts/*/*.h5
 artifacts/*.npy
 artifacts/*/*.npy
