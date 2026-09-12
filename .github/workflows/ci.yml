@@ -28,6 +28,22 @@ jobs:
                       matplotlib==3.8.4 seaborn==0.13.2 joblib==1.3.2 flask==3.0.3
       - name: 环境自检
         run: python tools/check_env.py || true   # 缺 TF 属预期，不视为失败
+      - name: 语法与导入检查（全部模块与工具，避免坏文件被合并）
+        run: |
+          python -m compileall -q src app tools tests integrations run_all.py
+          python -c "from src.service import DetectorConfig; c=DetectorConfig.from_env(); print('策略默认值:', c)"
+      - name: 处置策略的环境变量配置（部署路径）可用
+        env:
+          CIDA_POLICY_ACTION: block
+          CIDA_DRY_RUN: "0"
+          CIDA_CONFIRM_WINDOWS: "5"
+          CIDA_WHITELIST: "10.0.0.1 10.0.0.254"
+        run: |
+          python -c "from src.service import DetectorConfig; c=DetectorConfig.from_env(); \
+          assert c.action=='block' and c.dry_run is False and c.confirm_windows==5, c; print('OK', c)"
+          # 非法动作必须被拒绝并回退，不能让错误动作进入处置链路
+          python -c "import os; from src.service import DetectorConfig; \
+          os.environ['CIDA_POLICY_ACTION']='nuke'; assert DetectorConfig.from_env().action=='observe'; print('OK 非法动作已回退')"
       - name: 单元测试（10 项）
         run: python tests/test_core.py
       - name: 无 TF 全链路自检（数据生成 → 评估 → 出图）
