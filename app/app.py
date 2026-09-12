@@ -470,6 +470,289 @@ def figure_file(name: str):
     return send_file(path, mimetype="image/png")
 
 
+# ======================================================================================
+# 漂移与未知态势（只读接口，同样不依赖 TensorFlow）
+# ======================================================================================
+# 把「模型对当前流量的陌生程度」从"一个全局阈值"变成"一条随时间变化的曲线"：
+#
+# 1. 新颖性分数 = 多分类概率的**熵** ``H = -Σ p_i log p_i``（越大越像"没见过这种形态"），
+#    与 ``tools/openset_calibrate.py`` 是同一个算法，因此面板上的曲线与标定文件同口径；
+# 2. 阈值读 ``results/openset_thresholds.json`` 的 ``recommended.threshold``（entropy 口径，
+#    在真实标签为 Normal 的窗口上按误报预算标定）。**读不到就如实降级**——
+#    面板会显示"未标定，面板不可用"，绝不伪造一条参考线；
+# 3. 窗口级缓存 ``artifacts/predictions_windows_<tag>.csv`` 里没有窗口起点，因此用预处理产物
+#    ``meta.json`` 的 ``split_info.windows.test.starts`` 把「窗口序号 → 回放流位置」对齐；
+#    这样面板游标与「跳到未知占比最高处」都能精确落到大屏的回放位置上。
+#
+# 依赖的产物（都是 run_all.py / tools/openset_calibrate.py 已经落盘的，不需要重训、不需要 TF）：
+#   artifacts/predictions_windows_<tag>.csv · results/openset_thresholds.json · data/processed/meta.json
+NOVELTY_LOCK = threading.Lock()
+_NOVELTY_CACHE: dict = {}
+
+NOVELTY_DEFAULT_BINS = 60
+NOVELTY_MIN_BINS = 8
+NOVELTY_MAX_BINS = 240
+NOVELTY_EPS = 1e-12
+
+
+def _read_json_soft(path) -> dict | None:
+    """读 JSON，失败只记日志并返回 None（面板降级不该影响其它接口）。"""
+    try:
+        p = Path(path)
+        if p.exists():
+            return json.loads(p.read_text(encoding="utf-8"))
+    except Exception as exc:  # noqa: BLE001
+        LOGGER.warning("读取 %s 失败：%s", path, exc)
+    return None
+
+
+def _novelty_tag() -> str:
+    """主模型 tag：优先 artifacts/main_model.json，其次 results/summary.json，最后用演示用的 tag。"""
+    for p in (Path(ARTIFACT_DIR) / "main_model.json", Path(RESULT_DIR) / "summary.json"):
+        d = _read_json_soft(p)
+        if isinstance(d, dict) and d.get("tag"):
+            return str(d["tag"])
+    return str(getattr(STATE, "tag", "") or "")
+
+
+def _novelty_row_map(n_win: int) -> tuple[np.ndarray, np.ndarray, int, bool]:
+    """把「窗口级缓存的第 i 个窗口」映射到「回放流的第几行」。
+
+    优先用预处理产物里记录的真实窗口起点（``split_info.windows.test.starts``，与窗口级缓存
+    逐行对应）；对不上时退回按行数比例近似——游标仍可用，但会在返回里把 ``mapped`` 标成
+    False，让前端如实说明"位置为估算值"。
+    """
+    n_rows = int(getattr(STATE, "n_rows", 0) or 0)
+    ws = int(getattr(STATE, "window_size", 0) or 0)
+    meta = _read_json_soft(Path(PROCESSED_DIR) / "meta.json") or {}
+    try:
+        wtest = (((meta.get("split_info") or {}).get("windows") or {}).get("test") or {})
+        ws = int(wtest.get("window_size") or ws or 16)
+        starts = np.asarray(wtest.get("starts") or [], dtype=np.int64)
+        if starts.size == n_win and n_rows > 0:
+            idx = np.clip(starts, 0, n_rows - 1)
+            times = np.asarray(STATE.t_rel, dtype=np.float64)[idx]
+            return idx, times, ws, True
+    except Exception as exc:  # noqa: BLE001
+        LOGGER.warning("窗口→回放位置映射不可用（%s），改用比例近似", exc)
+    if n_rows > 0:
+        starts = np.linspace(0, max(n_rows - 1, 0), max(n_win, 1)).astype(np.int64)
+        times = np.asarray(STATE.t_rel, dtype=np.float64)[starts]
+    else:
+        starts = np.arange(max(n_win, 1), dtype=np.int64)
+        times = np.zeros(max(n_win, 1))
+    return starts, times, int(ws or 16), False
+
+
+def _novelty_series() -> dict:
+    """惰性加载窗口级预测缓存并算好熵（按文件 mtime 缓存，不在每个请求里重算）。"""
+    tag = _novelty_tag()
+    path = Path(ARTIFACT_DIR) / f"predictions_windows_{tag}.csv"
+    if not path.exists():
+        return {"ok": False, "reason": f"未找到窗口级预测缓存 {path.name}（请先运行 python run_all.py）"}
+    try:
+        mtime = path.stat().st_mtime
+    except OSError:
+        mtime = None
+    cache_key = f"{path}|{mtime}"
+    with NOVELTY_LOCK:
+        if _NOVELTY_CACHE.get("key") == cache_key:
+            return _NOVELTY_CACHE
+    if not getattr(STATE, "ok", False):
+        return {"ok": False, "reason": STATE.reason or "回放数据未就绪"}
+    try:
+        df = pd.read_csv(path)
+        prob_cols = [c for c in df.columns if c.startswith("p_") and c != "p_attack"]
+        label_col = "y_true_name" if "y_true_name" in df.columns else "y_true"
+        if len(prob_cols) < 2 or label_col not in df.columns:
+            return {"ok": False, "reason": f"{path.name} 缺少多分类概率列或真实标签列"}
+        probs = np.clip(df[prob_cols].to_numpy(dtype=np.float64), NOVELTY_EPS, 1.0)
+        probs = probs / probs.sum(axis=1, keepdims=True)
+        entropy = -(probs * np.log(probs)).sum(axis=1)          # 与 openset_calibrate 同公式
+        labels = df[label_col].astype(str).to_numpy()
+        pred = (df["y_pred_name"].astype(str).to_numpy()
+                if "y_pred_name" in df.columns else labels.copy())
+        p_attack = (df["p_attack"].to_numpy(dtype=np.float64)
+                    if "p_attack" in df.columns else np.zeros(len(df)))
+        starts, times, ws, mapped = _novelty_row_map(len(df))
+    except Exception as exc:  # noqa: BLE001
+        LOGGER.warning("新颖性序列计算失败：%s", exc)
+        return {"ok": False, "reason": f"窗口级缓存解析失败：{exc}"}
+    out = {
+        "ok": True, "key": cache_key, "tag": tag, "source": path.name,
+        "entropy": entropy, "labels": labels, "pred": pred, "p_attack": p_attack,
+        "prob_cols": prob_cols, "starts": starts, "times": times,
+        "window_size": ws, "mapped": bool(mapped),
+        "attack_classes": [c[2:] for c in prob_cols if c[2:] != "Normal"],
+    }
+    with NOVELTY_LOCK:
+        _NOVELTY_CACHE.clear()
+        _NOVELTY_CACHE.update(out)
+    LOGGER.info("漂移面板数据就绪：%s（%d 个窗口，熵阈值口径 entropy，位置映射%s）",
+                path.name, len(entropy), "精确" if mapped else "近似")
+    return out
+
+
+def _novelty_threshold() -> dict:
+    """每次请求都重读标定文件（很小）：标定文件被删掉/改口径时，面板立刻如实降级。"""
+    path = Path(RESULT_DIR) / "openset_thresholds.json"
+    if not path.exists():
+        return {"ok": False, "reason": f"未标定，面板不可用：找不到 {path.name}"
+                                      f"（请运行 python tools/openset_calibrate.py 生成标定阈值）"}
+    d = _read_json_soft(path)
+    if not isinstance(d, dict):
+        return {"ok": False, "reason": f"未标定，面板不可用：{path.name} 无法解析"}
+    score = str(d.get("score") or "")
+    if score != "entropy":
+        return {"ok": False, "reason": f"未标定，面板不可用：标定口径为 {score or '未知'}，本面板只支持 entropy"}
+    rec = d.get("recommended") or {}
+    try:
+        thr = float(rec["threshold"])
+    except (KeyError, TypeError, ValueError):
+        return {"ok": False, "reason": f"未标定，面板不可用：{path.name} 里没有 recommended.threshold"}
+    budget = rec.get("budget")
+    return {
+        "ok": True, "threshold": thr, "source": path.name, "tag": str(d.get("tag") or ""),
+        "budget": (float(budget) if budget is not None else None),
+        "budget_line": float(rec.get("normal_flagged") or 0.0),
+        "known_attack_flagged": float(rec.get("known_attack_flagged") or 0.0),
+        "n_windows_calibrated": int(d.get("n_windows") or 0),
+        "semantics": str(d.get("semantics") or ""),
+    }
+
+
+def _novelty_payload(bins: int) -> dict:
+    """组装 /api/novelty 的响应：分箱后的未知占比、各类别攻击窗口数、阈值与结论。"""
+    try:
+        bins = int(bins)
+    except (TypeError, ValueError):
+        bins = NOVELTY_DEFAULT_BINS
+    bins = max(NOVELTY_MIN_BINS, min(bins, NOVELTY_MAX_BINS))
+    out = {
+        "ok": False, "degraded": True, "reason": "", "bins": bins, "score": "entropy",
+        "threshold": None, "budget_line": None, "threshold_budget": None, "threshold_source": "",
+        "n_windows": 0, "window_size": 0, "unknown_ratio_global": None, "unknown_count_global": 0,
+        "summary": "", "conclusion": "", "peak": None, "x": None, "unknown_ratio": [],
+        "unknown_count": [], "attack_classes": [], "attack_counts": {}, "attack_share": {},
+        "detect_threshold": None, "attack_rule": "", "source": "", "tag": "", "mapped": False,
+        "hint": "面板需要「窗口级预测缓存 + 未知标记标定文件」两样产物，缺任意一样都会如实降级，不伪造曲线。",
+    }
+    ser = _novelty_series()
+    if not ser.get("ok"):
+        out["reason"] = ser.get("reason") or "新颖性数据不可用"
+        return out
+    thr = _novelty_threshold()
+    if not thr.get("ok"):
+        out["reason"] = thr.get("reason") or "未标定，面板不可用"
+        return out
+
+    H = np.asarray(ser["entropy"], dtype=np.float64)
+    labels = np.asarray(ser["labels"])
+    pred = np.asarray(ser["pred"])
+    p_attack = np.asarray(ser["p_attack"], dtype=np.float64)
+    starts = np.asarray(ser["starts"], dtype=np.int64)
+    times = np.asarray(ser["times"], dtype=np.float64)
+    ws = int(ser["window_size"])
+    n = int(H.size)
+    if n == 0:
+        out["reason"] = "窗口级预测缓存为空"
+        return out
+    bins = max(NOVELTY_MIN_BINS, min(bins, n))
+
+    threshold = float(thr["threshold"])
+    unknown = H >= threshold
+    # 「被判为攻击」的口径与大屏一致：二分类概率 ≥ 当前判定阈值（默认 0.5），且类别为攻击类。
+    detect_thr = float(getattr(STATE, "threshold", 0.5) or 0.5)
+    atk_classes = list(ser["attack_classes"])
+    is_atk = np.isin(pred, atk_classes)
+    judged = p_attack >= detect_thr
+
+    edges = np.linspace(0, n, bins + 1).astype(int)
+    ratio, ucount, counts, shares = [], [], {c: [] for c in atk_classes}, {c: [] for c in atk_classes}
+    x_w0, x_w1, x_r0, x_r1, x_t0, x_t1 = [], [], [], [], [], []
+    for i in range(bins):
+        a, b = int(edges[i]), int(edges[i + 1])
+        if b <= a:
+            b = min(a + 1, n)
+        sl = slice(a, b)
+        nwin = b - a
+        u = unknown[sl]
+        ratio.append(round(float(u.mean()), 6))
+        ucount.append(int(u.sum()))
+        hit = is_atk[sl] & judged[sl]
+        for c in atk_classes:
+            k = int(np.sum(hit & (pred[sl] == c)))
+            counts[c].append(k)
+            shares[c].append(round(k / nwin, 6))
+        x_w0.append(a)
+        x_w1.append(b - 1)
+        x_r0.append(int(starts[a]))
+        x_r1.append(int(starts[b - 1]) + ws - 1)
+        x_t0.append(round(float(times[a]), 3))
+        x_t1.append(round(float(times[b - 1]), 3))
+
+    peak_bin = int(np.argmax(np.asarray(ratio, dtype=np.float64)))
+    peak_ratio = float(ratio[peak_bin])
+    peak_bucket = {c: counts[c][peak_bin] for c in atk_classes}
+    peak_top = max(peak_bucket.items(), key=lambda kv: kv[1]) if peak_bucket else ("", 0)
+    budget = thr.get("budget")
+    budget_line = float(thr.get("budget_line") or 0.0)
+    glob_ratio = float(unknown.mean())
+    hit_rule = (f"「被判为攻击」的口径与大屏一致：二分类概率 p_attack ≥ {detect_thr:g}，"
+                f"且模型判定类别为攻击类（{('、'.join(atk_classes))}）的窗口数")
+    out.update({
+        "ok": True, "degraded": False, "reason": "",
+        "threshold": round(threshold, 6),
+        "budget_line": round(budget_line, 6),
+        "threshold_budget": (float(budget) if budget is not None else None),
+        "threshold_source": thr.get("source", ""),
+        "threshold_tag": thr.get("tag", ""),
+        "n_windows": n, "window_size": ws, "mapped": bool(ser.get("mapped")),
+        "unknown_ratio_global": round(glob_ratio, 6),
+        "unknown_count_global": int(unknown.sum()),
+        "unknown_ratio": ratio, "unknown_count": ucount,
+        "attack_classes": atk_classes, "attack_counts": counts, "attack_share": shares,
+        "detect_threshold": detect_thr, "attack_rule": hit_rule,
+        "source": ser.get("source", ""), "tag": ser.get("tag", ""),
+        "x": {"w_start": x_w0, "w_end": x_w1, "row_start": x_r0, "row_end": x_r1,
+              "t_start": x_t0, "t_end": x_t1},
+        "peak": {
+            "bin": peak_bin, "ratio": round(peak_ratio, 6),
+            "row": int(x_r0[peak_bin]), "t": float(x_t0[peak_bin]),
+            "w_start": x_w0[peak_bin], "w_end": x_w1[peak_bin],
+            "unknown_count": ucount[peak_bin], "n_windows": x_w1[peak_bin] - x_w0[peak_bin] + 1,
+            "top_class": peak_top[0], "top_class_count": int(peak_top[1]),
+            "above_budget_line": bool(peak_ratio > budget_line),
+        },
+        "summary": (f"当前全局未知占比 {glob_ratio * 100:.2f}%"
+                    f"（{int(unknown.sum())}/{n} 个判定窗口的熵 ≥ 标定阈值 {threshold:.4f}，"
+                    f"熵是新奇性分数：分布越平越像「没见过这种形态」）"),
+        "conclusion": (f"未知占比突然升高 = 新攻击出现或流量分布变化，值得人工研判"
+                       f"（参考线 = 标定误报预算 {budget * 100:g}%：局部未知率越过它的时段应优先复核）"
+                       if budget else "未知占比突然升高 = 新攻击出现或流量分布变化，值得人工研判"),
+    })
+    return out
+
+
+@app.route("/api/novelty")
+def api_novelty():
+    """漂移与未知态势（**只读**）：未知/新颖性占比随时间的曲线 + 各类别攻击窗口数 + 标定阈值。
+
+    查询参数：``bins``（分箱数，默认 60，钳制到 8~240；每格 ≈ n_windows/bins 个判定窗口）
+
+    返回要点：``ok``/``reason``（降级时 reason 说明缺什么产物）、``unknown_ratio``（分箱后的
+    未知占比序列）、``attack_counts``/``attack_share``（各类别被判为攻击的窗口数与占比）、
+    ``threshold``（熵口径标定阈值）与 ``budget_line``（它对应的误报预算参考线）、
+    ``x``（每格的窗口区间与回放流位置，供前端画游标与跳转）、``peak``（未知占比最高的一格）、
+    ``summary``（一句"当前全局未知占比"）、``conclusion``（一句结论文案）。
+
+    注意：**不依赖 TensorFlow**，只读 `predictions_windows_<tag>.csv` 与标定文件；
+    标定文件读不到时返回 ok=false（面板显示"未标定"），不会编造阈值。
+    """
+    bins = request.args.get("bins", default=NOVELTY_DEFAULT_BINS, type=int)
+    return jsonify(json_safe(_novelty_payload(bins)))
+
+
 @app.route("/api/health")
 def api_health():
     """健康检查：既有字段 ``ok``/``reason``（演示数据是否就绪）保持不变，
@@ -588,6 +871,8 @@ def main(argv: list[str] | None = None) -> int:
         DETECTOR = None  # 触发按需重建，确保检测服务与演示大屏用同一口径
         STATE = DemoState(PROCESSED_DIR, ARTIFACT_DIR)
         _RAW_MATRIX = None  # 换口径后原始量纲缓存必须失效
+        with NOVELTY_LOCK:  # 漂移面板的窗口级缓存同理：换口径后必须重算
+            _NOVELTY_CACHE.clear()
         LOGGER.info("已切换数据/模型口径：processed=%s artifacts=%s tag=%s",
                     PROCESSED_DIR, ARTIFACT_DIR, MODEL_TAG or "（主模型）")
 

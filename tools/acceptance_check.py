@@ -86,7 +86,7 @@ def check_files(r: Report) -> None:
         "tools/controller_simulator.py", "tools/ops_impact.py", "tools/acceptance_check.py",
         "tools/cross_dataset.py", "tools/live_demo.py", "tools/live_demo_campaign.py",
         "tools/openset_eval.py", "tools/openset_calibrate.py", "tools/pcap_to_flows.py",
-        "tools/per_class_online.py",
+        "tools/per_class_online.py", "tools/window_ablation.py", "tools/make_onepager.py",
         "docs/01_原始代码问题清单.md", "docs/02_实验报告.md", "docs/03_答辩要点与配置清单.md",
         "competition/README.md", "competition/01_开源及第三方资源使用清单.md",
         "competition/02_技术报告.md", "competition/02_技术报告_精简稿.md",
@@ -448,6 +448,39 @@ def check_deployable(r: Report) -> None:
     else:
         r.warn(False, "实况演示事件报告（可选）",
                f"未生成 {live}：运行 python tools/live_demo.py --speed 0 --no-color")
+
+    # ---- 窗口长度消融扩展：卷积增益是否随窗口转正（结论要能被复算） ----
+    wa = RESULT_DIR / "window_ablation.json"
+    if wa.exists():
+        w = json.loads(wa.read_text(encoding="utf-8"))
+        # ⚠️ 变量名不要用 rows：本函数后面还要用 rows 推流给 /api/detect（覆盖过一次，踩过坑）
+        wa_rows = [x for x in (w.get("rows") or []) if x.get("measured")]
+        tws = sorted(int(x.get("window") or 0) for x in wa_rows)
+        r.check(len(tws) >= 4, "窗口消融覆盖到至少 4 个窗口长度", f"T={tws}")
+        # 关键窗口长度必须给出多种子置信区间，否则"卷积是否有增益"没有误差尺度可比
+        multi = [int(x["window"]) for x in wa_rows if int(x.get("n_seeds") or 0) >= 3]
+        r.check(bool(multi), "关键窗口长度给出了多种子均值±标准差",
+                f"T={multi}（多种子）；其余为单种子且报告已标注")
+        r.check(bool(w.get("verdict")), "窗口消融给出了明确结论（不是含糊表述）",
+                str(w.get("verdict"))[:120])
+        noise = w.get("reference_noise") or {}
+        r.check(bool(noise), "窗口消融给出了噪声尺度（用于判断差距是否显著）",
+                f"σ 尺度：{json.dumps(noise, ensure_ascii=False)[:90]}")
+    else:
+        r.warn(False, "窗口长度消融扩展报告（可选）",
+               f"未生成 {wa}：运行 python tools/window_ablation.py")
+
+    # ---- 大屏漂移面板（离线可用，不依赖 TensorFlow） ----
+    nv = client.get("/api/novelty?bins=60")
+    nvj = nv.get_json() or {}
+    r.check(nv.status_code == 200, "GET /api/novelty 可用（大屏漂移面板的数据源）",
+            f"HTTP {nv.status_code}")
+    r.check("unknown_ratio" in nvj, "漂移接口返回未知占比序列",
+            f"{len(nvj.get('unknown_ratio') or [])} 个分箱；全局未知占比 "
+            f"{nvj.get('unknown_ratio_global')}")
+    r.check(nvj.get("degraded") is True or nvj.get("threshold") is not None,
+            "漂移接口给出阈值或明确降级（不伪造参考线）",
+            f"threshold={nvj.get('threshold')} degraded={nvj.get('degraded')}")
 
     # ---- 逐类在线指标：不只是"总体召回 100%"，而是每类各自多少 ----
     pco = RESULT_DIR / "per_class_online.json"

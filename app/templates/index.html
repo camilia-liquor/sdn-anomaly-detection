@@ -61,6 +61,45 @@
     <div class="hint" id="topo-hint">正在等待回放数据…</div>
   </section>
 
+  <!-- 漂移与未知态势：把「模型对当前流量的陌生程度」做成随时间变化的曲线。
+       数据来自窗口级预测缓存 + 未知标记标定文件（都不需要 TensorFlow），
+       与回放位置联动：游标指示当前播放到哪一格，并可一键跳到未知占比最高处。 -->
+  <section class="panel span-3" id="drift-panel">
+    <div class="panel-head">
+      <h2>漂移与未知态势 · 模型对当前流量的陌生程度</h2>
+      <div class="legend">
+        <span class="lg"><i class="sw drift"></i>未知占比低</span>
+        <span class="lg"><i class="sw over"></i>未知占比高</span>
+        <span class="lg"><i class="sw peak"></i>未知占比最高的一格</span>
+        <span class="lg"><i class="sw budget"></i>标定参考线</span>
+        <span class="lg"><i class="sw cursor"></i>当前回放位置</span>
+      </div>
+    </div>
+    <div class="drift-top">
+      <div class="drift-chips" id="drift-chips"><span class="drift-chip">正在载入漂移数据…</span></div>
+      <div class="drift-actions">
+        <label class="ctl">分箱粒度
+          <select id="drift-bins" title="每格包含多少判定窗口：格越大越平滑，格越小分辨漂移越快">
+            <option value="30">30 格</option>
+            <option value="60" selected>60 格</option>
+            <option value="120">120 格</option>
+            <option value="240">240 格</option>
+          </select>
+        </label>
+        <button id="btn-drift-peak" class="btn primary" disabled>⤓ 跳到未知占比最高处</button>
+        <span class="hint" id="drift-peak-hint"></span>
+      </div>
+    </div>
+    <div class="drift-body" id="drift-body">
+      <canvas id="drift" height="200"></canvas>
+      <div class="hint" id="drift-xnote">等待数据…</div>
+      <canvas id="drift-stack" height="140"></canvas>
+      <div class="drift-legend" id="drift-legend"></div>
+    </div>
+    <div class="drift-fallback" id="drift-fallback"></div>
+    <div class="hint" id="drift-conclusion">未知占比突然升高 = 新攻击出现或流量分布变化，值得人工研判。</div>
+  </section>
+
   <!-- 左：实时曲线 + 流量流水 -->
   <section class="panel span-2">
     <div class="panel-head">

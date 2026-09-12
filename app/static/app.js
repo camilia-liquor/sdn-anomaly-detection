@@ -91,6 +91,8 @@ async function boot() {
   }
   // 先起 SOC 控制台（状态条 / 策略 / 台账 / 拓扑），保证任何一路失败都不影响其它面板
   bootSocConsole();
+  // 漂移与未知态势面板：独立取数，失败只降级本面板，不影响回放与其它面板
+  loadNovelty(DRIFT.bins);
   if (!ov || !ov.ok) {
     showError((ov && ov.reason) || "演示数据未就绪");
     return;
@@ -144,6 +146,7 @@ async function tick() {
   }
   applyBatch(data);
   S.pos = data.end;
+  driftSyncCursor();          // 漂移面板游标跟随回放位置（只在跨格时重绘）
   if (S.pos >= S.n) setStatus("回放结束", "paused");
 }
 
@@ -435,6 +438,7 @@ $("btn-reset").addEventListener("click", () => {
   HOSTS.forEach((h) => { h.attackUntil = 0; h.disposalUntil = 0; h.cls = ""; h.action = ""; });
   SOC.lastWin = null; SOC.attacker = null;
   renderStats(); drawChart();
+  driftResetCursor();         // 游标回到第一格
   if (!S.playing) togglePlay();
 });
 $("speed").addEventListener("change", (e) => { S.speed = Number(e.target.value); });
@@ -446,7 +450,7 @@ $("threshold").addEventListener("input", (e) => {
   S.alarms = S.buf.filter((d) => d.alarm).length;
   renderStats(); drawChart();
 });
-window.addEventListener("resize", drawChart);
+window.addEventListener("resize", () => { drawChart(); driftScheduleDraw(); });
 
 /* ==================================================================================
    迷你 SOC 控制台
@@ -1334,6 +1338,515 @@ async function feedPrime(pos) {
     ingestAlerts(det.alerts);
     f.failures = 0;
   } catch (e) { /* 预热失败不提示：正常推流阶段会给出状态 */ }
+}
+
+/* ==================================================================================
+   漂移与未知态势面板
+   ----------------------------------------------------------------------------------
+   要回答的问题：**模型对当前这段流量有多陌生？**（未知/新颖性占比随时间的变化）
+   数据全部来自后端 /api/novelty 一次算好的分箱结果，前端只做绘制，
+   不逐帧遍历窗口、不重算模型 —— 因此回放时开销可以忽略。
+
+   上一格 canvas：每格滑窗里被判为「未知形态」的窗口占比（柱）+ 标定参考线（水平虚线）
+   下一格 canvas：同一时间轴上，各类别被判为攻击的窗口占该格的比例（堆叠）
+   两者共用一条「当前回放位置」游标，并可一键跳到未知占比最高的一格。
+   ================================================================================== */
+const DRIFT = {
+  ok: false, reason: "", bins: 60, data: null,
+  curBin: -1,      // 游标所在格
+  scan: 0,         // 单调扫描指针（避免每次回放都从头找）
+  hover: -1,       // 鼠标悬停的格
+  pending: false,  // requestAnimationFrame 节流标志
+  xnote: "",       // 静态说明文案（悬停时临时替换）
+};
+
+/* 类别配色：沿用大屏的深色 SOC 调色板（不引入任何外部资源） */
+const DRIFT_COLORS = {
+  Botnet: "#a78bfa", BruteForce: "#f472b6", DDoS: "#ef4444", DoS: "#f59e0b",
+  Probe: "#22d3ee", U2R: "#84cc16", WebAttack: "#60a5fa",
+};
+const DRIFT_OTHER_COLOR = "#94a3b8";
+
+const fmtDur = (s) => {
+  s = Math.max(0, Number(s) || 0);
+  const hh = Math.floor(s / 3600), mm = Math.floor((s % 3600) / 60), ss = Math.floor(s % 60);
+  return hh > 0 ? `${hh}h${String(mm).padStart(2, "0")}m` : `${mm}m${String(ss).padStart(2, "0")}s`;
+};
+
+/** 把上界抬到 1/2/2.5/5/10 × 10^k，让纵轴刻度好看 */
+function niceCeil(v) {
+  if (!isFinite(v) || v <= 0) return 0.01;
+  const p = Math.pow(10, Math.floor(Math.log10(v)));
+  const n = v / p;
+  const m = n <= 1 ? 1 : n <= 2 ? 2 : n <= 2.5 ? 2.5 : n <= 5 ? 5 : 10;
+  return m * p;
+}
+
+/* ---------------------------------------------------------------- 取数 */
+async function loadNovelty(bins) {
+  const want = Math.round(clamp(Number(bins) || DRIFT.bins || 60, 8, 240));
+  try {
+    const d = await fetchJSON("/api/novelty?bins=" + want);
+    DRIFT.data = d || null;
+    DRIFT.ok = !!(d && d.ok);
+    DRIFT.reason = (d && d.reason) || "";
+  } catch (e) {
+    DRIFT.data = null;
+    DRIFT.ok = false;
+    DRIFT.reason = "接口不可用（" + (e.message || e) + "）";
+  }
+  DRIFT.bins = (DRIFT.data && DRIFT.data.bins) || want;
+  DRIFT.curBin = -1;
+  DRIFT.scan = 0;
+  DRIFT.hover = -1;
+  renderDriftChrome();
+  driftScheduleDraw();
+}
+
+/* ---------------------------------------------------------------- 面板外框文案 */
+function renderDriftChrome() {
+  const body = $("drift-body"), fb = $("drift-fallback"), chips = $("drift-chips");
+  const btn = $("btn-drift-peak"), concl = $("drift-conclusion");
+  if (!body || !fb || !chips) return;
+  const d = DRIFT.data;
+
+  // ---------- 降级：没有标定文件 / 没有窗口级缓存 → 如实说明，不画曲线 ----------
+  if (!DRIFT.ok) {
+    body.classList.add("hide");
+    fb.className = "drift-fallback show";
+    // 后端 reason 也以「未标定，面板不可用」开头，这里去掉前缀避免同一句话出现两遍
+    const why = String(DRIFT.reason || "").replace(/^未标定，面板不可用[：:]\s*/, "");
+    fb.innerHTML = `<b>未标定，面板不可用</b><br>${why || "缺少窗口级预测缓存或标定阈值"}` +
+      (d && d.hint ? `<br><span style="color:#8ba0c0">${d.hint}</span>` : "");
+    chips.innerHTML = `<span class="drift-chip warn">漂移面板<b>未标定</b></span>`;
+    if (btn) { btn.disabled = true; btn.title = "标定阈值不可用时无法定位未知占比最高处"; }
+    const pk = $("drift-peak-hint");
+    if (pk) pk.textContent = "";
+    if (concl) {
+      concl.textContent = "面板只在「窗口级预测缓存 + 未知标记标定文件」两样产物齐备时才绘制曲线；" +
+        "缺任意一样都如实降级，不伪造参考线。";
+    }
+    return;
+  }
+
+  // ---------- 正常 ----------
+  body.classList.remove("hide");
+  fb.className = "drift-fallback";
+  fb.innerHTML = "";
+  const peak = d.peak || {};
+  const glob = Number(d.unknown_ratio_global);
+  const budget = Number(d.budget_line);
+  const ratios = d.unknown_ratio || [];
+  const nOver = ratios.filter((v) => (Number(v) || 0) > budget).length;
+  chips.innerHTML = [
+    `<span class="drift-chip">当前全局未知占比<b>${(100 * glob).toFixed(2)}%</b></span>`,
+    `<span class="drift-chip" title="熵是新奇性分数：8 类概率分布越平，越像「模型没见过这种形态」">熵阈值（标定）<b>${Number(d.threshold).toFixed(4)}</b></span>`,
+    `<span class="drift-chip warn" title="标定误报预算：正常流量的未知率应低于它；局部未知率越过它就需要人工复核">标定参考线<b>${(100 * budget).toFixed(1)}%</b></span>`,
+    `<span class="drift-chip${nOver ? " hot" : ""}" title="未知占比越过标定参考线的格数（这些时段值得人工复核）">越过参考线的格<b>${nOver}/${d.bins}</b></span>`,
+    `<span class="drift-chip" id="drift-cur-chip">当前回放格未知占比<b id="drift-cur-ratio">—</b></span>`,
+    `<span class="drift-chip" title="本次曲线用到的判定窗口总数">判定窗口<b>${Number(d.n_windows).toLocaleString()}</b></span>`,
+    `<span class="drift-chip" title="窗口级预测缓存（回放路径，不需要 TensorFlow）">数据源<b>${d.source || "-"}</b></span>`,
+  ].join("");
+
+  if (btn) {
+    btn.disabled = !(peak && isFinite(Number(peak.row)));
+    btn.title = "把回放位置跳到未知占比最高那一格的起点";
+  }
+  const pk = $("drift-peak-hint");
+  if (pk && peak) {
+    pk.innerHTML = `峰值：第 <b>${Number(peak.bin) + 1}/${d.bins}</b> 格 · 未知占比 <b>${(100 * peak.ratio).toFixed(2)}%</b>` +
+      `（参考线 ${(100 * budget).toFixed(1)}%）· 判定窗口 #${peak.w_start}~#${peak.w_end} · 回放位置 <b>${Number(peak.row).toLocaleString()}</b>` +
+      (peak.top_class ? ` · 该格判定 ${peak.top_class} ${peak.top_class_count} 个窗口` : "");
+  }
+  if (concl && d.conclusion) concl.textContent = d.conclusion;
+
+  // 攻击类别图例（堆叠色块顺序与绘制顺序一致）
+  const lg = $("drift-legend");
+  if (lg) {
+    lg.innerHTML = `<span class="lg" style="color:#8ba0c0">堆叠：模型判定类别占该格窗口比例</span>` +
+      (d.attack_classes || []).map((c) =>
+        `<span class="lg"><i class="sw" style="background:${DRIFT_COLORS[c] || DRIFT_OTHER_COLOR}"></i>${c}</span>`).join("");
+  }
+  const xn = $("drift-xnote");
+  const x = d.x || {};
+  const rows = (x.row_start || []);
+  DRIFT.xnote = `横轴：回放流位置 ${rows.length ? rows[0].toLocaleString() : 0} – ` +
+    `${rows.length ? (Number(x.row_end[rows.length - 1]) || 0).toLocaleString() : 0}` +
+    `（共 ${d.bins} 格，每格约 ${Math.max(1, Math.round(Number(d.n_windows) / d.bins))} 个判定窗口，` +
+    `合计 ${Number(d.n_windows).toLocaleString()} 个窗口；时长 ${fmtDur(x.t_end ? x.t_end[x.t_end.length - 1] : 0)}）· ` +
+    `纵轴左：未知占比 · 点任意一格可跳转` +
+    (d.mapped === false ? " · ⚠ 窗口→回放位置映射为估算值" : "");
+  if (xn) xn.textContent = DRIFT.xnote;
+  updateDriftCurChip();
+}
+
+function updateDriftCurChip() {
+  const el = $("drift-cur-ratio");
+  if (!el) return;
+  const d = DRIFT.data;
+  const chip = $("drift-cur-chip");
+  if (!DRIFT.ok || !d || DRIFT.curBin < 0) {
+    el.textContent = "—";
+    if (chip) chip.className = "drift-chip";
+    return;
+  }
+  const v = Number((d.unknown_ratio || [])[DRIFT.curBin]) || 0;
+  el.textContent = (100 * v).toFixed(2) + "%";
+  const budget = Number(d.budget_line);
+  if (chip) chip.className = "drift-chip" + (v > budget ? " hot" : (v > 0 ? " warn" : ""));
+  const x = d.x || {};
+  if (chip && x.row_start) {
+    chip.title = `第 ${DRIFT.curBin + 1}/${d.bins} 格 · 判定窗口 #${x.w_start[DRIFT.curBin]}~#${x.w_end[DRIFT.curBin]}` +
+      ` · 回放位置 ${x.row_start[DRIFT.curBin]}~${x.row_end[DRIFT.curBin]}`;
+  }
+}
+
+/* ---------------------------------------------------------------- 回放位置 → 格 */
+/** 当前回放位置落在第几格（单调扫描：只在越界时回退，摊还 O(1)） */
+function driftBinForPos(pos) {
+  const d = DRIFT.data;
+  const rs = (d && d.x && d.x.row_start) || [];
+  if (!rs.length) return -1;
+  let i = clamp(DRIFT.scan, 0, rs.length - 1);
+  if (rs[i] > pos) i = 0;
+  while (i + 1 < rs.length && rs[i + 1] <= pos) i++;
+  while (i > 0 && rs[i] > pos) i--;
+  DRIFT.scan = i;
+  return i;
+}
+
+/** 回放推进时调用：只有「走到另一格」才更新 DOM 与重绘（不是每帧） */
+function driftSyncCursor() {
+  if (!DRIFT.ok) return;
+  const bin = driftBinForPos(S.pos);
+  if (bin === DRIFT.curBin) return;
+  DRIFT.curBin = bin;
+  updateDriftCurChip();
+  driftScheduleDraw();
+}
+
+function driftResetCursor() {
+  DRIFT.scan = 0;
+  DRIFT.curBin = driftBinForPos(S.pos);
+  updateDriftCurChip();
+  driftScheduleDraw();
+}
+
+/* ---------------------------------------------------------------- 绘制 */
+function driftScheduleDraw() {
+  if (DRIFT.pending) return;
+  DRIFT.pending = true;
+  requestAnimationFrame(() => { DRIFT.pending = false; drawDrift(); });
+}
+
+/** 统一的 dpr 画布准备：返回逻辑尺寸的 2D 上下文 */
+function driftCtx(cv, hCss) {
+  const dpr = window.devicePixelRatio || 1;
+  const w = Math.max(320, cv.clientWidth || 900);
+  // 用元素实际高度（canvas 有 1px 边框，clientHeight 比 CSS height 小 2px），避免底部被裁掉
+  const h = Math.max(60, cv.clientHeight || hCss);
+  if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) {
+    cv.width = Math.round(w * dpr);
+    cv.height = Math.round(h * dpr);
+  }
+  const ctx = cv.getContext("2d");
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+  return { ctx, w, h };
+}
+
+function drawDrift() {
+  if (!DRIFT.ok || !DRIFT.data) return;
+  try { drawDriftRatio(); } catch (e) { /* 面板绘制异常不影响回放主流程 */ }
+  try { drawDriftStack(); } catch (e) { /* 同上 */ }
+}
+
+function drawDriftRatio() {
+  const cv = $("drift");
+  if (!cv) return;
+  const d = DRIFT.data;
+  const { ctx, w, h } = driftCtx(cv, 200);
+  const pad = { l: 46, r: 12, t: 16, b: 16 };
+  const iw = w - pad.l - pad.r, ih = h - pad.t - pad.b;
+  const bins = Math.max(1, Number(d.bins) || 60);
+  const ratio = d.unknown_ratio || [];
+  const peak = d.peak || {};
+  const budget = Number(d.budget_line) || 0;
+  let maxR = budget;
+  for (const v of ratio) maxR = Math.max(maxR, Number(v) || 0);
+  const yMax = Math.max(niceCeil(maxR * 1.28), 0.01);
+
+  const X = (i) => pad.l + iw * (i + 0.5) / bins;
+  const Y = (v) => pad.t + ih * (1 - clamp((Number(v) || 0) / yMax, 0, 1));
+  const bw = clamp(iw / bins - 2.4, 2, 26);
+
+  // 网格 + 纵轴刻度
+  ctx.font = "10px " + FONT_MONO;
+  ctx.textAlign = "left";
+  ctx.textBaseline = "middle";
+  ctx.lineWidth = 1;
+  for (let k = 0; k <= 3; k++) {
+    const v = yMax * k / 3, y = Y(v);
+    ctx.strokeStyle = k === 0 ? "rgba(139,160,192,.35)" : "rgba(139,160,192,.15)";
+    ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(w - pad.r, y); ctx.stroke();
+    ctx.fillStyle = "rgba(139,160,192,.75)";
+    ctx.fillText((100 * v).toFixed(yMax < 0.05 ? 2 : 1) + "%", 5, y + 0.5);
+  }
+
+  // 未知占比柱：颜色分三档（越暖＝该格未知占比越高）；
+  // 注意「一格 ≈ 59 个判定窗口」，所以单个未知窗口就会让该格达到 1.7%——
+  // 因此颜色按「相对全局峰值」分档，标定参考线另外用水平虚线标注（它是一条刻度，不是序列）。
+  const peakV = Number(peak.ratio) || 0;
+  const scale = Math.max(peakV, budget * 2, 1e-6);
+  // 峰格先铺一条淡红竖带（不用描边：满高描边会被误读成第二条游标线）
+  if (isFinite(Number(peak.bin)) && peakV > 0) {
+    ctx.fillStyle = "rgba(239,68,68,.10)";
+    ctx.fillRect(X(Number(peak.bin)) - bw / 2 - 1, pad.t, bw + 2, ih);
+  }
+  for (let i = 0; i < bins; i++) {
+    const v = Number(ratio[i]) || 0;
+    const x = X(i) - bw / 2;
+    const y = Y(v);
+    const base = pad.t + ih;
+    if (v <= 0) {                                    // 0 也要留一道基座，避免看着像缺数据
+      ctx.fillStyle = "rgba(139,160,192,.3)";
+      ctx.fillRect(x, base - 1.5, bw, 1.5);
+      continue;
+    }
+    const u = v / scale;
+    const g = ctx.createLinearGradient(0, y, 0, base);
+    if (i === Number(peak.bin) || u >= 0.66) { g.addColorStop(0, "#fca5a5"); g.addColorStop(1, "rgba(239,68,68,.3)"); }
+    else if (u >= 0.33) { g.addColorStop(0, "#fcd34d"); g.addColorStop(1, "rgba(245,158,11,.26)"); }
+    else { g.addColorStop(0, "#7dd3fc"); g.addColorStop(1, "rgba(56,189,248,.2)"); }
+    ctx.fillStyle = g;
+    ctx.fillRect(x, y, bw, Math.max(base - y, 2));
+  }
+
+  // 标定参考线（水平虚线：它不是时间序列，而是一条「刻度」）
+  const yb = Y(budget);
+  ctx.strokeStyle = "rgba(245,158,11,.9)";
+  ctx.setLineDash([6, 4]);
+  ctx.lineWidth = 1.2;
+  ctx.beginPath(); ctx.moveTo(pad.l, yb); ctx.lineTo(w - pad.r, yb); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = "rgba(252,211,77,.95)";
+  ctx.font = "10.5px " + FONT_CN;
+  ctx.textAlign = "right";
+  ctx.fillText(`标定参考线 ${(100 * budget).toFixed(1)}%（熵阈值 ${Number(d.threshold).toFixed(3)}）`, w - pad.r - 4, yb - 6);
+  ctx.textAlign = "left";
+  ctx.fillStyle = "rgba(139,160,192,.8)";
+  ctx.fillText("未知占比（每格被判「未知形态」的窗口比例）", pad.l + 4, pad.t + 5);
+
+  // 峰格标注
+  if (isFinite(Number(peak.ratio)) && Number(peak.ratio) > 0) {
+    const px = clamp(X(Number(peak.bin)), pad.l + 48, w - pad.r - 48);
+    const py = Math.max(Y(peak.ratio) - 8, pad.t + 14);
+    ctx.fillStyle = "#fecaca";
+    ctx.font = "600 10.5px " + FONT_CN;
+    ctx.textAlign = "center";
+    ctx.fillText(`峰值 ${(100 * Number(peak.ratio)).toFixed(1)}%`, px, py);
+    ctx.beginPath();
+    ctx.moveTo(px, py + 5); ctx.lineTo(px - 4, py + 10); ctx.lineTo(px + 4, py + 10);
+    ctx.closePath();
+    ctx.fillStyle = "#ef4444";
+    ctx.fill();
+    ctx.textAlign = "left";
+  }
+
+  // 鼠标悬停格的竖线（比游标浅，避免混淆）
+  if (DRIFT.hover >= 0 && DRIFT.hover !== DRIFT.curBin) {
+    const hx = X(DRIFT.hover);
+    ctx.strokeStyle = "rgba(139,160,192,.45)";
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(hx, pad.t); ctx.lineTo(hx, pad.t + ih); ctx.stroke();
+  }
+
+  // 回放游标
+  drawDriftCursor(ctx, X, pad, ih, bins, true);
+}
+
+function drawDriftCursor(ctx, X, pad, ih, bins, withHead) {
+  if (DRIFT.curBin < 0 || DRIFT.curBin >= bins) return;
+  const cx = X(DRIFT.curBin);
+  ctx.strokeStyle = "rgba(230,237,247,.92)";
+  ctx.lineWidth = 1.3;
+  ctx.setLineDash([3, 3]);
+  ctx.beginPath(); ctx.moveTo(cx, pad.t); ctx.lineTo(cx, pad.t + ih); ctx.stroke();
+  ctx.setLineDash([]);
+  if (withHead) {
+    ctx.beginPath();
+    ctx.moveTo(cx, pad.t + 2); ctx.lineTo(cx - 4.5, pad.t - 5); ctx.lineTo(cx + 4.5, pad.t - 5);
+    ctx.closePath();
+    ctx.fillStyle = "#e6edf7";
+    ctx.fill();
+  }
+}
+
+function drawDriftStack() {
+  const cv = $("drift-stack");
+  if (!cv) return;
+  const d = DRIFT.data;
+  const { ctx, w, h } = driftCtx(cv, 140);
+  const pad = { l: 46, r: 12, t: 10, b: 20 };
+  const iw = w - pad.l - pad.r, ih = h - pad.t - pad.b;
+  const bins = Math.max(1, Number(d.bins) || 60);
+  const classes = d.attack_classes || [];
+  const share = d.attack_share || {};
+  const x = d.x || {};
+
+  // 纵轴上界：所有格里最高的「攻击占比合计」
+  let maxS = 0;
+  for (let i = 0; i < bins; i++) {
+    let s = 0;
+    for (const c of classes) s += Number((share[c] || [])[i]) || 0;
+    maxS = Math.max(maxS, s);
+  }
+  const yMax = clamp(niceCeil(Math.max(maxS * 1.15, 0.05)), 0.05, 1);
+
+  const X = (i) => pad.l + iw * (i + 0.5) / bins;
+  const bw = clamp(iw / bins - 2.4, 2, 26);
+  const base = pad.t + ih;
+
+  ctx.font = "10px " + FONT_MONO;
+  ctx.textAlign = "left";
+  ctx.textBaseline = "middle";
+  ctx.lineWidth = 1;
+  for (let k = 0; k <= 2; k++) {
+    const v = yMax * k / 2, y = base - ih * v / yMax;
+    ctx.strokeStyle = k === 0 ? "rgba(139,160,192,.35)" : "rgba(139,160,192,.15)";
+    ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(w - pad.r, y); ctx.stroke();
+    ctx.fillStyle = "rgba(139,160,192,.75)";
+    ctx.fillText((100 * v).toFixed(0) + "%", 5, y + 0.5);
+  }
+  ctx.fillStyle = "rgba(139,160,192,.8)";
+  ctx.font = "10.5px " + FONT_CN;
+  ctx.fillText("攻击构成（各类别被判为攻击的窗口占该格比例，堆叠）", pad.l + 4, pad.t + 6);
+
+  // 堆叠柱
+  for (let i = 0; i < bins; i++) {
+    let acc = 0;
+    const px = X(i) - bw / 2;
+    for (const c of classes) {
+      const v = Number((share[c] || [])[i]) || 0;
+      if (v <= 0) continue;
+      const hgt = Math.max(ih * v / yMax, 1.2);
+      ctx.fillStyle = DRIFT_COLORS[c] || DRIFT_OTHER_COLOR;
+      ctx.globalAlpha = i === DRIFT.hover ? 1 : 0.88;
+      ctx.fillRect(px, base - acc - hgt, bw, hgt);
+      ctx.globalAlpha = 1;
+      acc += hgt;
+    }
+    if (acc <= 0) {
+      ctx.fillStyle = "rgba(139,160,192,.3)";
+      ctx.fillRect(px, base - 1.5, bw, 1.5);
+    }
+  }
+
+  // 时间刻度（用回放流的相对时间，评委更容易对上"攻击开始那一刻"）
+  if (x.t_end && x.t_end.length) {
+    ctx.fillStyle = "rgba(139,160,192,.75)";
+    ctx.font = "10px " + FONT_MONO;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    const ticks = Math.min(7, bins);
+    for (let k = 0; k < ticks; k++) {
+      const i = Math.round((bins - 1) * k / Math.max(ticks - 1, 1));
+      ctx.fillText(fmtDur(Number(x.t_end[i]) || 0), clamp(X(i), pad.l + 14, w - pad.r - 14), base + 5);
+    }
+    ctx.textAlign = "left";
+    ctx.textBaseline = "middle";
+  }
+
+  drawDriftCursor(ctx, X, pad, ih, bins, false);
+}
+
+/* ---------------------------------------------------------------- 交互 */
+function driftBinAtX(clientX, cv) {
+  cv = cv || $("drift");
+  if (!cv || !DRIFT.ok) return -1;
+  const rect = cv.getBoundingClientRect();
+  const pad = { l: 46, r: 12 };
+  const iw = rect.width - pad.l - pad.r;
+  if (iw <= 0) return -1;
+  const bins = Math.max(1, Number(DRIFT.data.bins) || 60);
+  const k = Math.floor((clientX - rect.left - pad.l) / (iw / bins));
+  return clamp(k, 0, bins - 1);
+}
+
+function driftHoverNote(bin) {
+  const d = DRIFT.data;
+  const x = d.x || {};
+  const ratio = Number((d.unknown_ratio || [])[bin]) || 0;
+  const cnt = Number((d.unknown_count || [])[bin]) || 0;
+  let nAtk = 0, top = "", topN = 0;
+  for (const c of (d.attack_classes || [])) {
+    const v = Number((d.attack_counts[c] || [])[bin]) || 0;
+    nAtk += v;
+    if (v > topN) { topN = v; top = c; }
+  }
+  const nWin = (x.w_end && x.w_start) ? (x.w_end[bin] - x.w_start[bin] + 1) : 0;
+  return `第 ${bin + 1}/${d.bins} 格 · 未知占比 <b>${(100 * ratio).toFixed(2)}%</b>（${cnt}/${nWin} 个窗口）· ` +
+    `判定攻击 ${nAtk} 个窗口${top ? `（主要是 ${top} ${topN} 个）` : ""} · ` +
+    `判定窗口 #${x.w_start ? x.w_start[bin] : "-"}~#${x.w_end ? x.w_end[bin] : "-"} · ` +
+    `回放位置 <b>${x.row_start ? Number(x.row_start[bin]).toLocaleString() : "-"}</b>` +
+    `（${fmtDur(x.t_start ? x.t_start[bin] : 0)}）· 点击跳到这一格`;
+}
+
+async function jumpToNoveltyPeak() {
+  const d = DRIFT.data;
+  if (!DRIFT.ok || !d || !d.peak || !isFinite(Number(d.peak.row))) return;
+  const p = d.peak;
+  const top = p.top_class ? `，该格判定 ${p.top_class} ${p.top_class_count} 个窗口` : "";
+  await jumpTo(Number(p.row),
+    `跳到未知占比最高处（第 ${Number(p.bin) + 1}/${d.bins} 格 · ${(100 * Number(p.ratio)).toFixed(2)}%${top}）`);
+}
+
+async function jumpToDriftBin(bin) {
+  const x = DRIFT.data && DRIFT.data.x;
+  if (!x || !x.row_start || bin < 0 || bin >= x.row_start.length) return;
+  await jumpTo(Number(x.row_start[bin]),
+    `跳到第 ${bin + 1}/${DRIFT.data.bins} 格（回放位置 ${Number(x.row_start[bin]).toLocaleString()}）`);
+}
+
+const driftPeakBtn = $("btn-drift-peak");
+if (driftPeakBtn) driftPeakBtn.addEventListener("click", () => { jumpToNoveltyPeak(); });
+
+// 分箱粒度：改一格包含多少个判定窗口（格越大越平滑，格越小越容易看出突然漂移）
+const driftBinsSel = $("drift-bins");
+if (driftBinsSel) {
+  driftBinsSel.addEventListener("change", () => {
+    DRIFT.bins = Math.round(clamp(Number(driftBinsSel.value) || 60, 8, 240));
+    loadNovelty(DRIFT.bins);
+  });
+}
+
+const driftCv = $("drift");
+if (driftCv) {
+  driftCv.addEventListener("mousemove", (e) => {
+    const bin = driftBinAtX(e.clientX);
+    if (bin === DRIFT.hover) return;
+    DRIFT.hover = bin;
+    const xn = $("drift-xnote");
+    if (xn) xn.innerHTML = bin >= 0 ? driftHoverNote(bin) : DRIFT.xnote;
+    driftScheduleDraw();
+  });
+  driftCv.addEventListener("mouseleave", () => {
+    DRIFT.hover = -1;
+    const xn = $("drift-xnote");
+    if (xn) xn.textContent = DRIFT.xnote;
+    driftScheduleDraw();
+  });
+  driftCv.addEventListener("click", (e) => {
+    const bin = driftBinAtX(e.clientX);
+    if (bin >= 0) jumpToDriftBin(bin);
+  });
+}
+const driftStackCv = $("drift-stack");
+if (driftStackCv) {
+  driftStackCv.addEventListener("click", (e) => {
+    const bin = driftBinAtX(e.clientX, driftStackCv);   // 两张图共用同一 x 轴几何
+    if (bin >= 0) jumpToDriftBin(bin);
+  });
 }
 
 /* ------------------------------------------------------------------ 入口 */

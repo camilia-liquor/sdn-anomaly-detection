@@ -1,0 +1,9 @@
+class,precision,recall,f1,support
+Botnet,1.0,1.0,1.0,59
+BruteForce,1.0,1.0,1.0,104
+DDoS,1.0,1.0,1.0,135
+DoS,1.0,1.0,1.0,143
+Normal,1.0,1.0,1.0,1721
+Probe,1.0,1.0,1.0,76
+U2R,1.0,1.0,1.0,14
+WebAttack,1.0,1.0,1.0,85
