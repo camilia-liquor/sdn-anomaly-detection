@@ -27,6 +27,8 @@ __pycache__/
 data/raw/*.csv
 data/processed/*.npz
 data/processed/*.joblib
+data/processed_*/*.npz
+data/processed_*/*.joblib
 data/raw_smoke/
 data/processed_smoke/
 data/processed_real*/
@@ -35,11 +37,14 @@ artifacts/*/*.h5
 artifacts/*.npy
 artifacts/*/*.npy
 artifacts/*/*.joblib
+artifacts/*.npz
 artifacts/_smoke/
 results/_smoke/
 results/figures_real*/
 results/predictions_cli.csv
 results/summary_backup.json
+# 运行期告警审计台账：每次运行都会追加，属运行日志（其汇总见 results/e2e_controller_report.md）
+results/audit_alerts*.jsonl
 logs/
 
 # ---------- 系统杂项 ----------

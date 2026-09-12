@@ -140,14 +140,22 @@ def clean_dataframe(df: pd.DataFrame, cfg: Config) -> tuple[pd.DataFrame, list[s
     # 1) 统一处理无穷大 / 缺失
     df = df.replace([np.inf, -np.inf], np.nan)
 
-    # 2) 多分类标签列：优先 attack_type / Label / target 这类带类别名的列
-    mc_col = None
-    for c in label_cols:
-        if c in {"attack_type", "Label", "label", "target", "attack_cat", "class", "category"}:
-            mc_col = c
-            break
-    if mc_col is None:
-        mc_col = label_cols[0]
+    # 2) 多分类标签列：优先 attack_type / Label / target 这类带类别名的列。
+    #    注意：同一份数据可能既有二值列（如 sdn 采集脚本写的 label=0/1），又有细粒度列
+    #    （attack_type=Normal/DDoS/...）。若按列名顺序硬取，会误选二值列、把多分类任务
+    #    降级成二分类。这里改为「在候选列中取粒度最细的那一列」（唯一取值最多），
+    #    既保住 insdn/CIC-IDS2017 的 Label，也能让 sdn 采集口径拿到 8 类标签。
+    mc_candidates = [c for c in label_cols
+                     if c in {"attack_type", "Label", "label", "target", "attack_cat", "class", "category"}]
+    if not mc_candidates:
+        mc_candidates = list(label_cols)
+    mc_col = mc_candidates[0]
+    if len(mc_candidates) > 1:
+        nuniq = {c: int(df[c].nunique(dropna=True)) for c in mc_candidates}
+        mc_col = max(mc_candidates, key=lambda c: nuniq[c])
+        if len(set(nuniq.values())) > 1:
+            LOGGER.info("检测到多个标签列 %s，按粒度选择最细的一列：%r（%d 类）",
+                        nuniq, mc_col, nuniq[mc_col])
 
     # 3) 行级清洗
     before = len(df)

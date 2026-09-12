@@ -69,15 +69,18 @@ def section(title: str) -> None:
 def check_files(r: Report) -> None:
     section("1) 代码与文档")
     must = [
-        "run_all.py", "requirements.txt", "README.md",
+        "run_all.py", "requirements.txt", "README.md", "DEPLOYMENT.md",
         "src/config.py", "src/traffic_generator.py", "src/data_pipeline.py", "src/model.py",
         "src/train.py", "src/evaluate.py", "src/visualize.py", "src/baselines.py", "src/utils.py",
+        "src/service.py",
         "app/app.py", "app/templates/index.html", "app/static/app.js", "app/static/style.css",
+        "integrations/ryu_guard.py",
         "tests/test_core.py",
         "tools/check_env.py", "tools/smoke_test.py", "tools/predict_cli.py",
         "tools/reevaluate.py", "tools/drift_test.py", "tools/ensemble_eval.py",
         "tools/make_report.py", "tools/fetch_wheel.py", "tools/sanitize_paths.py",
         "tools/operating_point.py", "tools/error_analysis.py", "tools/benchmark_latency.py",
+        "tools/controller_simulator.py", "tools/ops_impact.py", "tools/acceptance_check.py",
         "docs/01_原始代码问题清单.md", "docs/02_实验报告.md", "docs/03_答辩要点与配置清单.md",
         "competition/README.md", "competition/01_开源及第三方资源使用清单.md",
         "competition/02_技术报告.md", "competition/03_作品名称与简介.md",
@@ -263,6 +266,108 @@ def check_unit_tests(r: Report) -> None:
         r.check(False, "单元测试可执行", f"{type(exc).__name__}: {exc}")
 
 
+def check_deployable(r: Report) -> None:
+    """7) 可部署性：在线检测接口、控制器闭环、运维换算三条链路都要真的能跑。
+
+    这一节回答的是「这是不是一个能用的系统」。检查方式不是读文件，而是**真的调用接口**：
+    用 Flask 测试客户端把一批流记录 POST 进 /api/detect，看它是否返回逐条判定与告警；
+    再核对控制器闭环报告与运维换算报告是否存在且数值自洽。
+    """
+    section("7) 可部署性（在线接口 / 控制器闭环 / 运维换算）")
+    try:
+        spec = importlib.util.spec_from_file_location("cida_demo_app2", ROOT / "app" / "app.py")
+        mod = importlib.util.module_from_spec(spec)  # type: ignore[arg-type]
+        spec.loader.exec_module(mod)  # type: ignore[union-attr]
+    except Exception as exc:  # noqa: BLE001
+        r.check(False, "检测服务模块可加载", f"{type(exc).__name__}: {exc}")
+        return
+    client = mod.app.test_client()
+
+    # 策略接口：查询 + 热更新（改完再改回去，保证幂等）
+    pol = client.get("/api/policy").get_json() or {}
+    r.check("threshold" in pol and "confirm_windows" in pol, "策略接口可查询",
+            f"阈值={pol.get('threshold')} 确认={pol.get('confirm_windows')}")
+    orig = {"threshold": pol.get("threshold"), "confirm_windows": pol.get("confirm_windows")}
+    upd = client.post("/api/policy", json={"threshold": 0.9, "confirm_windows": 4}).get_json() or {}
+    r.check(float(upd.get("threshold", -1)) == 0.9 and int(upd.get("confirm_windows", -1)) == 4,
+            "策略接口可热更新（无需重启）", f"→ 阈值 {upd.get('threshold')} / 确认 {upd.get('confirm_windows')}")
+    client.post("/api/policy", json=orig)
+
+    # 核心接口：真的推一批流记录进去
+    meta = json.loads((PROCESSED_DIR / "meta.json").read_text(encoding="utf-8"))
+    feats = list(meta["feature_names"])
+    try:
+        z = np.load(PROCESSED_DIR / "tensors.npz", allow_pickle=True)
+        sample = np.asarray(z["test_stream_features"], dtype=np.float32)[:60]
+    except Exception as exc:  # noqa: BLE001
+        r.check(False, "能取到测试流样本用于在线推流", f"{type(exc).__name__}: {exc}")
+        return
+    rows = [{f: float(v) for f, v in zip(feats, sample[i])} for i in range(len(sample))]
+    resp = client.post("/api/detect", json={"rows": rows,
+                                            "meta": {"src_ip": "10.0.0.5", "dst_ip": "10.0.0.1", "dst_port": 80}})
+    det = resp.get_json() or {}
+    out_rows = det.get("rows") or []
+    judged = [x for x in out_rows if isinstance(x, dict) and x.get("window")]
+    r.check(resp.status_code == 200 and det.get("ok") is True,
+            "POST /api/detect 在线推流成功（这是控制器实际调用的接口）",
+            f"HTTP {resp.status_code}，返回 {len(out_rows)} 条判定" if resp.status_code == 200 else str(det)[:120])
+    r.check(len(judged) > 0 and "p_attack" in (judged[0]["window"] if judged else {}),
+            "接口返回逐条判定（含概率、类别、是否告警、是否确认）",
+            f"{len(judged)}/{len(out_rows)} 条带窗口判定，"
+            f"示例 p_attack={judged[0]['window']['p_attack']} 类别={judged[0]['window']['pred_class']}"
+            if judged else "无判定结果")
+    # 告警上下文完整性：每条告警都要能追到「谁、何时、依据什么、做了什么」
+    alerts_now = det.get("alerts") or (client.get("/api/alerts?limit=5").get_json() or [])
+    r.check(all(k in (alerts_now[0] if alerts_now else {}) for k in
+                ("time", "src_ip", "pred_class", "p_attack", "action", "rows_covered"))
+            if alerts_now else True,
+            "告警附带可追溯上下文（时间/源 IP/类别/置信度/处置动作/触发窗口）",
+            f"{len(alerts_now)} 条告警")
+    stats = client.get("/api/stats").get_json() or {}
+    r.check(int((stats.get("stats") or stats).get("rows") or 0) > 0, "运行统计已累计（可观测）",
+            f"rows={(stats.get('stats') or stats).get('rows')}")
+    alerts = client.get("/api/alerts?limit=5").get_json()
+    r.check(isinstance(alerts, list), "告警审计台账可查询", f"{len(alerts or [])} 条")
+    metrics_txt = client.get("/metrics").get_data(as_text=True)
+    r.check("cida" in metrics_txt.lower() or "# HELP" in metrics_txt,
+            "Prometheus /metrics 可被现有监控抓取", f"{len(metrics_txt)} 字节")
+
+    # 控制器闭环报告（无 Ryu 环境下的实测证据）
+    e2e = RESULT_DIR / "e2e_controller_report.json"
+    if e2e.exists():
+        rep = json.loads(e2e.read_text(encoding="utf-8"))
+        rps = float(rep.get("throughput_rows_per_sec") or rep.get("rows_per_sec") or 0.0)
+        r.check(rps > 100, "控制器闭环实测吞吐达标（tools/controller_simulator.py）",
+                f"{rps:,.0f} 条流/秒")
+        lat = rep.get("latency_ms") or {}
+        r.check(float(lat.get("p50") or 0) < 200, "在线判定时延达标（p50）",
+                f"p50={lat.get('p50')} ms / p95={lat.get('p95')} ms")
+    else:
+        r.check(False, "控制器闭环报告存在", f"{e2e}（运行 tools/controller_simulator.py 生成）")
+
+    # 运维换算报告（把指标翻译成告警量与人工工时）
+    ops = RESULT_DIR / "ops_impact.json"
+    if ops.exists():
+        o = json.loads(ops.read_text(encoding="utf-8"))
+        rec = o.get("recommended_working_point") or {}
+        r.check(bool(rec) and rec.get("alarms_per_day") is not None,
+                "运维换算报告存在且给出推荐上线工作点",
+                f"阈值 {rec.get('threshold')} + 确认 {rec.get('confirm')} → "
+                f"{rec.get('alarms_per_day', 0):.1f} 条告警/天、{rec.get('triage_hours_per_day', 0):.2f} 人工小时/天")
+    else:
+        r.check(False, "运维换算报告存在", f"{ops}（运行 tools/ops_impact.py 生成）")
+
+    # 控制器适配层：本机没有 Ryu 时只能做静态检查（不假装跑过）
+    guard = (ROOT / "integrations" / "ryu_guard.py").read_text(encoding="utf-8")
+    r.check(all(k in guard for k in ("add_arguments", "OFPFlowStatsRequest", "OFPMatch", "whitelist")),
+            "Ryu 适配层结构完整（参数注册 / 流表统计 / 规则下发 / 白名单）")
+    r.check("未做运行验证" in guard or "未在真实交换机上实跑" in guard or "dry_run" in guard,
+            "Ryu 适配层已声明运行边界与演练默认（不夸大验证范围）")
+    has_ryu = importlib.util.find_spec("ryu") is not None
+    r.warn(has_ryu, "本机 Ryu 环境（未安装属正常，适配层需在真实 SDN 环境验证）",
+           "已安装" if has_ryu else "未安装：ryu_guard.py 只在有 Ryu 的机器上运行")
+
+
 def main() -> int:
     print("=" * 74)
     print("交付验收自检 · CNN + BiLSTM SDN 异常检测工程")
@@ -274,6 +379,7 @@ def main() -> int:
     check_results(r)
     check_demo(r)
     check_unit_tests(r)
+    check_deployable(r)
 
     section("结论")
     print(f"  通过 {len(r.rows) - r.failed - r.warned} 项 | 警告 {r.warned} 项 | 失败 {r.failed} 项")

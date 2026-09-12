@@ -1,0 +1,23 @@
+{
+  "rows_sent": 3000,
+  "batches": 60,
+  "elapsed_sec": 1.822,
+  "latency_ms": {
+    "p50": 30.263600001489976,
+    "p95": 44.759610001710826,
+    "p99": 59.17554199950238
+  },
+  "throughput_rows_per_sec": 1646.9421554386292,
+  "alerts": 236,
+  "alerts_hitting_attack": 227,
+  "false_alarms": 9,
+  "by_action": {
+    "block": 236
+  },
+  "policy": {
+    "action": "block",
+    "confirm_windows": 3,
+    "dry_run": false,
+    "threshold": 0.5
+  }
+}

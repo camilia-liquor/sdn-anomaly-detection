@@ -20,6 +20,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import threading
 from pathlib import Path
 
 import numpy as np
@@ -37,6 +38,10 @@ LOGGER = get_logger("cida.demo")
 app = Flask(__name__, template_folder=str(Path(__file__).parent / "templates"),
             static_folder=str(Path(__file__).parent / "static"))
 
+# 由 --model-tag 指定（如 sdn_ctrl）；空串表示用 run_all.py 记录的"主模型"。
+# 注意：必须在 DemoState 实例化之前定义，因为模块级就会创建 STATE。
+MODEL_TAG: str = ""
+
 # 展示用的优先特征（按名字匹配，找不到就退回前几个特征）
 DISPLAY_FEATURES_PRIORITY = [
     "Flow Duration", "Total Fwd Packets", "Total Backward Packets", "Flow Packets/s",
@@ -50,11 +55,12 @@ DISPLAY_FEATURES_PRIORITY = [
 class DemoState:
     """演示所需的状态：测试流、窗口预测、指标、特征名。"""
 
-    def __init__(self, processed_dir: Path = PROCESSED_DIR, artifact_dir: Path = ARTIFACT_DIR):
+    def __init__(self, processed_dir: Path | None = None, artifact_dir: Path | None = None):
         self.ok = False
         self.reason = ""
-        self.processed_dir = Path(processed_dir)
-        self.artifact_dir = Path(artifact_dir)
+        # 注意：默认值在调用时从模块全局取，这样命令行 `--processed-dir` 能生效
+        self.processed_dir = Path(processed_dir or PROCESSED_DIR)
+        self.artifact_dir = Path(artifact_dir or ARTIFACT_DIR)
         self.load()
 
     # ---------------- 数据加载 ----------------
@@ -102,15 +108,42 @@ class DemoState:
         # ---------------- 窗口级预测 ----------------
         # 优先用 run_all.py 记录的"主模型"（artifacts/main_model.json），
         # 这样演示界面的预测、指标、注意力图三者一定来自同一个模型。
+        #
+        # ⚠️ 但 artifacts/ 下同时存在多种特征口径的预测缓存（完整流特征 71 维、
+        #    控制器原生字段 17 维……）。若直接取"主模型"或"最新的一个"，在切换到
+        #    控制器原生口径（--processed-dir data/processed_sdn）时会拿 71 维的预测
+        #    去配 17 维的数据流，页面显示的判定与在线接口的判定不是同一个模型。
+        #    这里按「预测缓存对应的 metrics 里记录的特征数」与当前预处理产物的特征数
+        #    做一致性校验，形状不符的候选一律跳过——宁可页面提示"无预测缓存"，
+        #    也不显示错误口径的判定。
+        want_f = len(self.feature_names)
+        want_t = int(self.window_size)
         main_tag = self._read_main_tag()
-        pred_files: list[Path] = []
+        cands: list[Path] = []
+        if MODEL_TAG:
+            cands.append(self.artifact_dir / f"predictions_{MODEL_TAG}.csv")
         if main_tag:
-            p = self.artifact_dir / f"predictions_{main_tag}.csv"
-            if p.exists():
-                pred_files = [p]
-        if not pred_files:
-            pred_files = sorted(self.artifact_dir.glob("predictions_*.csv"),
-                                key=lambda p: p.stat().st_mtime)
+            cands.append(self.artifact_dir / f"predictions_{main_tag}.csv")
+        cands.extend(sorted(self.artifact_dir.glob("predictions_*.csv"),
+                            key=lambda p: p.stat().st_mtime, reverse=True))
+        seen: set[Path] = set()
+        skipped: list[str] = []
+        pred_files: list[Path] = []
+        for c in cands:
+            c = Path(c)
+            if c in seen or not c.exists():
+                continue
+            seen.add(c)
+            tag = c.stem.replace("predictions_", "")
+            mt = self._metrics_shape(tag)
+            if mt is not None and mt != (want_t, want_f):
+                skipped.append(f"{tag}({mt[0]}×{mt[1]})")
+                continue
+            pred_files = [c]
+            break
+        if not pred_files and skipped:
+            LOGGER.warning("预测缓存与当前数据口径（窗口 %d、特征 %d）都不匹配，已跳过：%s",
+                           want_t, want_f, "、".join(skipped))
         if pred_files:
             self.pred_file = pred_files[-1]
             self.tag = self.pred_file.stem.replace("predictions_", "")
@@ -160,6 +193,30 @@ class DemoState:
         except Exception:
             pass
         return ""
+
+    @staticmethod
+    def _metrics_shape(tag: str) -> tuple[int, int] | None:
+        """从 metrics_<tag>.json 里读出该预测缓存对应的 (窗口长度, 特征数)。
+
+        用于把「预测缓存」与「当前预处理产物」做口径一致性校验：读不到就返回 None
+        （视为未知，允许作为兜底候选）。
+        """
+        p = RESULT_DIR / f"metrics_{tag}.json"
+        if not p.exists():
+            return None
+        try:
+            d = json.loads(p.read_text(encoding="utf-8")).get("data", {})
+            t = d.get("window_size")
+            f = d.get("n_features")
+            if t is None or f is None:
+                shape = d.get("input_shape") or []
+                if len(shape) == 2:
+                    t, f = shape
+            if t is None or f is None:
+                return None
+            return int(t), int(f)
+        except Exception:
+            return None
 
     def _build_segments(self) -> list[dict]:
         segs: list[dict] = []
@@ -341,13 +398,107 @@ def api_health():
     return jsonify({"ok": STATE.ok, "reason": STATE.reason})
 
 
+# ======================================================================================
+# 在线检测服务（给 SDN 控制器调用）—— 这是"课题"与"可用系统"的分界线
+# ======================================================================================
+DETECTOR = None
+DETECTOR_LOCK = threading.Lock()
+
+
+def get_detector():
+    """惰性加载检测服务（避免没有 TensorFlow 时连演示大屏都起不来）。"""
+    global DETECTOR
+    with DETECTOR_LOCK:
+        if DETECTOR is None:
+            from src.service import DetectionService
+
+            DETECTOR = DetectionService(processed_dir=PROCESSED_DIR, artifact_dir=ARTIFACT_DIR,
+                                        model_tag=MODEL_TAG)
+            if DETECTOR.ready:
+                LOGGER.info("在线检测服务已就绪：%s", DETECTOR.model_path)
+            else:
+                LOGGER.warning("在线检测服务不可用：%s", DETECTOR.reason)
+    return DETECTOR
+
+
+@app.route("/api/detect", methods=["POST"])
+def api_detect():
+    """控制器推送一批流记录 → 返回逐条判定、告警与处置建议。
+
+    请求体（按特征名给值，字段名与 `feature_names` 一致）::
+
+        {"meta": {"src_ip": "10.0.0.5", "dst_ip": "10.0.0.1", "dst_port": 80},
+         "rows": [{"Flow Duration": 1234, "Tot Fwd Pkts": 12, ...}, ...]}
+
+    响应：逐条窗口判定 + 新产生的告警（含处置动作）+ 运行统计。
+    """
+    det = get_detector()
+    if not det.ready:
+        return jsonify({"ok": False, "error": det.reason,
+                        "hint": "先运行 python run_all.py 生成模型与预处理产物，并确认已安装 TensorFlow"}), 503
+    payload = request.get_json(silent=True) or {}
+    rows = payload.get("rows") or []
+    if not isinstance(rows, list) or not rows:
+        return jsonify({"ok": False, "error": "rows 必须是非空数组"}), 400
+    return jsonify(json_safe(det.push(rows, meta=payload.get("meta") or {})))
+
+
+@app.route("/api/alerts")
+def api_alerts():
+    """告警审计台账（可用系统的基本要求：每条告警可追溯）。"""
+    det = get_detector()
+    limit = request.args.get("limit", default=100, type=int)
+    return jsonify(json_safe([a.to_dict() for a in det.alerts[-limit:]][::-1]))
+
+
+@app.route("/api/policy", methods=["GET", "POST"])
+def api_policy():
+    """查询/热更新检测策略（阈值、确认窗口数、处置动作、白名单、演练模式）。"""
+    det = get_detector()
+    if request.method == "GET":
+        return jsonify(json_safe(det.snapshot()["policy"]))
+    body = request.get_json(silent=True) or {}
+    return jsonify(json_safe(det.reload_policy(**body)))
+
+
+@app.route("/api/stats")
+def api_stats():
+    det = get_detector()
+    return jsonify(json_safe(det.snapshot()))
+
+
+@app.route("/metrics")
+def metrics():
+    """Prometheus 文本格式指标，可直接被现有监控系统抓取。"""
+    from flask import Response
+
+    return Response(get_detector().prometheus(), mimetype="text/plain; version=0.0.4")
+
+
 def main(argv: list[str] | None = None) -> int:
+    global STATE, DETECTOR, PROCESSED_DIR, ARTIFACT_DIR, MODEL_TAG
     cfg = Config()
     ap = argparse.ArgumentParser(description="CNN+BiLSTM 异常检测演示大屏")
     ap.add_argument("--host", default=cfg.demo_host)
     ap.add_argument("--port", type=int, default=cfg.demo_port)
     ap.add_argument("--debug", action="store_true")
+    ap.add_argument("--processed-dir", default=None,
+                    help="预处理产物目录（默认 data/processed；控制器原生字段场景用 data/processed_sdn）")
+    ap.add_argument("--artifact-dir", default=None, help="模型产物目录（默认 artifacts）")
+    ap.add_argument("--model-tag", default=None,
+                    help="指定模型子目录名（如 sdn_ctrl）；默认用 run_all.py 记录的主模型")
     args = ap.parse_args(argv)
+
+    if args.processed_dir or args.artifact_dir or args.model_tag:
+        if args.processed_dir:
+            PROCESSED_DIR = Path(args.processed_dir)
+        if args.artifact_dir:
+            ARTIFACT_DIR = Path(args.artifact_dir)
+        MODEL_TAG = args.model_tag or ""
+        DETECTOR = None  # 触发按需重建，确保检测服务与演示大屏用同一口径
+        STATE = DemoState(PROCESSED_DIR, ARTIFACT_DIR)
+        LOGGER.info("已切换数据/模型口径：processed=%s artifacts=%s tag=%s",
+                    PROCESSED_DIR, ARTIFACT_DIR, MODEL_TAG or "（主模型）")
 
     if not STATE.ok:
         LOGGER.warning("演示数据未就绪：%s", STATE.reason)

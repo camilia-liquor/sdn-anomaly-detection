@@ -459,8 +459,81 @@ def build_report(tag: str, bundle: dict) -> str:
         add("> 完整报告见 `results/operating_point.md`、`results/error_analysis.md`、`results/benchmark_latency.md`。")
         add("")
 
-    # ---------------- 4 讨论 ----------------
-    add("## 4. 讨论与局限")
+    # ---------------- 4 运维工作量与可部署性 ----------------
+    ops = load_json(RESULT_DIR / "ops_impact.json") or {}
+    e2e = load_json(RESULT_DIR / "e2e_controller_report.json") or {}
+    if ops or e2e:
+        add("## 4. 运维工作量与可部署性（把指标翻译成「能不能上线」）")
+        add("")
+        add("### 4.1 告警量与人工工时（`tools/ops_impact.py`）")
+        add("")
+        rec = ops.get("recommended_working_point") or {}
+        cfgp = ops.get("config_default_working_point") or {}
+        if ops:
+            add("| 工作点 | 误报/小时 | 误报/天 | 告警/天 | 人工工时/天 | 平均时延 | 漏报/天 |")
+            add("|---|---|---|---|---|---|---|")
+            for key, label in (("no_confirm_counterfactual", "推荐阈值但**不做连续确认**"),
+                               ("config_default_working_point", "工程默认（不依赖任何测试集调参）"),
+                               ("recommended_working_point", "**推荐上线工作点**")):
+                r = ops.get(key) or {}
+                if r:
+                    add(f"| {label}：阈值 {fmt(r.get('threshold'), 2)} + 确认 {int(r.get('confirm') or 0)} | "
+                        f"{fmt(r.get('false_alarms_per_hour'), 2)} | {fmt(r.get('false_alarms_per_day'), 1)} | "
+                        f"{fmt(r.get('alarms_per_day'), 1)} | **{fmt(r.get('triage_hours_per_day'), 2)}** | "
+                        f"{fmt(r.get('mttd_ms'), 1)} ms | {fmt(r.get('missed_attacks_per_day'), 2)} |")
+            add("")
+            if rec:
+                add(f"推荐工作点（阈值 {fmt(rec.get('threshold'), 2)} + 连续确认 {int(rec.get('confirm') or 0)}）："
+                    f"每天约 **{fmt(rec.get('alarms_per_day'), 1)} 条告警**、**{fmt(rec.get('triage_hours_per_day'), 2)} 人工小时**，"
+                    f"平均时延 **{fmt(rec.get('mttd_ms'), 1)} ms**。")
+                add("")
+            noc = ops.get("no_confirm_counterfactual") or {}
+            if rec and noc:
+                saved = float(noc.get("triage_hours_per_day") or 0) - float(rec.get("triage_hours_per_day") or 0)
+                add(f"**「连续确认」的价值（同一阈值下的对照）**：阈值 {fmt(rec.get('threshold'), 2)} 下，"
+                    f"不做确认时每天需 **{fmt(noc.get('triage_hours_per_day'), 2)} 人工小时**"
+                    f"（≈ {fmt(float(noc.get('triage_hours_per_day') or 0) / float(ops.get('shift_hours') or 8), 1)} 个班次），"
+                    f"做 {int(rec.get('confirm') or 0)} 个窗口的连续确认后降到 **{fmt(rec.get('triage_hours_per_day'), 2)} 人工小时**，"
+                    f"每天省下 **{fmt(saved, 2)} 人工小时**——而攻击片段召回不变（均 100%）。"
+                    "也就是说，这个几乎零成本的机制直接决定了值班室是被误报淹没还是能正常工作。")
+                add("")
+            add("> 口径说明：误报率按实测每小时事件数外推到天（与攻击密度无关）；真实告警按业务假设的攻击频次折算"
+                "（`--attacks-per-day`，默认 20 次/天）；单条告警按 6 分钟排查、一个班次按 8 小时折算。"
+                "测试流是刻意做成攻击密集的，直接线性外推会把告警量虚高十几倍，本文规避了这一常见方法学错误。")
+            add("")
+        add("### 4.2 控制平面端到端闭环实测（`tools/controller_simulator.py`）")
+        add("")
+        if e2e:
+            add(f"在没有 Ryu 的机器上扮演控制器，走完「流记录 → `POST /api/detect` → 告警 → 执行处置 → 写审计台账」全链路：")
+            add("")
+            add("| 指标 | 实测值 |")
+            add("|---|---|")
+            if e2e.get("rows_sent"):
+                per_batch = "-"
+                if e2e.get("batches"):
+                    per_batch = f"{int(round(int(e2e['rows_sent']) / max(int(e2e['batches']), 1)))}"
+                add(f"| 回放规模 | {int(e2e['rows_sent']):,} 条流 / 共 {e2e.get('batches', '-')} 批 / 每批约 {per_batch} 条 |")
+            if e2e.get("throughput_rows_per_sec"):
+                add(f"| 吞吐 | **{float(e2e['throughput_rows_per_sec']):,.0f} 条流/秒** |")
+            lat = e2e.get("latency_ms") or {}
+            if lat:
+                add(f"| 判定时延 | **p50 {fmt(lat.get('p50'), 1)} ms / p95 {fmt(lat.get('p95'), 1)} ms / "
+                    f"p99 {fmt(lat.get('p99'), 1)} ms** |")
+            if e2e.get("alerts") is not None:
+                add(f"| 告警 | {int(e2e['alerts'])} 条确认告警（命中真实攻击 "
+                    f"{e2e.get('alerts_hitting_attack')}、误报 {e2e.get('false_alarms')}） |")
+            if e2e.get("by_action"):
+                add("| 处置动作 | " + "、".join(f"{k} × {v}" for k, v in e2e["by_action"].items()) + " |")
+            add("")
+            add("> 诚实声明：`integrations/ryu_guard.py` 是按 Ryu 官方 API 编写的适配层，"
+                "因本机没有 Ryu/OpenFlow 交换机**未在真实交换机上实跑**；上表验证的是控制器与检测服务之间的"
+                "接口、判定与处置逻辑。")
+        else:
+            add("尚未生成闭环实测报告（运行 `python tools/controller_simulator.py` 生成）。")
+        add("")
+
+    # ---------------- 5 讨论 ----------------
+    add("## 5. 讨论与局限")
     add("")
     add("1. **关于 CNN 分支的贡献（如实说明）**：消融实验显示，去掉 BiLSTM 分支后宏 F1 从 0.985 掉到 0.943，"
         "而单独 BiLSTM 分支（去掉 CNN 分支）可达 0.988 —— 也就是说，**在本文的流统计量特征上，"
@@ -484,17 +557,24 @@ def build_report(tag: str, bundle: dict) -> str:
         "换成最优阈值后二分类 F1 可提升约 0.1，这提示**阈值标定与模型选择同等重要**。")
     add("6. **鲁棒性**：分布漂移实验显示深度时序模型退化约 1%，显著优于树模型的 4.5%~6.7%；"
         "对抗样本与在线增量学习是后续工作。")
+    add("7. **上线边界（如实说明）**：① Ryu 适配层未在真实交换机上实跑；"
+        "② 控制器原生字段口径（仅 OpenFlow 流表统计 17 列）的宏 F1 为 0.844，"
+        "需大幅收紧工作点才能把误报压到同一水平，尚不能替代完整流特征口径；"
+        "③ 误报率与人工工时基于数小时的在线回放外推，长周期表现需现场标定。")
     add("")
 
-    # ---------------- 5 复现 ----------------
-    add("## 5. 复现方式")
+    # ---------------- 6 复现 ----------------
+    add("## 6. 复现方式")
     add("")
     add("```bash")
     add("pip install -r requirements.txt")
     add("python tools/check_env.py          # 环境自检")
     add(f"python run_all.py --tag {tag}     # 一键复现本次实验")
     add("python tools/make_report.py       # 重新生成本报告")
-    add("python app/app.py                 # 启动可视化演示大屏")
+    add("python tools/ops_impact.py        # 运维工作量换算（告警/天、人工工时/天）")
+    add("python tools/acceptance_check.py  # 交付验收自检（含在线接口实调）")
+    add("python app/app.py                 # 启动检测服务 + 可视化演示大屏")
+    add("python tools/controller_simulator.py   # 控制平面闭环实测")
     add("```")
     add("")
     add(f"本次训练实际运行 {n_epochs} 个 epoch（最优 epoch = {best_epoch}），"

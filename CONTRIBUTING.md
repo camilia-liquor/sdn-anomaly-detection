@@ -1,4 +1,4 @@
-# 贡献指南（Contributing）
+﻿# 贡献指南（Contributing）
 
 感谢关注本作品。这是一个面向 **SDN 流量异常检测** 的开源工程，
 欢迎以 Issue 或 Pull Request 的形式反馈问题、补充数据、改进文档。
@@ -20,7 +20,7 @@ python tools/check_env.py
 ```bash
 python tests/test_core.py          # 10 项单元测试（生成器/管线/滑窗/评估口径）
 python run_all.py --smoke          # 25 秒跑通全流程（使用独立目录，不污染正式结果）
-python tools/acceptance_check.py   # 37 项交付验收自检
+python tools/acceptance_check.py   # 50 项交付验收自检
 ```
 
 三条都必须通过。若你改动了模型结构或评估口径，请在 PR 描述里附上新旧指标对比
