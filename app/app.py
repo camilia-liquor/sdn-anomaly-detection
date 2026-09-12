@@ -350,6 +350,67 @@ def api_stream():
     return jsonify(json_safe(STATE.batch(pos, count, thr)))
 
 
+# --------------------------------------------------------------------------------------
+# 回放流的「原始量纲整行特征」（只读）——让演示大屏能把真实窗口推给在线检测接口
+# --------------------------------------------------------------------------------------
+_RAW_LOCK = threading.Lock()
+_RAW_MATRIX: np.ndarray | None = None
+
+
+def raw_feature_matrix() -> np.ndarray:
+    """把演示用的测试流还原成**原始量纲**特征矩阵（惰性计算 + 缓存）。
+
+    在线检测服务（``/api/detect``）要求传入原始量纲的特征，由它自己标准化；
+    这里把标准化后的测试流逆变换回原始量纲，因此把它推给在线接口时，服务端
+    ``scaler.transform`` 得到的输入与「回放判定」（缓存预测）完全一致——
+    两条链路的 p_attack 可以逐窗口对照，演示与在线不会出现两套口径。
+    """
+    global _RAW_MATRIX
+    with _RAW_LOCK:
+        if _RAW_MATRIX is None:
+            import joblib
+
+            scaler = joblib.load(STATE.processed_dir / "scaler.joblib")
+            _RAW_MATRIX = np.asarray(scaler.inverse_transform(STATE.X), dtype=np.float64)
+    return _RAW_MATRIX
+
+
+@app.route("/api/replay_rows")
+def api_replay_rows():
+    """按回放位置取一段**完整特征行（原始量纲）**，供前端 POST /api/detect。
+
+    为什么必须补这个接口：``/api/stream`` 只返回展示用的少数特征列，而在线检测
+    接口要求给出全部特征列。有了它，演示大屏才能把**回放中的真实窗口**实时推给
+    在线检测服务，于是「攻击拓扑 + 处置控制台 + 审计台账」里出现的是真实判定
+    链路的产物，而不是前端编出来的动画。
+
+    每行额外带一个 ``Label``（该条流的真实标签）：检测服务会把它记进告警的
+    ``ground_truth``，台账因此能显示「这条告警对应真实攻击 / 是真误报」。
+
+    查询参数：``pos``（起始下标，默认 0）、``count``（条数，默认 32，上限 200）
+    返回：``{ok, pos, end, n_rows, feature_names, rows:[{特征名:值, …, Label:真值}]}``
+    """
+    if not STATE.ok:
+        return jsonify({"ok": False, "error": STATE.reason}), 400
+    pos = request.args.get("pos", default=0, type=int)
+    count = request.args.get("count", default=32, type=int)
+    pos = max(0, min(int(pos), max(STATE.n_rows - 1, 0)))
+    count = max(1, min(int(count), 200))
+    end = min(pos + count, STATE.n_rows)
+    try:
+        raw = raw_feature_matrix()[pos:end]
+    except Exception as exc:  # pragma: no cover
+        LOGGER.warning("原始量纲还原失败：%s", exc)
+        return jsonify({"ok": False, "error": f"原始量纲还原失败：{exc}"}), 500
+    rows = []
+    for k in range(end - pos):
+        row = {name: float(v) for name, v in zip(STATE.feature_names, raw[k])}
+        row["Label"] = str(STATE.labels[pos + k])          # 供在线服务记录 ground_truth
+        rows.append(row)
+    return jsonify(json_safe({"ok": True, "pos": int(pos), "end": int(end), "n_rows": int(STATE.n_rows),
+                              "feature_names": list(STATE.feature_names), "rows": rows}))
+
+
 @app.route("/api/segment/<int:idx>")
 def api_segment(idx: int):
     """跳转到第 idx 个攻击片段的起点（"注入攻击"按钮）。"""
@@ -411,7 +472,18 @@ def figure_file(name: str):
 
 @app.route("/api/health")
 def api_health():
-    return jsonify({"ok": STATE.ok, "reason": STATE.reason})
+    """健康检查：既有字段 ``ok``/``reason``（演示数据是否就绪）保持不变，
+    另**新增**两个只读字段，把「在线检测服务」的就绪状态一并暴露出来，
+    供前端状态条显示与优雅降级判断。任何异常都不会影响既有字段。"""
+    out = {"ok": STATE.ok, "reason": STATE.reason}
+    try:
+        det = get_detector()
+        out["detector_ready"] = bool(det.ready)
+        out["detector_reason"] = det.reason or ""
+    except Exception as exc:  # pragma: no cover - 在线接口不可用时也要能返回健康检查
+        out["detector_ready"] = False
+        out["detector_reason"] = f"在线检测服务不可用：{exc}"
+    return jsonify(out)
 
 
 # ======================================================================================
@@ -492,7 +564,7 @@ def metrics():
 
 
 def main(argv: list[str] | None = None) -> int:
-    global STATE, DETECTOR, PROCESSED_DIR, ARTIFACT_DIR, MODEL_TAG
+    global STATE, DETECTOR, PROCESSED_DIR, ARTIFACT_DIR, MODEL_TAG, _RAW_MATRIX
     cfg = Config()
     ap = argparse.ArgumentParser(description="CNN+BiLSTM 异常检测演示大屏")
     # 默认值支持用环境变量配置（服务化部署：见 deploy/cida-detect.env 与 deploy/cida-detect.service）
@@ -515,6 +587,7 @@ def main(argv: list[str] | None = None) -> int:
         MODEL_TAG = args.model_tag or ""
         DETECTOR = None  # 触发按需重建，确保检测服务与演示大屏用同一口径
         STATE = DemoState(PROCESSED_DIR, ARTIFACT_DIR)
+        _RAW_MATRIX = None  # 换口径后原始量纲缓存必须失效
         LOGGER.info("已切换数据/模型口径：processed=%s artifacts=%s tag=%s",
                     PROCESSED_DIR, ARTIFACT_DIR, MODEL_TAG or "（主模型）")
 

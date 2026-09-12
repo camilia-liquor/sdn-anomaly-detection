@@ -1,0 +1,245 @@
+{
+  "tag": "openset_nou2r_s0",
+  "kind": "openset",
+  "holdout_class": "U2R",
+  "seed": 0,
+  "data": {
+    "val": 1989,
+    "test": 3513,
+    "train": 8462,
+    "class_names": [
+      "Botnet",
+      "BruteForce",
+      "DDoS",
+      "DoS",
+      "Normal",
+      "Probe",
+      "WebAttack"
+    ],
+    "n_features": 71,
+    "input_shape": [
+      16,
+      71
+    ]
+  },
+  "openset": {
+    "n_windows": {
+      "val_normal": 1222,
+      "val_known_attack": 767,
+      "test_normal": 2500,
+      "test_known_attack": 971,
+      "test_unknown": 42,
+      "test_total": 3513
+    },
+    "known_class_macro_f1_no_reject": 0.9895130441058173,
+    "known_class_macro_f1_reference_scope": 0.9895130441058173,
+    "misclassification_no_reject": {
+      "n_unknown_windows": 42,
+      "counts": {
+        "Botnet": 0,
+        "BruteForce": 0,
+        "DDoS": 2,
+        "DoS": 4,
+        "Normal": 1,
+        "Probe": 0,
+        "WebAttack": 35
+      },
+      "fractions": {
+        "Botnet": 0.0,
+        "BruteForce": 0.0,
+        "DDoS": 0.047619047619047616,
+        "DoS": 0.09523809523809523,
+        "Normal": 0.023809523809523808,
+        "Probe": 0.0,
+        "WebAttack": 0.8333333333333334
+      },
+      "mean_max_softmax": 0.7913290858268738,
+      "fraction_high_confidence": 0.2857142857142857,
+      "top1_target": "WebAttack",
+      "top1_fraction": 0.8333333333333334
+    },
+    "ood": {
+      "msp": {
+        "available": true,
+        "definition": "1 - max softmax",
+        "direction": "多分类最大概率越低 → 分数越高 → 越可能是未知",
+        "auroc_unknown_vs_normal": 0.9906380952380952,
+        "auroc_unknown_vs_known": 0.9924133294919811,
+        "auroc_unknown_vs_known_attack": 0.9969839635133148,
+        "mean_score": {
+          "normal": 0.0057858653545379635,
+          "known_attack": 0.0011182531146629955,
+          "unknown": 0.20867088862827846
+        },
+        "budgets": {
+          "0.01": {
+            "budget": 0.01,
+            "threshold": 0.10129749774932861,
+            "val_fpr": 0.009819967266775777,
+            "val_known_attack_reject_rate": 0.002607561929595828,
+            "test_fpr_on_normal": 0.0096,
+            "udr_unknown_detected": 0.7142857142857143,
+            "n_unknown_detected": 30,
+            "known_attack_false_reject_rate": 0.0010298661174047373,
+            "known_class_macro_f1_after_reject": 0.9927233340536196,
+            "known_class_macro_f1_drop": -0.0032102899478022584,
+            "known_class_recall_after_reject": {
+              "Botnet": 1.0,
+              "BruteForce": 1.0,
+              "DDoS": 0.9956896551724138,
+              "DoS": 1.0,
+              "Normal": 0.9852,
+              "Probe": 1.0,
+              "WebAttack": 1.0
+            }
+          },
+          "0.001": {
+            "budget": 0.001,
+            "threshold": 0.4641295075416565,
+            "val_fpr": 0.0008183306055646482,
+            "val_known_attack_reject_rate": 0.0,
+            "test_fpr_on_normal": 0.0012,
+            "udr_unknown_detected": 0.047619047619047616,
+            "n_unknown_detected": 2,
+            "known_attack_false_reject_rate": 0.0,
+            "known_class_macro_f1_after_reject": 0.989897075556759,
+            "known_class_macro_f1_drop": -0.0003840314509416798,
+            "known_class_recall_after_reject": {
+              "Botnet": 1.0,
+              "BruteForce": 1.0,
+              "DDoS": 1.0,
+              "DoS": 1.0,
+              "Normal": 0.9908,
+              "Probe": 1.0,
+              "WebAttack": 1.0
+            }
+          }
+        }
+      },
+      "entropy": {
+        "available": true,
+        "definition": "熵 H(p)",
+        "direction": "多分类概率分布越平坦 → 熵越大 → 越可能是未知",
+        "auroc_unknown_vs_normal": 0.991752380952381,
+        "auroc_unknown_vs_known": 0.9932296168251225,
+        "auroc_unknown_vs_known_attack": 0.9970330047570006,
+        "mean_score": {
+          "normal": 0.03263488125859408,
+          "known_attack": 0.005560152749974606,
+          "unknown": 0.6996359695365877
+        },
+        "budgets": {
+          "0.01": {
+            "budget": 0.01,
+            "threshold": 0.3823803405761004,
+            "val_fpr": 0.009819967266775777,
+            "val_known_attack_reject_rate": 0.002607561929595828,
+            "test_fpr_on_normal": 0.0108,
+            "udr_unknown_detected": 0.7142857142857143,
+            "n_unknown_detected": 30,
+            "known_attack_false_reject_rate": 0.0020597322348094747,
+            "known_class_macro_f1_after_reject": 0.9928086763235706,
+            "known_class_macro_f1_drop": -0.003295632217753308,
+            "known_class_recall_after_reject": {
+              "Botnet": 1.0,
+              "BruteForce": 1.0,
+              "DDoS": 0.9913793103448276,
+              "DoS": 1.0,
+              "Normal": 0.9844,
+              "Probe": 1.0,
+              "WebAttack": 1.0
+            }
+          },
+          "0.001": {
+            "budget": 0.001,
+            "threshold": 1.0362143093725857,
+            "val_fpr": 0.0008183306055646482,
+            "val_known_attack_reject_rate": 0.0,
+            "test_fpr_on_normal": 0.0012,
+            "udr_unknown_detected": 0.16666666666666666,
+            "n_unknown_detected": 7,
+            "known_attack_false_reject_rate": 0.0010298661174047373,
+            "known_class_macro_f1_after_reject": 0.9901602964205771,
+            "known_class_macro_f1_drop": -0.0006472523147598164,
+            "known_class_recall_after_reject": {
+              "Botnet": 1.0,
+              "BruteForce": 1.0,
+              "DDoS": 0.9956896551724138,
+              "DoS": 1.0,
+              "Normal": 0.9912,
+              "Probe": 1.0,
+              "WebAttack": 1.0
+            }
+          }
+        }
+      },
+      "energy": {
+        "available": true,
+        "definition": "-logsumexp(logits)",
+        "direction": "能量分数 -logsumexp(logits)，越大越可能是未知",
+        "auroc_unknown_vs_normal": 0.9977238095238095,
+        "auroc_unknown_vs_known": 0.9981410599388127,
+        "auroc_unknown_vs_known_attack": 0.999215340101025,
+        "mean_score": {
+          "normal": -6.732746709477954,
+          "known_attack": -9.739916975620778,
+          "unknown": -2.926227161030082
+        },
+        "budgets": {
+          "0.01": {
+            "budget": 0.01,
+            "threshold": -4.2811698667424345,
+            "val_fpr": 0.009819967266775777,
+            "val_known_attack_reject_rate": 0.003911342894393742,
+            "test_fpr_on_normal": 0.0116,
+            "udr_unknown_detected": 1.0,
+            "n_unknown_detected": 42,
+            "known_attack_false_reject_rate": 0.004119464469618949,
+            "known_class_macro_f1_after_reject": 0.9916429255885413,
+            "known_class_macro_f1_drop": -0.002129881482723972,
+            "known_class_recall_after_reject": {
+              "Botnet": 1.0,
+              "BruteForce": 1.0,
+              "DDoS": 0.9870689655172413,
+              "DoS": 1.0,
+              "Normal": 0.9836,
+              "Probe": 0.9920634920634921,
+              "WebAttack": 1.0
+            }
+          },
+          "0.001": {
+            "budget": 0.001,
+            "threshold": -3.0180051477802787,
+            "val_fpr": 0.0008183306055646482,
+            "val_known_attack_reject_rate": 0.0,
+            "test_fpr_on_normal": 0.0012,
+            "udr_unknown_detected": 0.6428571428571429,
+            "n_unknown_detected": 27,
+            "known_attack_false_reject_rate": 0.0010298661174047373,
+            "known_class_macro_f1_after_reject": 0.9901602964205771,
+            "known_class_macro_f1_drop": -0.0006472523147598164,
+            "known_class_recall_after_reject": {
+              "Botnet": 1.0,
+              "BruteForce": 1.0,
+              "DDoS": 0.9956896551724138,
+              "DoS": 1.0,
+              "Normal": 0.9912,
+              "Probe": 1.0,
+              "WebAttack": 1.0
+            }
+          }
+        }
+      }
+    }
+  },
+  "train": {
+    "loaded_from_disk": false,
+    "tag": "openset_nou2r_s0",
+    "seed": 0,
+    "train_seconds": 35.2,
+    "best_epoch": 34,
+    "epochs_run": 40,
+    "n_params": 151369,
+    "best_val_loss": 0.06693577021360397
+  }
+}

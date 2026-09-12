@@ -1,4 +1,4 @@
-/* 实时检测大屏前端逻辑：纯原生 JS + canvas，无任何外部依赖（断网可演示） */
+/* 实时检测大屏 + 迷你 SOC 控制台前端逻辑：纯原生 JS + canvas，无任何外部依赖（断网可演示） */
 "use strict";
 
 const S = {
@@ -22,18 +22,80 @@ const S = {
   timer: null,
 };
 
-const $ = (id) => document.getElementById(id);
+/* ------------------------------------------------------------------ 常量 */
 const MAXBUF = 600;
 const MAXROWS = 60;
 
+const STATUS_REFRESH_MS = 3000;   // 健康状态条刷新周期
+const LEDGER_REFRESH_MS = 2000;   // 审计台账刷新周期
+const FEED_BATCH_MAX = 32;        // 单次推给在线检测接口的最大流记录数
+const ATTACK_HOLD_MS = 4000;      // 攻击态保持时长（无新判定后自动回落）
+const DISPOSAL_HOLD_MS = 30000;   // 处置标记保持时长（真实系统里封禁是持续的）
+const TOPO_FRAME_MS = 33;         // 拓扑动画约 30fps：肉眼流畅、空转 CPU 占用低
+
+const FONT_CN = '"Microsoft YaHei", "PingFang SC", system-ui, sans-serif';
+const FONT_MONO = '"Cascadia Mono", Consolas, Menlo, monospace';
+
+/* ------------------------------------------------------------------ 迷你 SOC 控制台状态 */
+const SOC = {
+  policy: { threshold: 0.5, confirm_windows: 3, action: "observe", dry_run: true },
+  whitelist: [],
+  detector: { ready: null, reason: "", down: false },
+  stats: null,
+  online: [],            // 服务端权威台账（GET /api/alerts）
+  local: [],             // 回放兜底台账（在线检测服务不可用时的降级展示）
+  seen: new Set(),
+  feed: { enabled: true, busy: false, sent: 0, sampled: 0, failures: 0, lastError: "", off: false },
+  lastWin: null,
+  attacker: null,        // {host, cls, p, ip}
+  attackerIP: null,
+  mode: "online",        // online | replay
+  lastLedgerAt: 0,
+  toastTimer: null,
+};
+
+/* 演示拓扑：2 台交换机 + 6 台主机（主机编址 10.0.0.1~10.0.0.6）。
+   数据集本身没有 IP 字段，因此攻击源按「判定类别 → 固定演示地址」映射，
+   同一类别始终落到同一台主机，方便评委对照；在线接口回填的 Src IP 也是这个地址，
+   因此拓扑、审计台账、在线统计三处的源 IP 完全一致、可互相追溯。 */
+const HOSTS = [
+  { id: "h1", ip: "10.0.0.1", sw: 0, role: "管理终端" },
+  { id: "h2", ip: "10.0.0.2", sw: 0, role: "办公主机" },
+  { id: "h3", ip: "10.0.0.3", sw: 0, role: "数据服务" },
+  { id: "h4", ip: "10.0.0.4", sw: 1, role: "Web 服务" },
+  { id: "h5", ip: "10.0.0.5", sw: 1, role: "接入主机" },
+  { id: "h6", ip: "10.0.0.6", sw: 1, role: "接入主机" },
+];
+HOSTS.forEach((h) => {
+  h.attackUntil = 0; h.disposalUntil = 0; h.cls = ""; h.p = 0;
+  h.action = ""; h.executed = false; h.srcIP = ""; h.win = null;
+});
+const HOST_DEFAULT = 4;   // 取不到末位时的兜底主机：h5
+
+const CLASS_TO_IP = {
+  DDoS: "10.0.0.5", DoS: "10.0.0.6", Botnet: "10.0.0.4",
+  BruteForce: "10.0.0.3", Probe: "10.0.0.2", WebAttack: "10.0.0.1", U2R: "10.0.0.1",
+};
+const DEFAULT_ATTACK_IP = "10.0.0.5";
+
+const $ = (id) => document.getElementById(id);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
 /* ------------------------------------------------------------------ 启动 */
 async function boot() {
-  const ov = await fetchJSON("/api/overview");
-  S.overview = ov;
-  if (!ov.ok) {
-    showError(ov.reason || "演示数据未就绪");
+  let ov = null;
+  try {
+    ov = await fetchJSON("/api/overview");
+  } catch (e) {
+    ov = null;
+  }
+  // 先起 SOC 控制台（状态条 / 策略 / 台账 / 拓扑），保证任何一路失败都不影响其它面板
+  bootSocConsole();
+  if (!ov || !ov.ok) {
+    showError((ov && ov.reason) || "演示数据未就绪");
     return;
   }
+  S.overview = ov;
   S.n = ov.n_rows;
   S.thr = ov.threshold || 0.5;
   S.confirm = ov.confirm_windows || 1;
@@ -55,7 +117,8 @@ function showError(msg) {
   const box = document.createElement("div");
   box.className = "error-box";
   box.innerHTML = "<b>演示数据未就绪</b><br>" + msg +
-    "<br><br>请先在项目根目录执行：<code>python run_all.py --smoke</code>（快速）或 <code>python run_all.py</code>（完整）";
+    "<br><br>请先在项目根目录执行：<code>python run_all.py --smoke</code>（快速）或 <code>python run_all.py</code>（完整）" +
+    "<br><br>提示：健康状态条、策略控制台与攻击拓扑仍会尝试连接在线检测接口，可在没有回放数据时照常演示降级行为。";
   document.querySelector(".layout").prepend(box);
 }
 
@@ -102,6 +165,7 @@ function applyBatch(data) {
         S.alarms++;
         if (r.win.true_attack === false) S.falseAlarms++;
         pushAlarm(r);
+        pushLocalLedger(r);
       } else if (!r.win.alarm) {
         S.lastAlarmWin = -1;
       }
@@ -116,6 +180,12 @@ function applyBatch(data) {
   $("progress-bar").style.width = (100 * S.pos / S.n).toFixed(2) + "%";
   $("pos-hint").textContent = `位置 ${S.pos} / ${S.n}（已回放 ${(100 * S.pos / S.n).toFixed(1)}%） · ` +
     `时间轴 ${last ? last.t.toFixed(1) : "0"} 秒 · 窗口长度 ${S.overview.window_size}`;
+  const sbPos = $("sb-pos");
+  if (sbPos) sbPos.textContent = `${S.pos.toLocaleString()} / ${S.n.toLocaleString()}`;
+
+  // 拓扑着色（真实窗口判定）+ 把真实窗口推给在线检测接口
+  topoNoteFromRows(rows);
+  feedRows(rows);
 }
 
 /* ------------------------------------------------------------------ 渲染 */
@@ -225,6 +295,7 @@ async function jumpTo(pos, note) {
   await fetchJSON(`/api/stream?pos=${Math.max(0, pos - 1)}&count=1&threshold=${S.thr}`); // 预热
   setStatus(`运行中 · ${note}`, "");
   if (!S.playing) togglePlay();
+  feedPrime(pos);   // 先把跳转点之前的窗口推给在线服务，避免缓冲区里混着旧位置的数据
   tick();
 }
 
@@ -361,6 +432,8 @@ $("btn-reset").addEventListener("click", () => {
   S.pos = 0; S.buf = []; S.tableRows = []; S.alarms = 0; S.falseAlarms = 0;
   S.attackRows = 0; S.decided = 0; S.correct = 0; S.lastAlarmWin = -1;
   $("alarm-log").innerHTML = "<div class='log-empty'>暂无告警</div>";
+  HOSTS.forEach((h) => { h.attackUntil = 0; h.disposalUntil = 0; h.cls = ""; h.action = ""; });
+  SOC.lastWin = null; SOC.attacker = null;
   renderStats(); drawChart();
   if (!S.playing) togglePlay();
 });
@@ -375,4 +448,893 @@ $("threshold").addEventListener("input", (e) => {
 });
 window.addEventListener("resize", drawChart);
 
+/* ==================================================================================
+   迷你 SOC 控制台
+   ================================================================================== */
+
+/* ---------------------------------------------------------------- 启动控制台 */
+function bootSocConsole() {
+  wireConsole();
+  startTopoLoop();
+  loadPolicy();
+  pollStatus();
+  pollAlerts();
+  setInterval(pollStatus, STATUS_REFRESH_MS);
+  setInterval(pollAlerts, LEDGER_REFRESH_MS);
+}
+
+/* ---------------------------------------------------------------- 3) 服务健康状态条 */
+async function pollStatus() {
+  let snap = null, down = false, reason = "";
+  try {
+    snap = await fetchJSON("/api/stats");
+    SOC.stats = snap;
+    SOC.detector.ready = !!snap.ready;
+    reason = snap.reason || "";
+  } catch (e) {
+    down = true;
+    SOC.detector.ready = false;
+    reason = "";
+  }
+  // /api/health 也带检测服务状态（新增字段，不影响既有 ok/reason）；
+  // 它失败不影响状态条：只作为交叉校验。
+  try {
+    const hp = await fetchJSON("/api/health");
+    if (typeof hp.detector_ready === "boolean") {
+      SOC.detector.ready = hp.detector_ready;
+      if (!hp.detector_ready && hp.detector_reason) reason = hp.detector_reason;
+    }
+  } catch (e) { /* 忽略：健康检查不可用不该阻塞界面 */ }
+  SOC.detector.down = down;
+  SOC.detector.reason = reason || "";
+  SOC.mode = SOC.detector.ready ? "online" : "replay";
+  renderStatusBar();
+  renderLedger();
+  renderPolicyEcho();
+}
+
+function renderStatusBar() {
+  const det = SOC.detector;
+  const box = $("sb-detector");
+  const val = $("sb-detector-v");
+  if (!box || !val) return;
+  if (det.down) {
+    box.className = "sb bad";
+    val.textContent = "检测服务未启动（在线接口不可用）";
+  } else if (det.ready) {
+    box.className = "sb ok";
+    val.textContent = "就绪 · " + ((SOC.stats && SOC.stats.infer_path) || "在线");
+  } else {
+    box.className = "sb warn";
+    val.textContent = "未就绪：" + (det.reason || "缺少模型或预处理产物");
+  }
+  const st = SOC.stats || {};
+  const lat = st.batch_latency_ms || {};
+  $("sb-rows").textContent = st.rows === undefined ? "-" : Number(st.rows).toLocaleString();
+  $("sb-windows").textContent = st.windows === undefined ? "-" : Number(st.windows).toLocaleString();
+  $("sb-alarms").textContent = st.alarms_confirmed === undefined ? "-" : Number(st.alarms_confirmed).toLocaleString();
+  $("sb-latency").textContent = lat.p50 === undefined ? "-" : Number(lat.p50).toFixed(1) + " ms";
+  const f = SOC.feed;
+  if (f.off) $("sb-feed").textContent = "已停止（" + (f.lastError || "在线接口不可用") + "）";
+  else if (!f.enabled) $("sb-feed").textContent = "已关闭";
+  else if (!det.ready) $("sb-feed").textContent = "不可用（服务未就绪）";
+  else $("sb-feed").textContent = "已推送 " + f.sent.toLocaleString() + " 行" + (f.sampled > 0 ? "（抽样 " + f.sampled + "）" : "");
+}
+
+/* ---------------------------------------------------------------- 2) 处置控制台 */
+function wireConsole() {
+  const sl = $("p-threshold");
+  if (sl) sl.addEventListener("input", () => { $("p-threshold-val").textContent = Number(sl.value).toFixed(2); });
+  const btn = $("btn-apply-policy");
+  if (btn) btn.addEventListener("click", applyPolicy);
+  const feed = $("p-feed");
+  if (feed) feed.addEventListener("change", () => {
+    SOC.feed.enabled = feed.checked;
+    SOC.feed.off = false;
+    SOC.feed.failures = 0;
+    renderStatusBar();
+  });
+  const dry = $("p-dryrun");
+  if (dry) dry.addEventListener("change", () => { /* 真正生效要按「应用策略」 */ });
+}
+
+function parseWhitelist(txt) {
+  return String(txt || "").split(/[,，\s;；]+/).map((s) => s.trim()).filter(Boolean);
+}
+
+async function loadPolicy() {
+  try {
+    const p = await fetchJSON("/api/policy");
+    if (p && typeof p === "object" && "threshold" in p) {
+      SOC.policy = Object.assign({}, SOC.policy, p);
+      fillPolicyForm(SOC.policy);
+      renderPolicyEcho();
+    }
+  } catch (e) {
+    setPolicyBadge("读取策略失败", "bad");
+  }
+}
+
+function fillPolicyForm(p) {
+  if ($("p-threshold")) { $("p-threshold").value = Number(p.threshold).toFixed(2); $("p-threshold-val").textContent = Number(p.threshold).toFixed(2); }
+  if ($("p-confirm")) $("p-confirm").value = String(p.confirm_windows);
+  if ($("p-action")) $("p-action").value = String(p.action);
+  if ($("p-dryrun")) $("p-dryrun").checked = !!p.dry_run;
+}
+
+function setPolicyBadge(text, cls) {
+  const b = $("policy-state");
+  if (!b) return;
+  b.textContent = text;
+  b.className = "badge " + (cls || "");
+}
+
+function renderPolicyEcho(extra) {
+  const box = $("policy-echo-box");
+  if (!box) return;
+  const p = SOC.policy;
+  const wl = SOC.whitelist.length ? SOC.whitelist.join(", ") : "（空）";
+  box.innerHTML =
+    `服务端回显策略：阈值 <b>${Number(p.threshold).toFixed(2)}</b> · 连续确认 <b>${p.confirm_windows}</b> 窗口 · ` +
+    `动作 <b>${p.action}</b> · 演练模式 <b>${p.dry_run ? "开启（只出建议）" : "关闭（真正下发）"}</b><br>` +
+    `白名单（本页已提交）：<b>${wl}</b>`;
+  if (extra) box.innerHTML += "<br>" + extra;
+  if (SOC.detector.ready === false) setPolicyBadge("在线服务未就绪", "warn");
+  else setPolicyBadge(p.dry_run ? "演练模式" : "已启用下发", p.dry_run ? "warn" : "ok");
+}
+
+async function applyPolicy() {
+  const body = {
+    threshold: Number($("p-threshold").value),
+    confirm_windows: Number($("p-confirm").value),
+    action: $("p-action").value,
+    whitelist: parseWhitelist($("p-whitelist").value),
+    dry_run: $("p-dryrun").checked,   // 必须是真布尔：服务端对 "false" 字符串会判为 True
+  };
+  try {
+    const r = await fetch("/api/policy", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+    });
+    if (!r.ok) throw new Error("/api/policy → " + r.status);
+    const pol = await r.json();
+    if (!pol || typeof pol !== "object" || !("threshold" in pol)) throw new Error("返回内容异常");
+    SOC.policy = Object.assign({}, SOC.policy, pol);
+    SOC.whitelist = body.whitelist;
+    fillPolicyForm(SOC.policy);
+    renderPolicyEcho(`下发时间 <b>${new Date().toLocaleTimeString()}</b>`);
+    toast("✓ 策略已生效（服务端回显一致）", false);
+  } catch (e) {
+    toast("✗ 策略未生效：" + (e.message || e), true);
+    setPolicyBadge("下发失败", "bad");
+  }
+}
+
+function toast(msg, isErr) {
+  const t = $("policy-toast");
+  if (!t) return;
+  t.textContent = msg;
+  t.className = "toast show" + (isErr ? " err" : "");
+  if (SOC.toastTimer) clearTimeout(SOC.toastTimer);
+  SOC.toastTimer = setTimeout(() => { t.className = "toast" + (isErr ? " err" : ""); }, 4000);
+}
+
+/* ---------------------------------------------------------------- 台账（在线 / 回放兜底） */
+function ledgerKey(a) {
+  return [a.time, a.window_index, a.src_ip, a.pred_class, a.action].join("|");
+}
+
+async function pollAlerts() {
+  try {
+    const list = await fetchJSON("/api/alerts?limit=20");
+    SOC.online = (Array.isArray(list) ? list : []).map((a) => Object.assign({}, a, { _src: "online" }));
+    SOC.online.forEach((a) => SOC.seen.add(ledgerKey(a)));
+    SOC.lastLedgerAt = Date.now();
+    // 反转成「由旧到新」再打标，保证最后落笔的标记属于最新一条告警
+    applyAlertsToTopo(SOC.online.slice(0, 6).slice().reverse());
+  } catch (e) {
+    // 在线台账取不到：保留已有内容，界面靠状态条提示服务状态
+  }
+  renderLedger();
+}
+
+function ingestAlerts(list) {
+  if (!Array.isArray(list) || !list.length) return;
+  let added = 0;
+  list.forEach((a) => {
+    const k = ledgerKey(a);
+    if (SOC.seen.has(k)) return;
+    SOC.seen.add(k);
+    SOC.online.unshift(Object.assign({}, a, { _src: "online", _fresh: true }));
+    added++;
+  });
+  if (!added) return;
+  SOC.online = SOC.online.slice(0, 60);
+  applyAlertsToTopo(list);
+  renderLedger();
+}
+
+/** 回放兜底台账：在线检测服务不可用时，用回放的真实判定显示「谁、何时、依据什么」，
+ *  只是没有「处置执行」信息（那必须由在线服务给出），因此来源列会明确标注。 */
+function pushLocalLedger(row) {
+  const ip = CLASS_TO_IP[row.win.pred] || DEFAULT_ATTACK_IP;
+  const p = SOC.policy;
+  SOC.local.unshift({
+    time: Date.now() / 1000,
+    window_index: row.win.idx,
+    p_attack: row.win.p,
+    pred_class: row.win.pred,
+    src_ip: ip,
+    dst_ip: "10.0.0.1",
+    dst_port: 80,
+    action: p.action,
+    executed: !p.dry_run,
+    rows_covered: [Math.max(0, row.i - ((S.overview && S.overview.window_size) || 16) + 1), row.i],
+    ground_truth: row.win.true || row.true || null,
+    _src: "replay",
+  });
+  SOC.local = SOC.local.slice(0, 60);
+  if (SOC.mode !== "online") renderLedger();
+}
+
+function fmtClock(sec) {
+  try {
+    return new Date(Number(sec) * 1000).toLocaleTimeString();
+  } catch (e) { return "-"; }
+}
+
+function renderLedger() {
+  const tbody = $("ledger-body");
+  if (!tbody) return;
+  const online = SOC.mode === "online";
+  const rows = (online ? SOC.online : SOC.local).slice(0, 20);
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="8" class="l" style="color:#8ba0c0;padding:12px">
+      ${online
+        ? "暂无告警。点击左侧「注入 DDoS / DoS / …」后，在线检测服务的确认告警会实时出现在这里。"
+        : "在线检测服务未就绪：台账将在服务可用后自动切换为服务端审计记录。"}</td></tr>`;
+  } else {
+    tbody.innerHTML = rows.map((a) => {
+      const act = String(a.action || "-");
+      const cls = act === "block" ? "block" : (act === "throttle" ? "throttle" : "observe");
+      const conf = Number(a.p_attack);
+      const bar = clamp(conf * 100, 0, 100).toFixed(0);
+      const rc = Array.isArray(a.rows_covered) && a.rows_covered.length === 2
+        ? `第 ${a.rows_covered[0]}~${a.rows_covered[1]} 条流` : "—";
+      const src = a._src === "replay"
+        ? '<span class="chip replay">回放兜底</span>'
+        : '<span class="chip online">在线服务</span>';
+      const exec = a.executed
+        ? '<span class="chip exec">✔ 已执行</span>'
+        : '<span class="chip dry">演练·未下发</span>';
+      return `<tr class="${a._fresh ? "fresh" : ""}">
+        <td class="l mono">${fmtClock(a.time)}</td>
+        <td class="l mono">${a.src_ip || "—"}</td>
+        <td class="l">${a.pred_class || "—"}</td>
+        <td title="p(异常)=${isFinite(conf) ? conf.toFixed(4) : "-"}">
+          <span class="mini-bar"><i style="width:${bar}%"></i></span>${isFinite(conf) ? conf.toFixed(3) : "-"}</td>
+        <td class="l"><span class="chip ${cls}">${act}</span></td>
+        <td class="l">${exec}</td>
+        <td class="l mono" title="触发窗口 #${a.window_index} 覆盖 ${rc}">#${a.window_index} <span style="color:#8ba0c0">(${rc})</span></td>
+        <td class="l">${src}</td></tr>`;
+    }).join("");
+  }
+  const meta = $("ledger-meta");
+  if (meta) {
+    const src = online ? "在线检测服务（/api/alerts）" : "回放兜底（在线检测服务未就绪）";
+    meta.textContent = `来源：${src} · 共 ${rows.length} 条 · 更新于 ${new Date().toLocaleTimeString()}`;
+  }
+  const note = $("ledger-note");
+  if (note) {
+    note.innerHTML = online
+      ? "台账来自在线检测服务的审计记录（<code>/api/alerts</code>）：每条含时间、源 IP、判定类别、置信度、处置动作、是否执行与触发窗口（服务端窗口序号 + 其覆盖的流记录区间），可逐条回溯。"
+      : "在线检测服务未就绪（<code>/api/detect</code> 不可用）：下表为<b>回放判定兜底</b>，判定类别与置信度仍来自模型真实预测，但「处置动作/是否执行」取自本页策略设置，仅供参考。";
+  }
+  // 清掉一次性高亮标记
+  SOC.online.forEach((a) => { a._fresh = false; });
+}
+
+/* ---------------------------------------------------------------- 1) 攻击拓扑动画 */
+function hostIndexForIP(ip) {
+  const m = /(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/.exec(String(ip || ""));
+  if (!m) return HOST_DEFAULT;              // 拿不到 IP：落到演示攻击源 h5
+  const last = Number(m[4]);
+  if (!last || last > HOSTS.length) return HOST_DEFAULT;  // 超出主机范围：循环用 h5
+  return last - 1;
+}
+
+/** 真实窗口判定 → 主机着色（攻击源变红并脉冲） */
+function topoNoteFromRows(rows) {
+  let lastWin = null;
+  for (const r of rows) {
+    if (!r.win) continue;
+    lastWin = { cls: r.win.pred, p: r.win.p, alarm: r.win.alarm, idx: r.win.idx, i: r.i, truth: r.true };
+    if (!r.win.alarm || r.win.pred === "Normal") continue;
+    const ip = CLASS_TO_IP[r.win.pred] || DEFAULT_ATTACK_IP;
+    const h = HOSTS[hostIndexForIP(ip)];
+    h.cls = r.win.pred;
+    h.p = r.win.p;
+    h.srcIP = h.ip;
+    h.win = r.win.idx;
+    h.attackUntil = nowMs() + ATTACK_HOLD_MS;
+    SOC.attacker = { host: h.id, cls: r.win.pred, p: r.win.p, ip: h.ip, win: r.win.idx };
+    SOC.attackerIP = h.ip;
+  }
+  if (lastWin) SOC.lastWin = lastWin;
+}
+
+/** 真实告警（含处置动作）→ 主机标记（阻断/限速/仅观察） */
+function applyAlertsToTopo(list) {
+  let touched = false;
+  for (const a of list) {
+    if (!a || !a.src_ip) continue;
+    const h = HOSTS[hostIndexForIP(a.src_ip)];
+    h.action = String(a.action || "observe");
+    h.executed = !!a.executed;
+    h.cls = a.pred_class || h.cls;
+    h.p = Number(a.p_attack) || h.p;
+    h.srcIP = a.src_ip;
+    h.disposalUntil = nowMs() + DISPOSAL_HOLD_MS;
+    if (!h.attackUntil) h.attackUntil = nowMs() + ATTACK_HOLD_MS;
+    SOC.attacker = { host: h.id, cls: h.cls, p: h.p, ip: h.ip, win: a.window_index };
+    touched = true;
+  }
+  return touched;
+}
+
+const nowMs = () => (window.performance && performance.now ? performance.now() : Date.now());
+
+const TOPO = { t: 0, phase: {}, last: 0 };
+
+function startTopoLoop() {
+  const loop = (ts) => {
+    requestAnimationFrame(loop);
+    if (document.hidden) { TOPO.last = ts; return; }
+    if (ts - TOPO.last < TOPO_FRAME_MS) return;      // 限帧：约 30fps，空转 CPU 占用低
+    const dt = Math.min((ts - TOPO.last) / 1000, 0.12);
+    TOPO.last = ts;
+    try { drawTopo(dt); } catch (e) { /* 拓扑绘制异常不能影响主流程 */ }
+  };
+  requestAnimationFrame(loop);
+}
+
+function topoBuild(w, h) {
+  const ctrl = { x: w / 2, y: 44, w: clamp(w * 0.27, 208, 330), h: 64 };
+  const sw = [
+    { x: w * 0.28, y: h * 0.50, w: 118, h: 42, name: "交换机 s1" },
+    { x: w * 0.72, y: h * 0.50, w: 118, h: 42, name: "交换机 s2" },
+  ];
+  const hostW = 78, hostH = 52, hostY = h - 40 - hostH / 2;
+  const spread = clamp(w * 0.085, 80, 128);
+  const xs = [sw[0].x - spread, sw[0].x, sw[0].x + spread, sw[1].x - spread, sw[1].x, sw[1].x + spread];
+  HOSTS.forEach((host, i) => {
+    host.w = hostW; host.h = hostH;
+    host.x = clamp(xs[i], hostW / 2 + 8, w - hostW / 2 - 8);
+    host.y = hostY;
+  });
+  const busY = (ctrl.y + ctrl.h / 2 + sw[0].y - sw[0].h / 2) / 2;
+  return { ctrl, sw, busY, hostW, hostH };
+}
+
+function polyLen(pts) {
+  const segs = [];
+  let total = 0;
+  for (let i = 1; i < pts.length; i++) {
+    const dx = pts[i][0] - pts[i - 1][0], dy = pts[i][1] - pts[i - 1][1];
+    const l = Math.hypot(dx, dy) || 1e-6;
+    segs.push(l); total += l;
+  }
+  return { segs, total };
+}
+
+function pointAt(pts, geo, t) {
+  let d = clamp(t, 0, 1) * geo.total;
+  for (let i = 0; i < geo.segs.length; i++) {
+    if (d <= geo.segs[i]) {
+      const k = d / geo.segs[i];
+      const x0 = pts[i][0], y0 = pts[i][1], x1 = pts[i + 1][0], y1 = pts[i + 1][1];
+      return { x: x0 + (x1 - x0) * k, y: y0 + (y1 - y0) * k, ang: Math.atan2(y1 - y0, x1 - x0) };
+    }
+    d -= geo.segs[i];
+  }
+  const n = pts.length - 1;
+  return { x: pts[n][0], y: pts[n][1], ang: 0 };
+}
+
+function strokePath(ctx, pts) {
+  ctx.beginPath();
+  ctx.moveTo(pts[0][0], pts[0][1]);
+  for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+  ctx.stroke();
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  const rr = Math.min(r, w / 2, h / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + rr, y);
+  ctx.lineTo(x + w - rr, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + rr);
+  ctx.lineTo(x + w, y + h - rr);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - rr, y + h);
+  ctx.lineTo(x + rr, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - rr);
+  ctx.lineTo(x, y + rr);
+  ctx.quadraticCurveTo(x, y, x + rr, y);
+  ctx.closePath();
+}
+
+function drawTopo(dt) {
+  const cv = $("topo");
+  if (!cv) return;
+  const dpr = window.devicePixelRatio || 1;
+  const w = Math.max(340, cv.clientWidth || 900);
+  const h = 340;
+  if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) {
+    cv.width = Math.round(w * dpr);
+    cv.height = Math.round(h * dpr);
+  }
+  const ctx = cv.getContext("2d");
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+  TOPO.t += dt;
+  const T = nowMs();
+  const playing = S.playing;
+
+  const G = topoBuild(w, h);
+  const { ctrl, sw, busY } = G;
+
+  // 背景光晕（控制器为中心）
+  const gl = ctx.createRadialGradient(ctrl.x, sw[0].y - 10, 10, ctrl.x, sw[0].y - 10, w * 0.6);
+  gl.addColorStop(0, "rgba(56,189,248,.07)");
+  gl.addColorStop(1, "rgba(56,189,248,0)");
+  ctx.fillStyle = gl;
+  ctx.fillRect(0, 0, w, h);
+
+  // ---------------- 主机状态汇总 ----------------
+  const swAtk = [false, false];
+  HOSTS.forEach((host) => {
+    if (T < host.attackUntil) swAtk[host.sw] = true;
+  });
+  HOSTS.forEach((host) => {
+    // 暂停时冻结衰减，方便停下来讲解现场状态：只保留「最后一台攻击源」，其余按正常节奏回落
+    if (!playing && host.disposalUntil > 0) host.disposalUntil = T + DISPOSAL_HOLD_MS;
+    if (!playing && SOC.attacker && SOC.attacker.host === host.id && host.attackUntil > 0) {
+      host.attackUntil = T + ATTACK_HOLD_MS;
+    }
+  });
+
+  // ---------------- 连线 ----------------
+  const links = [];
+  sw.forEach((s, i) => {
+    const pts = [[s.x, s.y - s.h / 2], [s.x, busY], [ctrl.x, busY], [ctrl.x, ctrl.y + ctrl.h / 2]];
+    links.push({ id: "c-s" + i, pts, geo: polyLen(pts), kind: "trunk", sw: i });
+  });
+  HOSTS.forEach((host, i) => {
+    const s = sw[host.sw];
+    const midY = (host.y - host.h / 2 + s.y + s.h / 2) / 2;
+    const pts = [[host.x, host.y - host.h / 2], [host.x, midY], [s.x, midY], [s.x, s.y + s.h / 2]];
+    links.push({ id: "h" + i, pts, geo: polyLen(pts), kind: "host", host: i });
+  });
+
+  // 攻击态路径（威胁光带）
+  const attacker = SOC.attacker ? HOSTS.find((x) => x.id === SOC.attacker.host) : null;
+  const attacking = attacker && (T < attacker.attackUntil);
+  if (attacking) {
+    const hostLink = links.find((l) => l.kind === "host" && l.host === HOSTS.indexOf(attacker));
+    const trunk = links.find((l) => l.kind === "trunk" && l.sw === attacker.sw);
+    ctx.save();
+    ctx.lineWidth = 7;
+    ctx.strokeStyle = "rgba(239,68,68,.22)";
+    ctx.shadowColor = "rgba(239,68,68,.55)";
+    ctx.shadowBlur = 14;
+    if (hostLink) strokePath(ctx, hostLink.pts);
+    if (trunk) strokePath(ctx, trunk.pts);
+    ctx.restore();
+    ctx.save();
+    ctx.lineWidth = 2.2;
+    ctx.strokeStyle = "rgba(252,165,165,.95)";
+    ctx.setLineDash([9, 7]);
+    ctx.lineDashOffset = -(TOPO.t * 70) % 1000;
+    if (hostLink) strokePath(ctx, hostLink.pts);
+    if (trunk) strokePath(ctx, trunk.pts);
+    ctx.restore();
+  }
+
+  // 普通连线
+  ctx.lineWidth = 1.4;
+  links.forEach((l) => {
+    const hot = l.kind === "trunk" ? swAtk[l.sw] : (T < HOSTS[l.host].attackUntil);
+    ctx.strokeStyle = hot ? "rgba(248,113,113,.45)" : "rgba(139,160,192,.32)";
+    strokePath(ctx, l.pts);
+  });
+
+  // ---------------- 粒子（流速/密度随状态变化） ----------------
+  links.forEach((l) => {
+    const hot = l.kind === "trunk" ? swAtk[l.sw] : (T < HOSTS[l.host].attackUntil);
+    const blocked = l.kind === "host" && HOSTS[l.host].disposalUntil > T && HOSTS[l.host].action === "block" && HOSTS[l.host].executed;
+    const n = hot ? (l.kind === "trunk" ? 14 : 9) : (l.kind === "trunk" ? 5 : 3);
+    const spd = hot ? 0.55 : 0.11;
+    let ph = TOPO.phase[l.id] || 0;
+    ph = (ph + spd * dt) % 1;
+    TOPO.phase[l.id] = ph;
+    if (blocked) return;                       // 已阻断：该链路不再放行流量
+    for (let i = 0; i < n; i++) {
+      const t = (ph + i / n) % 1;
+      const pt = pointAt(l.pts, l.geo, t);
+      const a = 0.35 + 0.45 * Math.sin(Math.PI * t);
+      ctx.beginPath();
+      ctx.fillStyle = hot ? `rgba(255,120,120,${a})` : `rgba(125,211,252,${a})`;
+      ctx.arc(pt.x, pt.y, hot ? 2.4 : 1.7, 0, Math.PI * 2);
+      ctx.fill();
+      if (hot) {
+        ctx.beginPath();
+        ctx.fillStyle = "rgba(239,68,68,.18)";
+        ctx.arc(pt.x, pt.y, 5.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  });
+
+  // 被阻断链路：在链路上画红色禁止标记
+  HOSTS.forEach((host, i) => {
+    const blocked = host.disposalUntil > T && host.action === "block" && host.executed;
+    if (!blocked) return;
+    const l = links.find((x) => x.kind === "host" && x.host === i);
+    if (!l) return;
+    for (const t of [0.35, 0.62]) {
+      const pt = pointAt(l.pts, l.geo, t);
+      drawProhibit(ctx, pt.x, pt.y, 7, "rgba(239,68,68,.85)", 2);
+    }
+  });
+
+  // ---------------- 控制器节点 ----------------
+  drawCtrlNode(ctx, ctrl, T);
+
+  // ---------------- 交换机节点 ----------------
+  sw.forEach((s, i) => {
+    const hot = swAtk[i];
+    ctx.save();
+    roundRect(ctx, s.x - s.w / 2, s.y - s.h / 2, s.w, s.h, 9);
+    ctx.fillStyle = hot ? "rgba(239,68,68,.16)" : "rgba(30,45,74,.85)";
+    ctx.fill();
+    ctx.lineWidth = hot ? 2 : 1.4;
+    ctx.strokeStyle = hot ? "#ef4444" : "#3b82f6";
+    ctx.stroke();
+    ctx.restore();
+    for (let k = 0; k < 4; k++) {   // 端口刻线
+      const px = s.x - s.w / 2 + 14 + k * ((s.w - 28) / 3);
+      ctx.beginPath();
+      ctx.moveTo(px, s.y + s.h / 2);
+      ctx.lineTo(px, s.y + s.h / 2 + 5);
+      ctx.strokeStyle = hot ? "rgba(248,113,113,.8)" : "rgba(125,211,252,.6)";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+    ctx.font = `600 12px ${FONT_CN}`;
+    ctx.fillStyle = hot ? "#fecaca" : "#bfdbfe";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(s.name, s.x, s.y - 3);
+    ctx.font = `10px ${FONT_CN}`;
+    ctx.fillStyle = "rgba(139,160,192,.9)";
+    ctx.fillText("OpenFlow 1.3", s.x, s.y + 11);
+    // 攻击计数徽标
+    const cnt = HOSTS.filter((x) => x.sw === i && (T < x.attackUntil)).length;
+    if (cnt > 0) {
+      ctx.beginPath();
+      ctx.fillStyle = "#ef4444";
+      ctx.arc(s.x + s.w / 2 - 6, s.y - s.h / 2 + 2, 9, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#fff";
+      ctx.font = `600 11px ${FONT_MONO}`;
+      ctx.fillText(String(cnt), s.x + s.w / 2 - 6, s.y - s.h / 2 + 3);
+    }
+  });
+
+  // ---------------- 主机节点 ----------------
+  HOSTS.forEach((host, i) => {
+    const atk = T < host.attackUntil;
+    const disp = host.disposalUntil > T;
+    const blocked = disp && host.action === "block" && host.executed;
+    const suggestBlock = disp && host.action === "block" && !host.executed;
+    const throttle = disp && host.action === "throttle";
+    const observe = disp && host.action === "observe";
+    const white = SOC.whitelist.indexOf(host.ip) >= 0;
+    const x = host.x - host.w / 2, y = host.y - host.h / 2;
+
+    // 脉冲光圈
+    if (atk) {
+      const phase = (TOPO.t % 1.4) / 1.4;
+      for (const off of [0, 0.5]) {
+        const ph = (phase + off) % 1;
+        ctx.beginPath();
+        ctx.strokeStyle = `rgba(239,68,68,${(1 - ph) * 0.55})`;
+        ctx.lineWidth = 2;
+        roundRect(ctx, x - ph * 20, y - ph * 16, host.w + ph * 40, host.h + ph * 32, 12);
+        ctx.stroke();
+      }
+    }
+    // 节点主体
+    ctx.save();
+    if (atk) { ctx.shadowColor = "rgba(239,68,68,.75)"; ctx.shadowBlur = 18; }
+    else if (white) { ctx.shadowColor = "rgba(129,140,248,.5)"; ctx.shadowBlur = 10; }
+    roundRect(ctx, x, y, host.w, host.h, 10);
+    const g = ctx.createLinearGradient(x, y, x, y + host.h);
+    if (blocked || suggestBlock) { g.addColorStop(0, "rgba(71,85,105,.95)"); g.addColorStop(1, "rgba(51,65,85,.95)"); }
+    else if (atk) { g.addColorStop(0, "rgba(127,29,29,.95)"); g.addColorStop(1, "rgba(69,10,10,.95)"); }
+    else { g.addColorStop(0, "rgba(13,37,64,.95)"); g.addColorStop(1, "rgba(12,24,44,.95)"); }
+    ctx.fillStyle = g;
+    ctx.fill();
+    ctx.restore();
+    ctx.lineWidth = atk ? 2.2 : 1.4;
+    ctx.strokeStyle = blocked || suggestBlock ? "#94a3b8"
+      : atk ? "#ef4444" : (throttle ? "#f59e0b" : (white ? "#818cf8" : "#38bdf8"));
+    if (suggestBlock) ctx.setLineDash([5, 4]);
+    roundRect(ctx, x, y, host.w, host.h, 10);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // 主机名 + IP
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.font = `600 13px ${FONT_CN}`;
+    ctx.fillStyle = blocked ? "#cbd5e1" : (atk ? "#fecaca" : "#e0f2fe");
+    ctx.fillText(host.id, host.x, host.y - 9);
+    ctx.font = `10.5px ${FONT_MONO}`;
+    ctx.fillStyle = blocked ? "#94a3b8" : "rgba(186,230,253,.9)";
+    ctx.fillText(host.ip, host.x, host.y + 6);
+    ctx.font = `9.5px ${FONT_CN}`;
+    ctx.fillStyle = "rgba(139,160,192,.85)";
+    ctx.fillText(atk ? "攻击源" : host.role, host.x, host.y + 19);
+
+    // 处置标记
+    if (blocked) {
+      drawProhibit(ctx, x + host.w - 2, y + 3, 13, "#ef4444", 3);
+      drawTag(ctx, host.x, y + host.h + 11, "已阻断", "rgba(239,68,68,.9)", "#fff");
+    } else if (suggestBlock) {
+      drawProhibit(ctx, x + host.w - 2, y + 3, 13, "rgba(248,113,113,.85)", 2);
+      drawTag(ctx, host.x, y + host.h + 11, "建议阻断·演练", "rgba(120,53,15,.9)", "#fed7aa");
+    } else if (throttle) {
+      ctx.beginPath();
+      ctx.strokeStyle = "#f59e0b";
+      ctx.lineWidth = 3;
+      ctx.arc(x + host.w - 4, y + 4, 9, 0, Math.PI * 2);
+      ctx.stroke();
+      drawTag(ctx, host.x, y + host.h + 11, "限速中", "rgba(120,53,15,.9)", "#fde68a");
+    } else if (white) {
+      if (observe) drawBang(ctx, x + host.w - 4, y + 4);
+      drawTag(ctx, host.x, y + host.h + 11, "白名单·不处置", "rgba(49,46,129,.9)", "#c7d2fe");
+    } else if (observe) {
+      drawBang(ctx, x + host.w - 4, y + 4);
+      drawTag(ctx, host.x, y + host.h + 11, "仅观察", "rgba(124,45,18,.9)", "#fed7aa");
+    }
+
+    // 攻击浮标（判定类别 + 概率）
+    if (atk) {
+      const label = `${host.cls || "Attack"} · p=${Number(host.p || 0).toFixed(3)}`;
+      ctx.font = `600 11.5px ${FONT_CN}`;
+      const tw = ctx.measureText(label).width + 16;
+      const bx = clamp(host.x - tw / 2, 6, w - tw - 6);
+      const by = y - 26;
+      ctx.save();
+      ctx.shadowColor = "rgba(239,68,68,.6)";
+      ctx.shadowBlur = 12;
+      roundRect(ctx, bx, by, tw, 19, 9);
+      ctx.fillStyle = "rgba(127,29,29,.96)";
+      ctx.fill();
+      ctx.restore();
+      roundRect(ctx, bx, by, tw, 19, 9);
+      ctx.strokeStyle = "rgba(252,165,165,.9)";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.fillStyle = "#fee2e2";
+      ctx.font = `600 11.5px ${FONT_CN}`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(label, bx + tw / 2, by + 10);
+    }
+  });
+
+  drawTopoHint(attacking ? attacker : null, T);
+}
+
+function drawCtrlNode(ctx, ctrl, T) {
+  const p = SOC.policy;
+  const x = ctrl.x - ctrl.w / 2, y = ctrl.y - ctrl.h / 2;
+  ctx.save();
+  ctx.shadowColor = "rgba(56,189,248,.45)";
+  ctx.shadowBlur = 16;
+  roundRect(ctx, x, y, ctrl.w, ctrl.h, 12);
+  const g = ctx.createLinearGradient(x, y, x, y + ctrl.h);
+  g.addColorStop(0, "rgba(12,74,110,.95)");
+  g.addColorStop(1, "rgba(8,47,73,.95)");
+  ctx.fillStyle = g;
+  ctx.fill();
+  ctx.restore();
+  roundRect(ctx, x, y, ctrl.w, ctrl.h, 12);
+  ctx.strokeStyle = "#22d3ee";
+  ctx.lineWidth = 1.6;
+  ctx.stroke();
+
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.font = `600 13.5px ${FONT_CN}`;
+  ctx.fillStyle = "#e0f2fe";
+  ctx.fillText("控制器 Ryu", ctrl.x, y + 15);
+
+  const wl = SOC.whitelist.length;
+  ctx.font = `10.5px ${FONT_MONO}`;
+  ctx.fillStyle = "rgba(186,230,253,.95)";
+  ctx.fillText(`阈值 ${Number(p.threshold).toFixed(2)} · 确认 ${p.confirm_windows} 窗口 · ${wl} 条白名单`, ctrl.x, y + 34);
+
+  const act = String(p.action);
+  const actColor = act === "block" ? "#fca5a5" : (act === "throttle" ? "#fcd34d" : "#cbd5e1");
+  ctx.font = `600 11px ${FONT_CN}`;
+  ctx.fillStyle = actColor;
+  ctx.fillText(`策略动作 ${act}${p.dry_run ? " · 演练模式（dry_run）" : " · 已启用真实下发"}`, ctrl.x, y + 51);
+
+  // 状态点（就绪 / 未就绪）
+  const det = SOC.detector;
+  const dc = det.down ? "#ef4444" : (det.ready ? "#22c55e" : "#f59e0b");
+  ctx.beginPath();
+  ctx.fillStyle = dc;
+  ctx.shadowColor = dc;
+  ctx.shadowBlur = 10;
+  ctx.arc(x + 12, y + 12, 4, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+}
+
+function drawProhibit(ctx, cx, cy, r, color, lw) {
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.fillStyle = "rgba(15,23,42,.85)";
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = lw;
+  ctx.stroke();
+  ctx.beginPath();
+  const k = r * 0.7071;
+  ctx.moveTo(cx - k, cy + k);
+  ctx.lineTo(cx + k, cy - k);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawBang(ctx, cx, cy) {
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx, cy, 10, 0, Math.PI * 2);
+  ctx.fillStyle = "rgba(251,146,60,.95)";
+  ctx.fill();
+  ctx.fillStyle = "#1f2937";
+  ctx.font = `700 13px ${FONT_MONO}`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText("!", cx, cy + 0.5);
+  ctx.restore();
+}
+
+function drawTag(ctx, cx, cy, text, bg, fg) {
+  ctx.save();
+  ctx.font = `600 10.5px ${FONT_CN}`;
+  const tw = ctx.measureText(text).width + 14;
+  roundRect(ctx, cx - tw / 2, cy - 8, tw, 16, 8);
+  ctx.fillStyle = bg;
+  ctx.fill();
+  ctx.fillStyle = fg;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(text, cx, cy + 1);
+  ctx.restore();
+}
+
+function drawTopoHint(attacker, T) {
+  const el = $("topo-hint");
+  if (!el) return;
+  const w = SOC.lastWin;
+  const p = SOC.policy;
+  const parts = [];
+  parts.push(`数据来源：<code>/api/stream</code> 的窗口判定给主机着色，<code>/api/alerts</code> 的处置动作给节点打标`);
+  if (!w) {
+    parts.push("等待回放数据…");
+  } else {
+    const st = w.alarm ? "告警" : "正常";
+    parts.push(`当前窗口 #${w.idx}：${st}（${w.cls}，p=${Number(w.p).toFixed(3)}）`);
+  }
+  if (attacker) {
+    parts.push(`攻击源 <b>${attacker.ip}</b>（${attacker.id}）判定 ${attacker.cls} p=${Number(attacker.p).toFixed(3)}`);
+  }
+  // 处置摘要优先显示「正在攻击的那台主机」，避免被别的历史标记抢占
+  let acted = (attacker ? HOSTS[hostIndexForIP(attacker.ip)] : null);
+  if (!acted || acted.disposalUntil <= nowMs()) {
+    const marked = HOSTS.filter((h) => h.disposalUntil > nowMs());
+    acted = marked.sort((a, b) => b.disposalUntil - a.disposalUntil)[0];
+  }
+  if (acted) {
+    const ex = acted.action === "block" ? (acted.executed ? "已阻断" : "建议阻断（演练）")
+      : acted.action === "throttle" ? "限速" : "仅观察";
+    parts.push(`处置：<b>${acted.action}</b> → ${ex}（源 ${acted.srcIP || acted.ip}）`);
+  }
+  parts.push(`当前策略：阈值 ${Number(p.threshold).toFixed(2)} / 确认 ${p.confirm_windows} / ${p.action}${p.dry_run ? " / 演练" : ""}`);
+  el.innerHTML = parts.join(" · ");
+}
+
+/* ------------------------------------------------------------------ 回放 → 在线检测服务 */
+async function fetchReplayRows(pos, count) {
+  const d = await fetchJSON(`/api/replay_rows?pos=${Math.max(0, Math.floor(pos))}&count=${Math.max(1, Math.floor(count))}`);
+  if (!d || !d.ok || !Array.isArray(d.rows) || !d.rows.length) {
+    throw new Error((d && d.error) || "/api/replay_rows 无数据");
+  }
+  return d.rows;
+}
+
+async function postDetect(rows, srcIP) {
+  const r = await fetch("/api/detect", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ meta: { src_ip: srcIP, dst_ip: "10.0.0.1", dst_port: 80 }, rows }),
+  });
+  if (r.status === 503) {
+    const j = await r.json().catch(() => ({}));
+    throw new Error(j.error || "在线检测服务未就绪");
+  }
+  if (!r.ok) throw new Error("/api/detect → " + r.status);
+  const det = await r.json();
+  if (det && det.ok === false) throw new Error(det.error || "在线推流失败");
+  return det;
+}
+
+function feedRows(rows) {
+  const f = SOC.feed;
+  if (!f.enabled || f.off || !SOC.detector.ready || !rows || !rows.length) return;
+  const keep = rows.slice(-FEED_BATCH_MAX);
+  f.sampled += rows.length - keep.length;   // 高倍速回放：按批内最近若干条推送
+  feedIndices(keep[0].i, keep.length);
+}
+
+async function feedIndices(pos, count) {
+  const f = SOC.feed;
+  if (f.busy) return;                        // 上一批还在路上，避免请求堆积
+  f.busy = true;
+  try {
+    const rows = await fetchReplayRows(pos, count);
+    const det = await postDetect(rows, SOC.attackerIP || DEFAULT_ATTACK_IP);
+    f.sent += rows.length;
+    f.failures = 0;
+    if (det.stats && det.stats.ready) { SOC.stats = det.stats; renderStatusBar(); }
+    ingestAlerts(det.alerts);
+  } catch (e) {
+    f.lastError = String((e && e.message) || e);
+    f.failures++;
+    if (f.failures >= 3) {                   // 连续失败：自动停止推送并如实提示（不影响其它面板）
+      f.off = true;
+      f.enabled = false;
+      const cb = $("p-feed");
+      if (cb) cb.checked = false;
+    }
+    renderStatusBar();
+  } finally {
+    f.busy = false;
+  }
+}
+
+/** 跳转（注入攻击）时先把跳转点之前的窗口推过去，保证在线服务的滑动缓冲一致 */
+async function feedPrime(pos) {
+  const f = SOC.feed;
+  if (!f.enabled || f.off || !SOC.detector.ready) return;
+  const win = (S.overview && S.overview.window_size) || 16;
+  try {
+    const rows = await fetchReplayRows(Math.max(0, pos - win), win);
+    const det = await postDetect(rows, SOC.attackerIP || DEFAULT_ATTACK_IP);
+    f.sent += rows.length;
+    if (det.stats && det.stats.ready) { SOC.stats = det.stats; renderStatusBar(); }
+    ingestAlerts(det.alerts);
+    f.failures = 0;
+  } catch (e) { /* 预热失败不提示：正常推流阶段会给出状态 */ }
+}
+
+/* ------------------------------------------------------------------ 入口 */
 boot().catch((e) => { console.error(e); showError(String(e)); });

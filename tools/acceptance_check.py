@@ -78,13 +78,13 @@ def check_files(r: Report) -> None:
         "integrations/ryu_guard.py",
         "deploy/README.md", "deploy/cida-detect.service", "deploy/cida-detect.env",
         "deploy/nginx-cida.conf", "deploy/install-windows-service.ps1",
-        "tests/test_core.py", "tests/test_ryu_guard.py",
+        "tests/test_core.py", "tests/test_ryu_guard.py", "tests/test_pcap_tools.py",
         "tools/check_env.py", "tools/smoke_test.py", "tools/predict_cli.py",
         "tools/reevaluate.py", "tools/drift_test.py", "tools/ensemble_eval.py",
         "tools/make_report.py", "tools/fetch_wheel.py", "tools/sanitize_paths.py",
         "tools/operating_point.py", "tools/error_analysis.py", "tools/benchmark_latency.py",
         "tools/controller_simulator.py", "tools/ops_impact.py", "tools/acceptance_check.py",
-        "tools/cross_dataset.py",
+        "tools/cross_dataset.py", "tools/live_demo.py", "tools/openset_eval.py", "tools/pcap_to_flows.py",
         "docs/01_原始代码问题清单.md", "docs/02_实验报告.md", "docs/03_答辩要点与配置清单.md",
         "competition/README.md", "competition/01_开源及第三方资源使用清单.md",
         "competition/02_技术报告.md", "competition/02_技术报告_精简稿.md",
@@ -413,7 +413,60 @@ def check_deployable(r: Report) -> None:
                "未生成 results/cross_dataset.json：需要真实数据集 data/real/insdn/Dataset.csv"
                "（未标注许可证、依规不再分发），公开仓库中默认不生成，不影响交付")
 
-    # 部署样例：环境变量驱动的初始策略必须真的生效（否则 systemd/服务化配置就是摆设）
+    # ---- 开集（未知攻击）检测：实验产物 + 结论是否到位 ----
+    oset = RESULT_DIR / "openset.json"
+    if oset.exists():
+        o = json.loads(oset.read_text(encoding="utf-8"))
+        scen = o.get("scenarios") or {}
+        pooled = o.get("pooled") or {}
+        auroc = pooled.get("auroc_unknown_vs_normal") or {}
+        r.check(len(scen) >= 1, "开集实验已覆盖留出攻击类场景",
+                f"留出场景：{'、'.join(scen.keys())}")
+        r.check(bool(auroc), "开集实验报告了 OOD 分数对未知攻击的可分性（AUROC）",
+                "、".join(f"{k} {float(v):.4f}" if isinstance(v, (int, float)) else str(k)
+                          for k, v in list(auroc.items())[:3]))
+        # 「不做拒识时会怎样」是最有说服力的对照，必须存在
+        per_seed = ((scen.get(list(scen)[0]) or {}).get("per_seed") or []) if scen else []
+        has_misclass = any("misclass" in json.dumps(x, ensure_ascii=False) or
+                           "attribution" in json.dumps(x, ensure_ascii=False) or
+                           "argmax" in json.dumps(x, ensure_ascii=False) for x in per_seed)
+        r.check(has_misclass, "开集实验报告了「不做拒识时的错判分布」（最有说服力的对照）")
+    else:
+        r.warn(False, "开集（未知攻击）检测报告（可选）",
+               f"未生成 {oset}：运行 python tools/openset_eval.py（约 2 分钟）")
+
+    # ---- live_demo：一条命令的实况演示 ----
+    live = RESULT_DIR / "live_demo_incident.md"
+    if live.exists():
+        txt = live.read_text(encoding="utf-8")
+        r.check("检测时延" in txt and "误报" in txt, "实况演示事件报告含关键指标（时延 / 误报）")
+        r.check("dry_run" in txt or "模拟执行" in txt or "策略建议" in txt,
+                "实况演示报告写明了处置的性质（策略建议而非真实下发）")
+        r.check("逐窗口" in txt, "实况演示报告含与离线评估的逐窗口一致性核对")
+    else:
+        r.warn(False, "实况演示事件报告（可选）",
+               f"未生成 {live}：运行 python tools/live_demo.py --speed 0 --no-color")
+
+    # ---- pcap 接入：往返报告 ----
+    pc = RESULT_DIR / "pcap_roundtrip.json"
+    if pc.exists():
+        p = json.loads(pc.read_text(encoding="utf-8"))
+        rt = p.get("roundtrip") or {}
+        tot = int(rt.get("features_total") or 0)
+        per_feat = rt.get("features_exact") or {}
+        n_feat = len(per_feat) if isinstance(per_feat, dict) else 0
+        all_exact = bool(rt.get("features_all_exact")) and n_feat > 0
+        r.check(all_exact and tot > 0,
+                "pcap → 流特征 往返逐位一致（控制器原生字段全部命中）",
+                f"{n_feat} 个特征 × {tot} 条流全部逐位一致；解析回 {rt.get('parsed_flows')} 条流")
+        r.check(int(rt.get("packet_count_exact") or 0) == int(rt.get("parsed_flows") or -1),
+                "报文数与生成清单完全一致（无丢包/多算）",
+                f"packet_count 完全一致 {rt.get('packet_count_exact')}/{rt.get('parsed_flows')}")
+    else:
+        r.warn(False, "pcap 往返一致性报告（可选）",
+               f"未生成 {pc}：运行 python tests/test_pcap_tools.py 与 tools/pcap_to_flows.py")
+
+    # ---- 部署样例：环境变量驱动的初始策略必须真的生效（否则 systemd/服务化配置就是摆设）
     env = dict(os.environ)
     try:
         os.environ.update({"CIDA_POLICY_ACTION": "block", "CIDA_DRY_RUN": "0",

@@ -1,0 +1,322 @@
+{
+ "tool": "tools/pcap_to_flows.py",
+ "version": "1.0",
+ "generated_from": {
+  "raw_stream_rows": 86037,
+  "raw_stream": "data/raw/sdn_stream.csv",
+  "meta": "data/processed_sdn/meta.json",
+  "feature_names": [
+   "datapath_id",
+   "tp_src",
+   "tp_dst",
+   "ip_proto",
+   "icmp_code",
+   "icmp_type",
+   "flow_duration_sec",
+   "flow_duration_nsec",
+   "idle_timeout",
+   "hard_timeout",
+   "flags",
+   "packet_count",
+   "byte_count",
+   "packet_count_per_second",
+   "packet_count_per_nsecond",
+   "byte_count_per_second",
+   "byte_count_per_nsecond"
+  ]
+ },
+ "sample": {
+  "path": "samples/sample_capture.pcap",
+  "bytes": 401738,
+  "sha256_16": "537e3452bbe280f8",
+  "reproducible_sha256_match": true,
+  "n_flows": 800,
+  "n_packets": 3207,
+  "time_resolution": "us",
+  "byte_order": "little",
+  "idle_timeout": 15.0,
+  "hard_timeout": 120.0,
+  "datapath_id": 3,
+  "flags": 1,
+  "flow_guard_sec": 16.0,
+  "skipped_candidates": {
+   "datapath_id_mismatch": 66048,
+   "packet_count_lt_2": 376,
+   "duration_above_hard_timeout": 916,
+   "byte_count_above_mtu": 40,
+   "byte_count_below_min_frame": 107,
+   "spacing_above_idle_timeout": 263
+  }
+ },
+ "roundtrip": {
+  "manifest_flows": 800,
+  "parsed_flows": 800,
+  "features_exact": {
+   "datapath_id": 800,
+   "tp_src": 800,
+   "tp_dst": 800,
+   "ip_proto": 800,
+   "icmp_code": 800,
+   "icmp_type": 800,
+   "flow_duration_sec": 800,
+   "flow_duration_nsec": 800,
+   "idle_timeout": 800,
+   "hard_timeout": 800,
+   "flags": 800,
+   "packet_count": 800,
+   "byte_count": 800,
+   "packet_count_per_second": 800,
+   "packet_count_per_nsecond": 800,
+   "byte_count_per_second": 800,
+   "byte_count_per_nsecond": 800
+  },
+  "features_exact_min": 800,
+  "features_total": 800,
+  "features_all_exact": true,
+  "byte_count_max_abs_dev": 0.4991960299400944,
+  "byte_count_mean_abs_dev": 0.24576419287541526,
+  "byte_count_round_exact": 800,
+  "duration_max_abs_dev_ns": 12858.0,
+  "duration_mean_abs_dev_ns": 749.9075,
+  "duration_max_allowed_ns": 29000.0,
+  "packet_count_exact": 800,
+  "proto_exact": 800,
+  "tcp_udp_ports_exact": 682,
+  "tcp_udp_ports_total": 682,
+  "icmp_flows": 118,
+  "flow_id_match": 800,
+  "class_counts": {
+   "Botnet": 25,
+   "BruteForce": 25,
+   "DDoS": 25,
+   "DoS": 25,
+   "Normal": 407,
+   "Probe": 243,
+   "U2R": 25,
+   "WebAttack": 25
+  }
+ },
+ "self_check": {
+  "n_hard_violations": 0,
+  "n_soft_violations": 0,
+  "checks": [
+   {
+    "name": "速率恒等式：packet_count_per_second ≈ packet_count / duration_sec（duration_sec==0 时按 1 兜底、nsecond 列同理，见口径说明）",
+    "n_violations": 0,
+    "detail": "sec==0 走兜底 694 条，nsec==0 走兜底 0 条"
+   },
+   {
+    "name": "时长字段合法（sec >= 0 且 0 <= nsec < 1e9）",
+    "n_violations": 0,
+    "detail": ""
+   },
+   {
+    "name": "计数非负（packet_count >= 1 且 byte_count >= 1）",
+    "n_violations": 0,
+    "detail": ""
+   },
+   {
+    "name": "全局能量守恒：Σpacket_count == 已解析报文数 且 Σbyte_count == 已解析字节数",
+    "n_violations": 0,
+    "detail": "Σpacket_count=3207 vs 解析报文 3207；Σbyte_count=350402 vs 解析字节 350402"
+   },
+   {
+    "name": "byte_count >= packet_count × 20（最小 IP+TCP 头，物理红线） 且 byte_count <= packet_count × 1514（以太网 MTU 上限）",
+    "n_violations": 0
+   }
+  ],
+  "parse_stats": {
+   "packets_read": 3207,
+   "packets_parsed": 3207,
+   "bytes_parsed": 350402
+  }
+ },
+ "e2e_detection": {
+  "processed_dir": "data/processed_sdn",
+  "model_tag": "sdn_ctrl_s0",
+  "model_path": "./artifacts/sdn_ctrl_s0/model.keras",
+  "window_size": 16,
+  "online_stride": 3,
+  "threshold": 0.5,
+  "confirm_windows": 3,
+  "batch_size": 64,
+  "batches": 13,
+  "rows_pushed": 800,
+  "windows": 261,
+  "alarms": 224,
+  "alarms_confirmed": 198,
+  "by_class": {
+   "DoS": 15,
+   "Normal": 32,
+   "Probe": 149,
+   "BruteForce": 1,
+   "U2R": 1
+  },
+  "rows_without_window": 539,
+  "window_class_accuracy_vs_majority_truth": 0.5555555555555556,
+  "per_class_window_accuracy": {
+   "Botnet": [
+    0,
+    6
+   ],
+   "BruteForce": [
+    0,
+    8
+   ],
+   "DDoS": [
+    0,
+    8
+   ],
+   "DoS": [
+    4,
+    9
+   ],
+   "Normal": [
+    59,
+    135
+   ],
+   "Probe": [
+    80,
+    81
+   ],
+   "U2R": [
+    2,
+    9
+   ],
+   "WebAttack": [
+    0,
+    5
+   ]
+  },
+  "binary": {
+   "tp": 123,
+   "fp": 101,
+   "fn": 7,
+   "tn": 30,
+   "precision": 0.5491071428571429,
+   "recall": 0.9461538461538461,
+   "attack_windows": 130,
+   "normal_windows": 131
+  },
+  "truth_class_counts_flows": {
+   "Botnet": 25,
+   "BruteForce": 25,
+   "DDoS": 25,
+   "DoS": 25,
+   "Normal": 407,
+   "Probe": 243,
+   "U2R": 25,
+   "WebAttack": 25
+  },
+  "infer_path": "tf_direct",
+  "alarm_prob_mean": 0.8282727969348656
+ },
+ "tests": {
+  "n_flows": 200,
+  "n_packets": 1663,
+  "pcap_bytes": 247950,
+  "time_resolution": "us",
+  "byte_order": "little",
+  "class_counts": {
+   "Botnet": 25,
+   "BruteForce": 25,
+   "DDoS": 25,
+   "DoS": 25,
+   "Normal": 25,
+   "Probe": 25,
+   "U2R": 25,
+   "WebAttack": 25
+  },
+  "features_exact": {
+   "datapath_id": 200,
+   "tp_src": 200,
+   "tp_dst": 200,
+   "ip_proto": 200,
+   "icmp_code": 200,
+   "icmp_type": 200,
+   "flow_duration_sec": 200,
+   "flow_duration_nsec": 200,
+   "idle_timeout": 200,
+   "hard_timeout": 200,
+   "flags": 200,
+   "packet_count": 200,
+   "byte_count": 200,
+   "packet_count_per_second": 200,
+   "packet_count_per_nsecond": 200,
+   "byte_count_per_second": 200,
+   "byte_count_per_nsecond": 200
+  },
+  "features_exact_all": 200,
+  "features_total": 200,
+  "byte_count_max_abs_dev_vs_sim": 0.49109048313835046,
+  "duration_max_abs_dev_ns_vs_sim": 12858.0,
+  "duration_tolerance_ns": 29000.0,
+  "flow_id_match": 200,
+  "protos": [
+   1,
+   6,
+   17
+  ],
+  "ns": {
+   "n_flows": 40,
+   "n_packets": 160,
+   "pcap_bytes": 20359,
+   "time_resolution": "us",
+   "byte_order": "little",
+   "class_counts": {
+    "Botnet": 5,
+    "BruteForce": 5,
+    "DDoS": 5,
+    "DoS": 5,
+    "Normal": 5,
+    "Probe": 5,
+    "U2R": 5,
+    "WebAttack": 5
+   },
+   "features_exact": {
+    "datapath_id": 40,
+    "tp_src": 40,
+    "tp_dst": 40,
+    "ip_proto": 40,
+    "icmp_code": 40,
+    "icmp_type": 40,
+    "flow_duration_sec": 40,
+    "flow_duration_nsec": 40,
+    "idle_timeout": 40,
+    "hard_timeout": 40,
+    "flags": 40,
+    "packet_count": 40,
+    "byte_count": 40,
+    "packet_count_per_second": 40,
+    "packet_count_per_nsecond": 40,
+    "byte_count_per_second": 40,
+    "byte_count_per_nsecond": 40
+   },
+   "features_exact_all": 40,
+   "features_total": 40,
+   "byte_count_max_abs_dev_vs_sim": 0.47263565295406806,
+   "duration_max_abs_dev_ns_vs_sim": 3271.0,
+   "duration_tolerance_ns": 6000.0,
+   "flow_id_match": 40,
+   "protos": [
+    1,
+    6,
+    17
+   ]
+  },
+  "test_total": 58,
+  "test_failed": 0,
+  "failures": []
+ },
+ "known_limitations": [
+  "pcap→特征只覆盖控制器原生 17 字段口径（与 CICFlowMeter 的 84 列口径不同）。",
+  "datapath_id / idle_timeout / hard_timeout / flags 这 4 列无法从报文推导，由 CLI 常量填充。",
+  "byte_count 取帧长（整数），仿真源记录的 byte_count 是浮点：物理上无法逐位复现，量化 ≤ 0.5 字节。",
+  "非首片分片不带 L4 头，按策略跳过（与按端口建流表项的数据面一致），其字节不计入 byte_count。",
+  "流时长按首末报文跨度计算；OpenFlow 的 duration 是流表项存活时间，二者语义不同。",
+  "pcapng 只支持读取（SHB/IDB/EPB），不支持写出，也不支持 SPB（无时间戳）。",
+  "样本类分布是选流体积预算的产物，不代表真实网络分布。",
+  "17 字段口径的模型精度上限：宏 F1 0.8441（见 results/summary_sdn_ctrl.md）。",
+  "既有实现注意：artifacts/sdn_ctrl/model.keras 的 mc 头宽度为 2，与 meta.json 的 8 类不一致，经 src/service.py 推送会 IndexError；本报告改用 artifacts/sdn_ctrl_s0（8 类、同样 17 字段口径）。"
+ ]
+}

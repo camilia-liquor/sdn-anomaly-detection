@@ -17,9 +17,10 @@ html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text);
   font-family: system-ui, "Microsoft YaHei", "PingFang SC", sans-serif; font-size: 14px; }
 
 /* ---------- 顶栏 ---------- */
+.topwrap { position: sticky; top: 0; z-index: 20; }
 .topbar { display: flex; justify-content: space-between; align-items: center; gap: 16px;
   padding: 14px 22px; background: linear-gradient(180deg, #0e1729, #0b1120);
-  border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 20; flex-wrap: wrap; }
+  border-bottom: 1px solid var(--border); flex-wrap: wrap; }
 .brand { display: flex; align-items: center; gap: 14px; }
 .logo { font-family: var(--mono); font-weight: 700; letter-spacing: 1px; color: #0b1120;
   background: linear-gradient(135deg, #38bdf8, #22d3ee); padding: 10px 12px; border-radius: 10px; font-size: 13px; }
@@ -119,7 +120,88 @@ tr.attack td { color: #fca5a5; }
 .overlay img { max-width: 96%; max-height: 96%; background: #fff; border-radius: 10px; }
 .error-box { background: rgba(239,68,68,.12); border: 1px solid var(--danger); color: #fecaca;
   border-radius: 10px; padding: 14px 16px; font-size: 13px; grid-column: span 3; }
+
+/* ======================================================================
+   迷你 SOC 控制台新增样式（零外部依赖，全部离线可用）
+   ====================================================================== */
+
+/* ---------- 顶部服务健康状态条 ---------- */
+.statusbar { display: flex; flex-wrap: wrap; gap: 10px 22px; align-items: center;
+  padding: 9px 22px; background: linear-gradient(180deg, #0d1626, #0b1120);
+  border-bottom: 1px solid var(--border); }
+.sb { display: flex; align-items: center; gap: 8px; font-size: 11.5px; color: var(--muted); }
+.sb .k { white-space: nowrap; }
+.sb .v { font-family: var(--mono); font-size: 12.5px; color: var(--text); font-weight: 600;
+  white-space: nowrap; }
+.sb .sdot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex: 0 0 auto; }
+.sb.ok .sdot { background: var(--ok); box-shadow: 0 0 8px var(--ok); }
+.sb.ok .v { color: #86efac; }
+.sb.warn .sdot { background: var(--warn); box-shadow: 0 0 8px var(--warn); }
+.sb.warn .v { color: #fcd34d; }
+.sb.bad .sdot { background: var(--danger); box-shadow: 0 0 8px var(--danger); }
+.sb.bad .v { color: #fca5a5; }
+.sb-wide { margin-left: auto; }
+
+/* ---------- 拓扑图例圆点 ---------- */
+.dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+.dot.normal { background: #38bdf8; box-shadow: 0 0 6px rgba(56,189,248,.8); }
+.dot.attack { background: #ef4444; box-shadow: 0 0 8px rgba(239,68,68,.9); }
+.dot.blocked { background: #94a3b8; }
+.dot.throttle { background: #f59e0b; box-shadow: 0 0 6px rgba(245,158,11,.8); }
+.dot.observe { background: #fb923c; }
+.dot.white { background: #818cf8; box-shadow: 0 0 6px rgba(129,140,248,.8); }
+#topo { height: 340px; }
+
+/* ---------- 处置控制台 ---------- */
+.console { display: grid; grid-template-columns: 340px 1fr; gap: 16px; align-items: start; }
+.policy-box { background: var(--bg-soft); border: 1px solid var(--border); border-radius: 10px;
+  padding: 12px 14px; }
+.policy-box h3, .ledger-box h3 { margin: 0; font-size: 13px; font-weight: 600; letter-spacing: .3px; }
+.policy-box h3 { margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+.badge { font-size: 10.5px; font-family: var(--mono); padding: 2px 7px; border-radius: 999px;
+  background: rgba(148,163,184,.16); color: #cbd5e1; font-weight: 500; }
+.badge.ok { background: rgba(34,197,94,.16); color: #86efac; }
+.badge.warn { background: rgba(245,158,11,.18); color: #fcd34d; }
+.badge.bad { background: rgba(239,68,68,.18); color: #fca5a5; }
+.ctl-row { display: grid; grid-template-columns: 92px 1fr; gap: 8px; align-items: center;
+  margin-bottom: 9px; }
+.ctl-row > label { color: var(--muted); font-size: 11.5px; }
+.ctl-body { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; }
+.ctl-body input[type=range] { flex: 1 1 110px; accent-color: var(--accent); min-width: 0; }
+.ctl-body select, .ctl-body input[type=text] { background: #0d1626; color: var(--text);
+  border: 1px solid var(--border); border-radius: 6px; padding: 5px 7px; font-size: 12px;
+  width: 100%; min-width: 0; }
+.ctl-body .mono { font-family: var(--mono); font-size: 12.5px; min-width: 38px; }
+.tip { color: var(--muted); font-size: 10.5px; }
+.switch { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--text); }
+.switch input { accent-color: var(--accent); }
+.toast { font-size: 11.5px; color: #86efac; opacity: 0; transition: opacity .25s; }
+.toast.show { opacity: 1; }
+.toast.err { color: #fca5a5; }
+.echo { margin-top: 10px; padding-top: 9px; border-top: 1px dashed var(--border);
+  font-size: 11px; color: var(--muted); font-family: var(--mono); line-height: 1.7; word-break: break-all; }
+.echo b { color: #7dd3fc; font-weight: 600; }
+.ledger-box { min-width: 0; }
+.ledger-box .panel-head { margin-bottom: 8px; }
+.ledger-wrap { max-height: 268px; }
+#ledger-table td.mono { font-family: var(--mono); }
+.chip { padding: 1px 7px; border-radius: 999px; font-size: 10.5px; font-family: var(--mono); white-space: nowrap; }
+.chip.block { background: rgba(239,68,68,.18); color: #fca5a5; }
+.chip.throttle { background: rgba(245,158,11,.18); color: #fcd34d; }
+.chip.observe { background: rgba(148,163,184,.18); color: #cbd5e1; }
+.chip.exec { background: rgba(34,197,94,.16); color: #86efac; }
+.chip.dry { background: rgba(148,163,184,.16); color: #cbd5e1; }
+.chip.online { background: rgba(56,189,248,.16); color: #7dd3fc; }
+.chip.replay { background: rgba(129,140,248,.18); color: #c7d2fe; }
+tr.fresh { animation: fresh 1.4s ease-out; }
+@keyframes fresh { from { background: rgba(56,189,248,.28); } to { background: transparent; } }
+.mini-bar { display: inline-block; width: 46px; height: 6px; border-radius: 3px;
+  background: #0a1020; overflow: hidden; vertical-align: middle; margin-right: 6px; }
+.mini-bar > i { display: block; height: 100%; background: linear-gradient(90deg,#b91c1c,#ef4444); }
+
+@media (max-width: 1280px) { .console { grid-template-columns: 1fr; } }
 @media (max-width: 1100px) {
   .layout { grid-template-columns: 1fr; }
   .span-2, .span-3 { grid-column: span 1; }
+  .sb-wide { margin-left: 0; }
 }

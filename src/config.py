@@ -84,6 +84,15 @@ class Config:
     split_group_eval: bool = False   # 是否在随机切分之外，额外做一次"严格按组切分"的对照评估
     keep_port_features: bool = False  # 是否把源/目的端口也当特征（默认丢弃，避免模型记住具体服务端口"作弊"）
 
+    # ---------------- 开集 / 未知攻击检测（留出攻击类）----------------
+    exclude_classes: tuple = ()      # 要从**训练/验证集**里剔除的类别名（测试集仍保留 = 未知攻击）
+    #   ★ 这一项专供开集实验使用：`python tools/openset_eval.py --scenarios U2R Botnet`
+    #     （留空时该工具用它的默认场景）。剔除逻辑实现在工具内部（自己按标签过滤后重建数据集），
+    #     **主流程 prepare_dataset 刻意不读这一项**，因此默认值下从数据生成到训练评估的行为
+    #     与改动前完全一致；`run_all.py --set exclude_classes=...` 不会改变主实验的行为。
+    #     这样做的原因：开集实验要同时改「训练集内容」与「模型输出类别数 + 测试集未知标签」，
+    #     放进 prepare_dataset 会牵动所有既有实验共用的编码器/切分/评估路径，风险远大于收益。
+
     # ---------------- 模型 ----------------
     model_variant: str = "cnn_bilstm"   # cnn_bilstm | cnn | bilstm | mlp  （后三者用于消融实验）
     conv_filters: tuple = (64, 128)
@@ -144,7 +153,7 @@ class Config:
         for k, v in (data or {}).items():
             if k not in known:
                 continue
-            if k in {"conv_filters", "dense_units", "target_fpr"} and v is not None:
+            if k in {"conv_filters", "dense_units", "target_fpr", "exclude_classes"} and v is not None:
                 v = tuple(v)
             clean[k] = v
         return cls(**clean)

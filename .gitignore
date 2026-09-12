@@ -33,6 +33,7 @@ data/raw_smoke/
 data/processed_smoke/
 data/processed_real*/
 artifacts/*/*.keras
+artifacts/*/*/*.keras
 artifacts/*/*.h5
 artifacts/*.npy
 artifacts/*/*.npy
@@ -45,13 +46,15 @@ results/_smoke/
 # 否则跑一次 `--smoke` 就会把工作区弄脏。
 artifacts/*_smoke*
 results/*_smoke*
-# 各工具的临时/试跑目录（results/_xxx/，例如校准阶梯的冒烟输出）
-results/_*/
+# 各工具的临时/试跑目录（results/_xxx/ 或 results/_xxx.csv，例如校准阶梯与 pcap 抽查的中间产物）
+results/_*
 results/figures_real*/
 results/predictions_cli.csv
 results/summary_backup.json
-# 运行期告警审计台账：每次运行都会追加，属运行日志（其汇总见 results/e2e_controller_report.md）
+# 运行期告警审计台账：每次运行都会追加，属运行日志（其汇总见 results/e2e_controller_report.md /
+# results/live_demo_incident.md）；同目录下的 *.md / *.json 报告才是要交付的产物
 results/audit_alerts*.jsonl
+results/live_demo_audit.jsonl
 logs/
 
 # ---------- 系统杂项 ----------

@@ -7,6 +7,8 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
 </head>
 <body>
+<!-- 顶栏 + 服务健康状态条一起吸顶：既保留回放控制，又让服务状态始终可见 -->
+<div class="topwrap">
 <header class="topbar">
   <div class="brand">
     <div class="logo">SDN·IDS</div>
@@ -17,7 +19,7 @@
   </div>
   <div class="controls">
     <div class="pill" id="status-pill"><span class="dot"></span><span id="status-text">加载中…</span></div>
-    <label class="ctl">阈值 <input type="range" id="threshold" min="0.05" max="0.95" step="0.05" value="0.5" /><span id="threshold-val">0.50</span></label>
+    <label class="ctl">回放阈值 <input type="range" id="threshold" min="0.05" max="0.95" step="0.05" value="0.5" /><span id="threshold-val">0.50</span></label>
     <label class="ctl">速度 <select id="speed">
       <option value="1">1×</option><option value="4">4×</option>
       <option value="10" selected>10×</option><option value="30">30×</option>
@@ -29,7 +31,36 @@
   </div>
 </header>
 
+<!-- 服务健康状态条：检测服务就绪状态 + 在线运行指标（3 秒刷新） -->
+<div class="statusbar" id="statusbar">
+  <div class="sb" id="sb-detector"><span class="sdot"></span><span class="k">检测服务</span><b class="v" id="sb-detector-v">检测中…</b></div>
+  <div class="sb"><span class="k">已处理流记录</span><b class="v" id="sb-rows">-</b></div>
+  <div class="sb"><span class="k">已判定窗口</span><b class="v" id="sb-windows">-</b></div>
+  <div class="sb"><span class="k">确认告警</span><b class="v" id="sb-alarms">-</b></div>
+  <div class="sb"><span class="k">p50 判定时延</span><b class="v" id="sb-latency">-</b></div>
+  <div class="sb"><span class="k">在线推送</span><b class="v" id="sb-feed">-</b></div>
+  <div class="sb sb-wide"><span class="k">回放位置</span><b class="v" id="sb-pos">-</b></div>
+</div>
+</div>
+
 <div class="layout">
+  <!-- 攻击拓扑动画：节点着色与标记全部来自真实判定与真实处置动作 -->
+  <section class="panel span-3">
+    <div class="panel-head">
+      <h2>攻击拓扑与处置态势（真实判定驱动）</h2>
+      <div class="legend">
+        <span class="lg"><i class="dot normal"></i>常态主机</span>
+        <span class="lg"><i class="dot attack"></i>攻击源（脉冲）</span>
+        <span class="lg"><i class="dot blocked"></i>已阻断</span>
+        <span class="lg"><i class="dot throttle"></i>限速</span>
+        <span class="lg"><i class="dot observe"></i>仅观察</span>
+        <span class="lg"><i class="dot white"></i>白名单</span>
+      </div>
+    </div>
+    <canvas id="topo" height="340"></canvas>
+    <div class="hint" id="topo-hint">正在等待回放数据…</div>
+  </section>
+
   <!-- 左：实时曲线 + 流量流水 -->
   <section class="panel span-2">
     <div class="panel-head">
@@ -53,6 +84,96 @@
     </div>
     <div class="prob-bars" id="prob-bars"></div>
     <div class="kv" id="win-meta"></div>
+  </section>
+
+  <!-- 处置控制台：策略控制（在线调参）+ 告警审计台账（每条可追溯） -->
+  <section class="panel span-3">
+    <div class="panel-head">
+      <h2>处置控制台 · 策略下发与告警审计台账（每条可追溯）</h2>
+      <span class="hint" id="policy-echo">在线接口：/api/policy · /api/alerts · /api/stats</span>
+    </div>
+    <div class="console">
+      <div class="policy-box">
+        <h3>策略控制 <span class="badge" id="policy-state">读取中…</span></h3>
+        <div class="ctl-row">
+          <label for="p-threshold">判定阈值</label>
+          <div class="ctl-body">
+            <input type="range" id="p-threshold" min="0.10" max="0.99" step="0.01" value="0.50" />
+            <b class="mono" id="p-threshold-val">0.50</b>
+          </div>
+        </div>
+        <div class="ctl-row">
+          <label for="p-confirm">连续确认次数</label>
+          <div class="ctl-body">
+            <select id="p-confirm">
+              <option value="1">1 个窗口</option><option value="2">2 个窗口</option>
+              <option value="3" selected>3 个窗口</option><option value="4">4 个窗口</option>
+              <option value="5">5 个窗口</option>
+            </select>
+            <span class="tip">连续 N 个窗口都超阈值才确认告警</span>
+          </div>
+        </div>
+        <div class="ctl-row">
+          <label for="p-action">处置动作</label>
+          <div class="ctl-body">
+            <select id="p-action">
+              <option value="observe">observe · 仅观察</option>
+              <option value="throttle">throttle · 限速</option>
+              <option value="block">block · 阻断</option>
+            </select>
+            <span class="tip">对确认告警给出的处置</span>
+          </div>
+        </div>
+        <div class="ctl-row">
+          <label for="p-whitelist">白名单</label>
+          <div class="ctl-body">
+            <input type="text" id="p-whitelist" placeholder="10.0.0.1, 10.0.0.2（逗号分隔源 IP）" />
+          </div>
+        </div>
+        <div class="ctl-row">
+          <label for="p-dryrun">演练模式</label>
+          <div class="ctl-body">
+            <label class="switch"><input type="checkbox" id="p-dryrun" checked /><span>dry_run：只产出建议，不真正下发</span></label>
+          </div>
+        </div>
+        <div class="ctl-row">
+          <label for="p-feed">回放联动</label>
+          <div class="ctl-body">
+            <label class="switch"><input type="checkbox" id="p-feed" checked /><span>把回放窗口实时推给 <code>/api/detect</code></span></label>
+          </div>
+        </div>
+        <div class="ctl-row">
+          <label></label>
+          <div class="ctl-body">
+            <button id="btn-apply-policy" class="btn primary">应用策略</button>
+            <span class="toast" id="policy-toast"></span>
+          </div>
+        </div>
+        <div class="echo" id="policy-echo-box">正在读取当前策略…</div>
+      </div>
+
+      <div class="ledger-box">
+        <div class="panel-head">
+          <h3>告警审计台账（每条可追溯）</h3>
+          <span class="hint" id="ledger-meta">等待数据…</span>
+        </div>
+        <div class="table-wrap ledger-wrap">
+          <table id="ledger-table">
+            <thead>
+              <tr>
+                <th class="l">时间</th><th class="l">源 IP</th><th class="l">判定类别</th>
+                <th>置信度</th><th class="l">处置动作</th><th class="l">已执行</th>
+                <th class="l" title="在线检测服务的窗口序号（服务端计数器），括号内为该窗口覆盖的流记录区间">触发窗口（服务端）</th><th class="l">来源</th>
+              </tr>
+            </thead>
+            <tbody id="ledger-body"></tbody>
+          </table>
+        </div>
+        <div class="hint" id="ledger-note">
+          台账来自在线检测服务的审计记录（<code>/api/alerts</code>）；每条含时间、源 IP、判定类别、置信度、处置动作、是否执行与触发窗口，可回溯到具体窗口与流记录区间。
+        </div>
+      </div>
+    </div>
   </section>
 
   <section class="panel">

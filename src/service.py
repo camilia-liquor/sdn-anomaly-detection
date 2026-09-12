@@ -300,6 +300,26 @@ class DetectionService:
             return "observe"
         return self.policy.action
 
+    def reset_stream(self, reason: str = "") -> dict:
+        """清空滑窗缓冲与连续告警计数（**数据中断/换流后的正确做法**）。
+
+        为什么必须有这个方法：滑窗是"连续 T 条流记录"的语义，一旦上游数据出现**中断或换段**
+        （控制器重连、采集重启、回放跳转、日志分段），把中断前后的行拼进同一个窗口就会生成
+        **现实中不存在的窗口**——它既不是真实相邻流量，也不属于任何一次离线评估。
+        真机上的对应动作是"给流量打一个断点标记，从断点之后重新积累窗口"。
+        返回清空前的状态，便于审计"这次中断丢掉了多少已积累的行"。
+        """
+        with self.lock:
+            dropped = len(self.buffer)
+            self.buffer.clear()
+            self.stats["alarm_run"] = 0
+            self.stats.setdefault("stream_resets", 0)
+            self.stats["stream_resets"] += 1
+            if reason:
+                LOGGER.warning("流被重置（%s）：丢弃已积累的 %d 条流记录，窗口从头累积", reason, dropped)
+            return {"dropped_rows": int(dropped), "reason": reason,
+                    "stream_resets": int(self.stats["stream_resets"])}
+
     # ------------------------------------------------------------------ 主入口
     def push(self, rows: Iterable[dict], meta: dict | None = None) -> dict:
         """推送一批流记录（按特征名给值的字典），返回逐条结果与告警。

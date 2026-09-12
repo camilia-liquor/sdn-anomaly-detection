@@ -80,7 +80,8 @@ python tools/check_env.py
 python tools/smoke_test.py        # 冒烟：小样本全链路跑通（约 1 分钟，产物写在 _smoke 隔离目录）
 python tests/test_core.py         # 单元测试：10 个用例，覆盖数据切分/窗口/泄漏防护
 python tests/test_ryu_guard.py    # Ryu 适配层行为测试：25 个用例，无需安装 Ryu（见 3.5）
-python tools/acceptance_check.py  # 交付验收：文件齐全性 + 指标复算 + 在线接口真实调用（56 项）
+python tests/test_pcap_tools.py   # pcap 解析往返一致性：58 个用例，无需真实抓包
+python tools/acceptance_check.py  # 交付验收：文件齐全性 + 指标复算 + 在线接口真实调用（64 项）
 ```
 
 ---
@@ -134,14 +135,15 @@ sudo systemctl enable --now cida-detect && journalctl -u cida-detect -f
 .\deploy\install-windows-service.ps1 -ProjectRoot "D:\sdn_demo" -Port 5000
 ```
 
-### 2.2 两种特征口径，按你的数据源选一个
+### 2.2 三种数据来源，按你的环境选一个
 
 这是**上线前最容易踩的坑**：模型的特征列必须和喂进来的字段完全对得上。
 
-| 口径 | 需要的数据 | 预处理产物 | 模型 | 适用场景 |
-|---|---|---|---|---|
-| **`insdn`（84 列）** | CICFlowMeter / CIC-IDS2017 风格完整流特征 | `data/processed` | 主模型 | 有独立流量探针/镜像口，能算出完整流统计量 |
-| **`sdn`（17 列）** | **OpenFlow 流表统计字段**（`packet_count`/`byte_count`/`flow_duration`/`tp_src`…），控制器可直接取到 | `data/processed_sdn` | `sdn_ctrl` | 只有控制器、没有探针的纯 SDN 环境 |
+| 数据来源 | 需要什么 | 预处理产物 / 模型 | 适用场景 |
+|---|---|---|---|
+| **`insdn`（84 列）** | CICFlowMeter / CIC-IDS2017 风格完整流特征 | `data/processed` + 主模型 | 有独立流量探针/镜像口，能算出完整流统计量 |
+| **控制器原生字段（17 列）** | **OpenFlow 流表统计**（`packet_count`/`byte_count`/`flow_duration`/`tp_src`…），控制器可直接取到 | `data/processed_sdn` + `sdn_ctrl` | 只有控制器、没有探针的纯 SDN 环境 |
+| **真实抓包 pcap（17 列）** | 一段 `tcpdump` 抓包文件，**不需要控制器在场** | 先用 `tools/pcap_to_flows.py` 转成 17 列 CSV，再喂给上面的控制器口径模型 | 离线取证、事后复盘、没有 SDN 控制器的现场 |
 
 ```bash
 # 场景 A：完整流特征（精度最高）
@@ -149,7 +151,23 @@ python app/app.py --port 5000
 
 # 场景 B：控制器原生字段（控制器能自给自足）
 python app/app.py --port 5000 --processed-dir data/processed_sdn --model-tag sdn_ctrl
+
+# 场景 C：从一段抓包开始（离线取证）
+tcpdump -i eth0 -s 0 -w capture.pcap                 # 抓包（或直接用历史 pcap）
+python tools/pcap_to_flows.py --input capture.pcap --output flows.csv
+python tools/predict_cli.py --input flows.csv        # 批量出判定
+# 也可以把 flows.csv 逐条推送进 /api/detect，走与控制器完全相同的在线链路
 ```
+
+> `pcap_to_flows.py` **纯标准库实现、不依赖 scapy**：支持经典 `.pcap`（微秒/纳秒、大小端）
+> 与 `.pcapng`（SHB/IDB/EPB、`if_tsresol` 二进制时基），支持 VLAN/QinQ、RAW IP / LINUX_SLL / LINUX_SLL2
+> （覆盖 `tcpdump -i any` 的 cooked 抓包），按空闲/硬超时切分流（与 OpenFlow 流表项的 idle/hard timeout 等价）。
+> 往返一致性已实测：自造 800 条流的抓包解析回 800 条，**17 个特征 × 800 条流逐位一致**
+> （见 `results/pcap_roundtrip_report.md`、测试 `tests/test_pcap_tools.py` 58 项）。
+>
+> ⚠️ 局限：我们只算这 17 个控制器口径字段，**与 CICFlowMeter 的完整口径（含子流/Bulk/IAT 统计量）不同**，
+> 因此该路径的精度上限就是控制器原生口径的水平（宏 F1 0.8441，见 `results/summary_sdn_ctrl.md`）。
+> 要更高精度仍需完整流特征口径。
 
 > 两种口径的实测差异、以及「字段不够时性能会掉多少、怎么补回来」，
 > 见 `results/summary_sdn_ctrl.md` 与 `results/operating_point_sdn_ctrl.md`；
@@ -282,12 +300,24 @@ ryu-manager integrations/ryu_guard.py --execute --whitelist 10.0.0.1 10.0.0.254 
 ## 4. 无 Ryu 环境下的端到端验证（推荐每次都跑）
 
 ```bash
-# 用真实样本流回放给运行中的检测服务，模拟控制器的完整闭环
+# ① 一条命令看一场攻防（最快建立信心：约 10 秒演完，自动出事件报告）
+python tools/live_demo.py
+python tools/live_demo.py --attack Probe --speed 50   # 换攻击类型 / 调演示节奏
+#   产物：results/live_demo_incident.md（时间线 + 关键指标 + 逐窗口与离线评估的一致性核对）
+
+# ② 用真实样本流回放给运行中的检测服务，模拟控制器的完整闭环
 python tools/controller_simulator.py --rows 3000 --batch 50 --policy block --no-dry-run
 ```
 
+`live_demo.py` 的价值在于**它把"系统在做事"变成肉眼可见的 10 秒**：安静基线 → 攻击爆发 → 告警 →
+处置下发 → 攻击结束 → 风险回落，全程用真实留出测试流、真实判定、真实时间戳。
+它还有一个工程细节值得注意：剧本在"攻击后恢复"阶段有一次位置跳转（等价于上游数据中断），
+此时它会**重置滑窗缓冲**——否则中断前后的行会被拼进同一个窗口，产生现实中不存在的窗口。
+重置后 227 个窗口全部是真实连续窗口，与离线评估逐窗口一致（最大 |Δp| 4.94e-05、判定类别不一致 0）。
+
 产物：
 
+* `results/live_demo_incident.md` —— 事件时间线、检测时延、告警/误报数、处置动作分布；
 * `results/e2e_controller_report.md` / `.json` —— 吞吐、时延分位、告警命中/误报数、处置动作统计；
 * `results/audit_alerts.jsonl` —— 每条告警的完整台账（时间、源 IP、类别、置信度、动作）。
 
