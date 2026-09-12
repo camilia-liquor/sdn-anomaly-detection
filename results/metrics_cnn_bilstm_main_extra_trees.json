@@ -351,6 +351,7 @@
   },
   "online": {
     "threshold": 0.5,
+    "confirm_windows": 3,
     "stream_rows": 21478,
     "stream_hours": 3.0381,
     "min_segment_rows": 16,
@@ -360,15 +361,16 @@
     "n_segments_detected": 24,
     "segment_recall": 1.0,
     "n_segments_missed": 0,
-    "mean_detection_delay_rows": 10.75,
-    "median_detection_delay_rows": 13.0,
-    "mean_detection_delay_sec": 0.01767853895823161,
-    "p95_detection_delay_sec": 0.05762842893600464,
+    "mean_detection_delay_rows": 18.0,
+    "median_detection_delay_rows": 19.0,
+    "mean_detection_delay_sec": 0.033198803663253784,
+    "p95_detection_delay_sec": 0.10948611497879027,
     "false_alarms": 0,
     "false_alarms_per_hour": 0.0,
     "n_windows": 7155,
-    "n_alarmed_windows": 1612,
-    "alarm_rate": 0.22529699510831586
+    "n_alarmed_windows": 1333,
+    "n_raw_alarmed_windows": 1612,
+    "alarm_rate": 0.18630328441649197
   },
   "attention_file": null
 }

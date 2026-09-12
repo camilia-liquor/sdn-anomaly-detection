@@ -1,0 +1,60 @@
+{
+  "tag": "cnn_bilstm_main_s0",
+  "input_shape": [
+    3513,
+    16,
+    71
+  ],
+  "results": [
+    {
+      "batch_size": 1,
+      "repeats": 30,
+      "mean_ms": 49.98161666759794,
+      "p50_ms": 35.85970000131056,
+      "p95_ms": 40.69519999757176,
+      "p99_ms": 453.7142000044696,
+      "windows_per_sec": 20.007356037530485,
+      "per_window_ms": 49.98161666759794,
+      "flows_per_sec": 60.022068112591455,
+      "path": "keras_predict"
+    },
+    {
+      "batch_size": 16,
+      "repeats": 30,
+      "mean_ms": 36.84805333371818,
+      "p50_ms": 36.511300000711344,
+      "p95_ms": 39.740700005495455,
+      "p99_ms": 41.44600000290666,
+      "windows_per_sec": 434.2156112045963,
+      "per_window_ms": 2.303003333357386,
+      "flows_per_sec": 1302.6468336137889,
+      "path": "keras_predict"
+    },
+    {
+      "batch_size": 64,
+      "repeats": 30,
+      "mean_ms": 39.035490000242135,
+      "p50_ms": 38.67589999572374,
+      "p95_ms": 41.98280000127852,
+      "p99_ms": 42.15470000053756,
+      "windows_per_sec": 1639.5336653799661,
+      "per_window_ms": 0.6099295312537834,
+      "flows_per_sec": 4918.600996139899,
+      "path": "keras_predict"
+    },
+    {
+      "batch_size": 256,
+      "repeats": 30,
+      "mean_ms": 52.61914333338306,
+      "p50_ms": 52.52479999762727,
+      "p95_ms": 55.426899998565204,
+      "p99_ms": 56.62950000260025,
+      "windows_per_sec": 4865.149521307133,
+      "per_window_ms": 0.20554352864602757,
+      "flows_per_sec": 14595.4485639214,
+      "path": "keras_predict"
+    }
+  ],
+  "baselines": [],
+  "online_stride": 3
+}

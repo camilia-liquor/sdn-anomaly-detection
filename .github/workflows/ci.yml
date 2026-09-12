@@ -1,0 +1,63 @@
+name: CI
+
+# 持续集成：每次提交自动验证"这份工程还能跑、指标口径没被改坏"。
+# 设计说明：
+#   * core 作业**不安装 TensorFlow**（约 200MB），因此能在 1~2 分钟内跑完，
+#     覆盖数据生成器、数据管线、滑窗、评估口径与演示接口；
+#   * full 作业安装 TensorFlow，跑一次 --smoke 端到端（训练 + 评估 + 出图）。
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  core:
+    name: 数据链路与单元测试（不依赖 TensorFlow）
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: 安装核心依赖（不含 TensorFlow）
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy==1.26.4 pandas==2.1.4 scikit-learn==1.4.2 scipy \
+                      matplotlib==3.8.4 seaborn==0.13.2 joblib==1.3.2 flask==3.0.3
+      - name: 环境自检
+        run: python tools/check_env.py || true   # 缺 TF 属预期，不视为失败
+      - name: 单元测试（10 项）
+        run: python tests/test_core.py
+      - name: 无 TF 全链路自检（数据生成 → 评估 → 出图）
+        run: python tools/smoke_test.py --scale 0.08
+
+  full:
+    name: 端到端快跑（含 TensorFlow 训练）
+    runs-on: ubuntu-latest
+    needs: core
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: 缓存 pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-tf-${{ hashFiles('requirements.txt') }}
+      - name: 安装依赖（含 TensorFlow CPU 版）
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: 端到端快跑（独立目录，不污染正式结果）
+        run: python run_all.py --smoke
+      - name: 上传图表与报告
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-results
+          path: |
+            results/_smoke/
+            results/summary_cnn_bilstm_smoke.md
+          if-no-files-found: warn

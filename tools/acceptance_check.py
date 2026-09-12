@@ -73,11 +73,18 @@ def check_files(r: Report) -> None:
         "src/config.py", "src/traffic_generator.py", "src/data_pipeline.py", "src/model.py",
         "src/train.py", "src/evaluate.py", "src/visualize.py", "src/baselines.py", "src/utils.py",
         "app/app.py", "app/templates/index.html", "app/static/app.js", "app/static/style.css",
+        "tests/test_core.py",
         "tools/check_env.py", "tools/smoke_test.py", "tools/predict_cli.py",
         "tools/reevaluate.py", "tools/drift_test.py", "tools/ensemble_eval.py",
-        "tools/make_report.py", "tools/fetch_wheel.py",
+        "tools/make_report.py", "tools/fetch_wheel.py", "tools/sanitize_paths.py",
+        "tools/operating_point.py", "tools/error_analysis.py", "tools/benchmark_latency.py",
         "docs/01_原始代码问题清单.md", "docs/02_实验报告.md", "docs/03_答辩要点与配置清单.md",
+        "competition/README.md", "competition/01_开源及第三方资源使用清单.md",
+        "competition/02_技术报告.md", "competition/03_作品名称与简介.md",
+        "competition/04_演示视频脚本.md", "competition/05_匿名化与合规自查清单.md",
         "configs/fast.json", "configs/full.json",
+        "LICENSE", "NOTICE", "CONTRIBUTING.md", ".github/workflows/ci.yml",
+        "samples/README.md", "samples/insdn_stream.csv",
     ]
     missing = [p for p in must if not (ROOT / p).exists()]
     r.check(not missing, f"交付文件齐全（{len(must)} 项）", f"缺少：{missing}" if missing else "")

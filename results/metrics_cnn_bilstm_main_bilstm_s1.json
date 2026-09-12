@@ -351,6 +351,7 @@
   },
   "online": {
     "threshold": 0.5,
+    "confirm_windows": 3,
     "stream_rows": 21478,
     "stream_hours": 3.0381,
     "min_segment_rows": 16,
@@ -360,15 +361,16 @@
     "n_segments_detected": 24,
     "segment_recall": 1.0,
     "n_segments_missed": 0,
-    "mean_detection_delay_rows": 7.125,
-    "median_detection_delay_rows": 8.0,
-    "mean_detection_delay_sec": 0.010995646317799887,
-    "p95_detection_delay_sec": 0.04234672784805297,
-    "false_alarms": 11,
-    "false_alarms_per_hour": 3.620677665617979,
+    "mean_detection_delay_rows": 11.625,
+    "median_detection_delay_rows": 14.0,
+    "mean_detection_delay_sec": 0.019371261199315388,
+    "p95_detection_delay_sec": 0.07121692895889283,
+    "false_alarms": 0,
+    "false_alarms_per_hour": 0.0,
     "n_windows": 7155,
-    "n_alarmed_windows": 2147,
-    "alarm_rate": 0.30006988120195666
+    "n_alarmed_windows": 2095,
+    "n_raw_alarmed_windows": 2147,
+    "alarm_rate": 0.29280223619846263
   },
   "attention_file": "<USER_HOME>\\Desktop\\generate_normal_traffic\\artifacts\\attention_cnn_bilstm_main_bilstm_s1.npy"
 }

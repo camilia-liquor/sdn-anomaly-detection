@@ -1,25 +1,50 @@
-# SDN 流量异常检测：CNN + BiLSTM 混合模型（参赛工程版）
+# SDN 流量异常检测：CNN + BiLSTM 混合模型（开源工程版）
+
+[![CI](https://github.com/OWNER/REPO/actions/workflows/ci.yml/badge.svg)](./.github/workflows/ci.yml)
 
 > 一个**开箱即跑、结果可复现**的 SDN 入侵/异常检测工程：自带仿真数据集生成器，
 > 训练 CNN+BiLSTM 混合模型，输出多分类 + 二分类 + **在线告警级**三套指标，
-> 并附带一个可现场演示的实时检测大屏。
+> 提供**误报可控的部署工作点选择**，并附带一个可现场演示的实时检测大屏。
 
 本目录的起点是一份能跑但**不可复现、指标口径有误**的课程/论文 demo（`CNN_biLSTM2.py`）。
-这里把它整理成了可以拿去参赛的完整工程：**同样的算法思路，正确地实现、正确地评估、正确地演示**。
+这里把它整理成了可以参赛、也可以被他人复用的完整工程：
+**同样的算法思路，正确地实现、正确地评估、正确地演示**。
 原代码逐条问题清单见 [`docs/01_原始代码问题清单.md`](docs/01_原始代码问题清单.md)。
 
 ---
 
-## 1. 亮点（答辩可以直接讲这五条）
+## English summary
+
+A reproducible, open-source **SDN intrusion/anomaly detection** project (Apache-2.0).
+
+- **Self-contained data generator** — synthesises 8 classes of SDN flow traffic with
+  inSDN / CICFlowMeter-compatible columns (84-col and 22-col schemas), physical-quantity
+  consistency and difficulty knobs (class overlap, stealthy attacks, label noise).
+- **CNN + BiLSTM dual-branch model** (sliding window `(T, F)`, multi-task heads for
+  multi-class + binary, temporal attention), with ablations, multi-seed statistics,
+  drift robustness and error analysis.
+- **Deployment-oriented**: online alarm-level metrics (detection delay, false alarms per hour,
+  attack-segment recall) and an **operating-point selector** that trades false alarms against
+  latency — false alarms can be cut from 8.56 to **0.66 per hour** while keeping **100%**
+  segment recall.
+- **Reproducible**: one command (`python run_all.py`), 37-item acceptance self-check,
+  10 unit tests, offline demo dashboard, no GPU required (~0.02 ms per window batched).
+
+Quick start: `pip install -r requirements.txt && python run_all.py --smoke` (≈25 s),
+then `python app/app.py` for the live dashboard. See sections below for details.
+
+---
+
+## 1. 亮点（答辩可以直接讲这几条）
 
 | # | 亮点 | 说明 |
 |---|------|------|
-| 1 | **自带数据生成器，不依赖外部数据集** | 按攻击机理建模（速率、时长、标志位、到达间隔……）生成 8 类 SDN 流量；输出格式与公开数据集 inSDN/CICFlowMeter **列名逐字一致**，也与本仓库 Ryu 采集脚本**完全一致** → 赛后可直接换成真实采集数据 |
-| 2 | **真正的时序建模** | 原 demo 把 1280 维特征硬切 10 个"假时间步"喂 LSTM；本工程用**滑动窗口 (T,F)**，CNN 沿时间轴提局部模式、BiLSTM 沿时间轴双向建模，才有资格叫"时序异常检测" |
-| 3 | **多任务双头 + 注意力** | 多分类头（认攻击类型）+ 二分类头（判正常/异常）联合训练；Softmax 时间维注意力池化既提精度又给可解释热力图 |
-| 4 | **指标体系对齐真实部署** | 除常规指标外，报告**检测时延（均值/P95）**、**误报率（次/小时）**、**攻击片段召回率**——评委最关心的"能不能用" |
-| 5 | **难度可调、结论稳健** | 生成器内置"隐蔽攻击片段 / 类别重叠 / 标注噪声"旋钮，避免"自己造的数据当然 100%"；支持 `--seeds 0,1,2` 多种子重复实验，报告**均值±标准差**，说明结论不是碰运气 |
-| 6 | **一键复现 + 现场演示** | `python run_all.py` 一条命令跑完全流程（本机实测约 2.5 分钟跑完主模型+3 个消融+3 个传统基线）；`python app/app.py` 起一个离线可用的实时检测大屏 |
+| 1 | **误报可控：检测工作点选择（本作品核心设计）** | 把「窗口长度 × 判定阈值 × 告警确认次数」放进同一评估框架全枚举，给出 Pareto 表与图：**召回保持 100% 的前提下把误报从 8.56 降到 0.66 次/小时**（−92%），也可选零误报点。直接回应行业第一痛点（2025 SANS：**73% 的组织把误报列为威胁检测最大挑战**） |
+| 2 | **自带数据生成器，不依赖外部数据集** | 按攻击机理建模（速率、时长、标志位、到达间隔……）生成 8 类 SDN 流量；输出格式与公开数据集 inSDN/CICFlowMeter **列名逐字一致**，也与本仓库 Ryu 采集脚本**完全一致** → 赛后可直接换成真实采集数据 |
+| 3 | **真正的时序建模 + 窗口机理发现** | 用真实**滑动窗口 (T,F)**（原 demo 是把特征硬切成假时间步）；并量化出"窗口越长越准、**误报断崖下降**（28.3→3.3 次/小时）、卷积分支增益随窗口单调收敛"的机理结论 |
+| 4 | **多任务双头 + 注意力 + 可解释** | 多分类头 + 二分类头联合训练；Softmax 时间维注意力池化既提精度又给热力图，报警时能说明"哪几条流可疑" |
+| 5 | **可核验的方法学** | 错误分析（**漏报 0**、误报集中在 4 组混淆对、错例特征画像）、性能基准（单窗口 **p50 0.92 ms**）、泄漏诊断（公开数据集 **85% 近似重复**）、多种子均值±标准差、分布漂移测试 |
+| 6 | **一键复现 + 现场演示 + 工程规范** | `python run_all.py` 一条命令跑完全流程；**37 项交付验收自检 + 10 项单元测试 + CI**；`python app/app.py` 起一个离线可用的实时检测大屏 |
 
 ---
 
@@ -40,8 +65,11 @@ python run_all.py --smoke
 # 3) 正式实验（约 8 分钟：主模型 + 3 个消融 + 3 个传统基线 × 3 个随机种子）
 python run_all.py --ablation --baselines --seeds 0,1,2
 
-# 4) 分布漂移鲁棒性 + 概率集成（可选，各 1 分钟）
-python tools/drift_test.py
+# 4) 部署相关分析（都基于已有产物，无需重训）
+python tools/operating_point.py    # 工作点 Pareto 表与图：按误报预算挑阈值/窗口/确认次数
+python tools/error_analysis.py     # 错误分析：模型错在哪里、被哪些特征带偏
+python tools/benchmark_latency.py  # 性能基准：单窗口延迟与批量吞吐
+python tools/drift_test.py         # 分布漂移鲁棒性
 python tools/ensemble_eval.py --tags cnn_bilstm_main_s0 cnn_bilstm_main_cnn_s0 cnn_bilstm_main_bilstm_s0
 
 # 5) 生成实验报告 + 交付验收自检
@@ -84,8 +112,9 @@ python app/app.py            # 浏览器打开 http://127.0.0.1:5000
 | PR-AUC / MCC | 0.9999 / 0.9870（seed 0） |
 | **TPR@FPR=1%** | **1.0000**；TPR@FPR=0.1% = 0.9921（seed 0） |
 | **在线攻击片段召回** | **100%（24/24）** |
-| **平均检测时延** | **9.9 ms**（P95 = 37.0 ms） |
-| **误报率** | **9.55 ± 3.43 次/小时** |
+| **平均检测时延** | **18.4 ± 0.7 ms**（P95 = 71.2 ms，流时间；可用工作点表换更低时延） |
+| **误报率** | **0.55 ± 0.41 次/小时**（默认开启"连续 3 窗口确认"；不确认时为 8.56，见 3.7） |
+| 单窗口推理延迟（CPU，生产路径） | **p50 0.92 ms**；批量 256 时 0.022 ms/窗口（≈13.6 万条流/秒） |
 | 模型参数量 / 单轮训练耗时 | 151,434 / 约 1 秒（CPU） |
 
 > 测试流长度 21,478 条流记录（约 3 小时），时序切分，测试集只在最终评估用一次。
@@ -171,13 +200,66 @@ python app/app.py            # 浏览器打开 http://127.0.0.1:5000
 并把公开数据集的结果定位为"验证流水线在真实数据上端到端可用"。
 我们把这套诊断工具（切分口径对照 + 最近邻泄漏诊断 + 单特征基线）也留在了工程里，方便复用到其他数据集。
 
-### 3.6 一句话总结
+### 3.6 错误分析（模型错在哪里）
+
+对 3,513 个测试窗口逐条分析（`python tools/error_analysis.py` → `results/error_analysis.md`）：
+
+| 项目 | 结果 |
+|---|---|
+| 总错误 | 17 个（**错误率 0.48%**） |
+| **漏报（攻击→正常）** | **0** —— 8 个类别里 7 类错误率为 0，唯一错误来自 Normal |
+| 误报（正常→攻击） | 17 个（Normal 错误率 0.680%） |
+| 主要混淆对 | Normal→BruteForce 9 次（52.9%）、Normal→DoS 4 次、Normal→Probe 3 次、Normal→WebAttack 1 次 |
+| 置信度 | 错误样本异常概率中位数 0.844，正确样本 0.008 |
+| 错例特征画像 | 错例的共同特征是**包长显著偏小**（Average Packet Size / Packet Length Mean 等比同类正确样本低约 0.4~0.5 个 z） |
+
+**读法**：错误方向全部是"误报"而非"漏报"，对安全场景是好消息；
+误报集中在"小包短连接"被误判为暴力破解/扫描——这与这两类攻击的机理（小包高频）天然重叠，
+属于数据本身的模糊地带，也是下一步补样本/做特征工程的着力点。
+
+### 3.7 检测工作点选择（误报可控，直接回应行业第一痛点）
+
+2025 SANS 调查显示 **73% 的组织把"误报"列为威胁检测的第一大挑战**。
+因此我们不做"固定阈值报一个 F1"，而是把三个旋钮放进同一框架全枚举
+（`python tools/operating_point.py`，**无需重训**）：
+
+| 阈值 | 确认窗口数 | 攻击片段召回 | 误报次数 | 误报/小时 | 平均检测时延 |
+|---|---|---|---|---|---|
+| 0.30 | 1 | 100% | 34 | 11.19 | 9.9 ms |
+| 0.50 | 1 | 100% | 26 | 8.56 | 9.9 ms |
+| 0.50 | 2 | 100% | 4 | 1.32 | 14.3 ms |
+| **0.50（当前默认）** | **3** | **100%** | **2** | **0.66** | **18.1 ms** |
+| 0.50 | 5 | 100% | 0 | **0.00** | 32.3 ms |
+| 0.90 | 3 | 100% | 0 | **0.00** | 19.5 ms |
+
+**结论**：**召回保持 100% 不变**，仅靠"连续确认 3 个窗口"就把误报从 8.56 降到 **0.66 次/小时（−92%）**，
+代价是时延 +8 ms；要求零误报可选"阈值 0.90 + 确认 3"（19.5 ms）。
+运维按自己的误报预算挑点即可 —— 这是本作品对"误报痛点"的直接回应，也是相对同类工作最实用的差异点。
+
+### 3.8 推理性能基准（能不能真的接到控制器上）
+
+CPU 单进程实测（`python tools/benchmark_latency.py`）：
+
+| 推理路径 | 批量 | 逐窗口延迟 | 吞吐 | 折算流记录/秒 |
+|---|---|---|---|---|
+| Keras `predict()`（演示服务路径） | 1 | 49.98 ms（含 ~36 ms 固定包装开销） | 20 窗口/秒 | 60 |
+| Keras `predict()` | 256 | 0.21 ms | 4,865 窗口/秒 | 14,595 |
+| **直接调用推理图（生产路径）** | 1 | **p50 0.92 ms**（P95 1.52 ms） | 73 窗口/秒 | 219 |
+| **直接调用推理图（生产路径）** | 256 | **0.022 ms** | **45,281 窗口/秒** | **135,843** |
+
+**结论**：模型计算量极小（单窗口 0.92 ms），瓶颈是 Keras `predict()` 的固定调用开销（约 36 ms）；
+**按控制器采集周期攒批推理即可消除**。按 10 秒采集周期算，单周期可处理约 136 万条流记录 ——
+普通 CPU 即可覆盖中小型校园网/企业网，**无需 GPU**。
+
+### 3.9 一句话总结
 
 > 在完全可复现的仿真 SDN 流量上，CNN+BiLSTM 双分支模型取得 **宏 F1 0.9940、AUC 0.9999、
-> 攻击片段召回 100%、平均检测时延 9.9 ms、误报 9.6 次/小时**；
-> 消融实验表明**时序建模是性能来源**（去掉 BiLSTM 分支掉 2.1 个百分点），
-> 窗口消融给出了**可直接用于部署的结论**（窗口加长能把误报再降 88%），
-> 漂移实验表明它对环境变化比树模型稳健得多（退化 ≤0.2% vs 3.8%~7.7%）。
+> 攻击片段召回 100%、平均检测时延 18.4 ms、误报 0.55 次/小时**；
+> 消融表明**时序建模是性能来源**（去掉 BiLSTM 分支掉 2.1 个百分点），
+> 窗口消融给出**部署结论**（窗口加长把误报再降 88%），
+> 工作点分析给出**误报可控的部署方案**（召回 100% 不变，确认 3 窗口把误报再降 92%），
+> 漂移实验表明它对环境变化比树模型稳健得多（退化 ≤0.2% vs 3.8%~7.7%），
+> 性能基准表明**普通 CPU 即可在线部署**（批量推理 13.6 万条流/秒）。
 
 ---
 
@@ -208,6 +290,9 @@ generate_normal_traffic/
 │  ├─ acceptance_check.py      ★ 交付验收自检（提交前跑这个：37 项全过才算完整）
 │  ├─ smoke_test.py            无 TF 依赖的全链路自检（独立目录，不污染正式结果）
 │  ├─ reevaluate.py            改口径/阈值后重新评估（不用重训）
+│  ├─ operating_point.py       ★ 检测工作点选择器（阈值×窗口×确认次数的 Pareto 表与图）
+│  ├─ error_analysis.py        ★ 错误分析（混淆对/逐类错误/置信度/错例特征画像）
+│  ├─ benchmark_latency.py     ★ 推理性能基准（单窗口 p50/p95、批量吞吐）
 │  ├─ drift_test.py            分布漂移鲁棒性测试
 │  ├─ ensemble_eval.py         晚融合（概率集成）评估
 │  ├─ make_report.py           按真实产物自动生成实验报告

@@ -1,0 +1,139 @@
+{
+  "tag": "cnn_bilstm_main_s0",
+  "n_windows": 3513,
+  "n_wrong": 17,
+  "per_class": [
+    [
+      "Normal",
+      2500,
+      "0.680%",
+      "BruteForce×9"
+    ],
+    [
+      "Botnet",
+      73,
+      "0.000%",
+      ""
+    ],
+    [
+      "BruteForce",
+      150,
+      "0.000%",
+      ""
+    ],
+    [
+      "DDoS",
+      232,
+      "0.000%",
+      ""
+    ],
+    [
+      "DoS",
+      216,
+      "0.000%",
+      ""
+    ],
+    [
+      "Probe",
+      126,
+      "0.000%",
+      ""
+    ],
+    [
+      "U2R",
+      42,
+      "0.000%",
+      ""
+    ],
+    [
+      "WebAttack",
+      174,
+      "0.000%",
+      ""
+    ]
+  ],
+  "top_pairs": [
+    {
+      "y_true_name": "Normal",
+      "y_pred_name": "BruteForce",
+      "n": 9,
+      "conf": 0.75932246
+    },
+    {
+      "y_true_name": "Normal",
+      "y_pred_name": "DoS",
+      "n": 4,
+      "conf": 0.94848212
+    },
+    {
+      "y_true_name": "Normal",
+      "y_pred_name": "Probe",
+      "n": 3,
+      "conf": 0.8362172
+    },
+    {
+      "y_true_name": "Normal",
+      "y_pred_name": "WebAttack",
+      "n": 1,
+      "conf": 0.843861
+    }
+  ],
+  "feature_profile": {
+    "main_confusion_pair": [
+      "Normal",
+      "BruteForce"
+    ],
+    "n_error": 9,
+    "n_correct": 2483,
+    "top_features": [
+      {
+        "feature": "Average Packet Size",
+        "delta_z": -0.4804829955101013,
+        "z_error": -0.43736255168914795,
+        "z_correct": 0.043120432645082474
+      },
+      {
+        "feature": "Packet Length Mean",
+        "delta_z": -0.48020797967910767,
+        "z_error": -0.43708884716033936,
+        "z_correct": 0.04311912879347801
+      },
+      {
+        "feature": "Max Packet Length",
+        "delta_z": -0.4663781225681305,
+        "z_error": -0.41772130131721497,
+        "z_correct": 0.04865681380033493
+      },
+      {
+        "feature": "Fwd Packet Length Max",
+        "delta_z": -0.4421252906322479,
+        "z_error": -0.4054851233959198,
+        "z_correct": 0.03664017096161842
+      },
+      {
+        "feature": "Avg Fwd Segment Size",
+        "delta_z": -0.44209179282188416,
+        "z_error": -0.40543133020401,
+        "z_correct": 0.03666047379374504
+      },
+      {
+        "feature": "Fwd Packet Length Min",
+        "delta_z": -0.4416969120502472,
+        "z_error": -0.40489429235458374,
+        "z_correct": 0.03680260851979256
+      },
+      {
+        "feature": "Fwd Packet Length Mean",
+        "delta_z": -0.4416266679763794,
+        "z_error": -0.40488898754119873,
+        "z_correct": 0.036737680435180664
+      },
+      {
+        "feature": "Packet Length Std",
+        "delta_z": -0.4319784641265869,
+        "z_error": -0.4091997444629669,
+        "z_correct": 0.02277872897684574
+      }
+    ]
+  }
+}

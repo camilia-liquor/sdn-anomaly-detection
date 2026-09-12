@@ -61,21 +61,10 @@
 | 攻击片段数 | 24 |
 | 成功检出片段 | 24 |
 | 片段召回率 | 1.0000 |
-| 平均检测时延 | 0.009942968686421713 秒 |
-| P95 检测时延 | 0.03698328733444213 秒 |
-| 误报次数 | 26 |
-| 误报率 | 8.557965391460678 次/小时 |
-
-## 5. 训练信息
-
-| 项目 | 数值 |
-|---|---|
-| 模型变体 | cnn_bilstm |
-| 参数量 | 151,434 |
-| 实际训练轮数 | 40 |
-| 最优 epoch | 39 |
-| 最优验证损失 | 0.0536 |
-| 训练耗时 | 76.9 秒 |
+| 平均检测时延 | 0.0181346337000529 秒 |
+| P95 检测时延 | 0.07121692895889283 秒 |
+| 误报次数 | 2 |
+| 误报率 | 0.6583050301123599 次/小时 |
 
 ## 6. 消融实验（各结构贡献）
 
@@ -109,15 +98,3 @@
 | random_forest | 0.9337 ± 0.0000 | 0.8767 ± 0.0000 | 0.9252 ± 0.0000 | 0.9983 ± 0.0000 | 1.000 ± 0.000 | 254,718 |
 | extra_trees | 0.9066 ± 0.0000 | 0.8343 ± 0.0000 | 0.8794 ± 0.0000 | 0.9995 ± 0.0000 | 1.000 ± 0.000 | 736,770 |
 | logistic_regression | 0.9835 ± 0.0000 | 0.9739 ± 0.0000 | 0.9710 ± 0.0000 | 0.9992 ± 0.0000 | 1.000 ± 0.000 | 9,096 |
-
-## 7. 图表清单
-
-- `figures\01_class_distribution.png`
-- `figures\02_feature_profiles.png`
-- `figures\04_confusion_matrix_cnn_bilstm_main_s0.png`
-- `figures\05_multiclass_roc_pr_cnn_bilstm_main_s0.png`
-- `figures\06_binary_detection_cnn_bilstm_main_s0.png`
-- `figures\03_training_curves_cnn_bilstm_main_s0.png`
-- `figures\07_online_timeline_cnn_bilstm_main_s0.png`
-- `figures\08_attention_cnn_bilstm_main_s0.png`
-- `figures\09_ablation.png`

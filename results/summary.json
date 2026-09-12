@@ -35,6 +35,7 @@
   },
   "online": {
     "threshold": 0.5,
+    "confirm_windows": 3,
     "stream_rows": 21478,
     "stream_hours": 3.0381,
     "min_segment_rows": 16,
@@ -44,30 +45,18 @@
     "n_segments_detected": 24,
     "segment_recall": 1.0,
     "n_segments_missed": 0,
-    "mean_detection_delay_rows": 6.5,
-    "median_detection_delay_rows": 8.0,
-    "mean_detection_delay_sec": 0.009942968686421713,
-    "p95_detection_delay_sec": 0.03698328733444213,
-    "false_alarms": 26,
-    "false_alarms_per_hour": 8.557965391460678,
+    "mean_detection_delay_rows": 11.0,
+    "median_detection_delay_rows": 14.0,
+    "mean_detection_delay_sec": 0.0181346337000529,
+    "p95_detection_delay_sec": 0.07121692895889283,
+    "false_alarms": 2,
+    "false_alarms_per_hour": 0.6583050301123599,
     "n_windows": 7155,
-    "n_alarmed_windows": 2177,
-    "alarm_rate": 0.3042627533193571
+    "n_alarmed_windows": 2106,
+    "n_raw_alarmed_windows": 2177,
+    "alarm_rate": 0.2943396226415094
   },
-  "train": {
-    "variant": "cnn_bilstm",
-    "tag": "cnn_bilstm_main_s0",
-    "epochs_run": 40,
-    "best_epoch": 38,
-    "best_val_loss": 0.05360386520624161,
-    "final_train_acc": 1.0,
-    "best_val_acc": 0.9960842132568359,
-    "n_params": 151434,
-    "train_seconds": 76.9,
-    "model_path": "<USER_HOME>\\Desktop\\generate_normal_traffic\\artifacts\\cnn_bilstm_main_s0\\model.keras",
-    "model_saved": true,
-    "checkpoint": "<USER_HOME>\\Desktop\\generate_normal_traffic\\artifacts\\cnn_bilstm_main_s0\\best.keras"
-  },
+  "train": null,
   "aggregate": {
     "cnn_bilstm": {
       "n_seeds": 3,
@@ -100,12 +89,12 @@
         "std": 0.0
       },
       "false_alarms_per_hour": {
-        "mean": 9.545422936629217,
-        "std": 3.4311946064845333
+        "mean": 0.5485875250936333,
+        "std": 0.4105253131117255
       },
       "mean_detection_delay_sec": {
-        "mean": 0.010211881664064197,
-        "std": 0.0006313155062058904
+        "mean": 0.018423428138097126,
+        "std": 0.0006972589422126068
       },
       "n_params": {
         "mean": 151434.0,
@@ -143,12 +132,12 @@
         "std": 0.0
       },
       "false_alarms_per_hour": {
-        "mean": 47.3979621680899,
-        "std": 10.76014960252249
+        "mean": 9.984292956704124,
+        "std": 2.705376497233029
       },
       "mean_detection_delay_sec": {
-        "mean": 0.009879098998175727,
-        "std": 0.0005622946320600397
+        "mean": 0.018043206797705755,
+        "std": 0.00034917340129262726
       },
       "n_params": {
         "mean": 65289.0,
@@ -186,12 +175,12 @@
         "std": 0.0
       },
       "false_alarms_per_hour": {
-        "mean": 5.376157745917605,
-        "std": 1.4801700663002353
+        "mean": 0.21943501003745328,
+        "std": 0.31032796725444267
       },
       "mean_detection_delay_sec": {
-        "mean": 0.011334912644492256,
-        "std": 0.0007594680417039309
+        "mean": 0.020332862933476765,
+        "std": 0.001963725476477341
       },
       "n_params": {
         "mean": 95882.0,
@@ -229,12 +218,12 @@
         "std": 0.0
       },
       "false_alarms_per_hour": {
-        "mean": 25.1253086492884,
-        "std": 4.166376887496434
+        "mean": 1.9749150903370793,
+        "std": 0.465491950881664
       },
       "mean_detection_delay_sec": {
-        "mean": 0.01192457808388604,
-        "std": 0.00035003100323360197
+        "mean": 0.022242648733986747,
+        "std": 0.0004100083831905039
       },
       "n_params": {
         "mean": 172169.0,
@@ -276,7 +265,7 @@
         "std": 0.0
       },
       "mean_detection_delay_sec": {
-        "mean": 0.02088091770807902,
+        "mean": 0.03950178623199463,
         "std": 0.0
       },
       "n_params": {
@@ -319,7 +308,7 @@
         "std": 0.0
       },
       "mean_detection_delay_sec": {
-        "mean": 0.01767853895823161,
+        "mean": 0.033198803663253784,
         "std": 0.0
       },
       "n_params": {
@@ -358,11 +347,11 @@
         "std": 0.0
       },
       "false_alarms_per_hour": {
-        "mean": 30.94033641528091,
+        "mean": 2.962372635505619,
         "std": 0.0
       },
       "mean_detection_delay_sec": {
-        "mean": 0.011801769336064657,
+        "mean": 0.01960831880569458,
         "std": 0.0
       },
       "n_params": {
@@ -428,6 +417,7 @@
     "batch_norm": true,
     "use_attention": true,
     "keep_sequence_in_hybrid": true,
+    "online_confirm_windows": 3,
     "epochs": 40,
     "batch_size": 256,
     "learning_rate": 0.001,

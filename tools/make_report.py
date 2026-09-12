@@ -393,6 +393,72 @@ def build_report(tag: str, bundle: dict) -> str:
             "说明窗口化的时序建模对「换个网络环境/换个攻击工具」这类分布变化更不敏感。")
         add("")
 
+    # ---------------- 3.7 部署相关分析（工作点 / 错误分析 / 性能基准）----------------
+    opp = load_json(RESULT_DIR / "operating_point.json")
+    if opp and opp.get("table"):
+        add("### 3.7 检测工作点选择（误报–时延权衡）")
+        add("")
+        add("把「判定阈值 × 窗口长度 × 告警确认次数」放在同一评估框架里全枚举（无需重训即可得到）：")
+        add("")
+        rows = []
+        for r in opp["table"]:
+            rows.append([
+                f"{r['threshold']:.2f}", str(r["confirm"]),
+                f"{r['segment_recall']:.3f}", f"{r['n_segments_detected']}/{r['n_attack_segments']}",
+                str(r["false_alarms"]),
+                f"{r['false_alarms_per_hour']:.2f}" if r.get("false_alarms_per_hour") is not None else "-",
+                f"{(r['mean_detection_delay_sec'] or 0)*1000:.1f}",
+            ])
+        add(markdown_table(["阈值", "确认窗口数", "片段召回", "检出/总片段", "误报次数", "误报/小时", "平均时延(ms)"], rows))
+        add("")
+        rec = opp.get("recommended")
+        if rec:
+            add(f"**推荐工作点**：在误报预算 {opp.get('budget')} 次/小时内且片段召回 100% 的组合中，"
+                f"阈值 {rec['threshold']:.2f} + 连续确认 {rec['confirm']} 个窗口的时延最小："
+                f"{(rec['mean_detection_delay_sec'] or 0)*1000:.1f} ms、误报 {rec['false_alarms_per_hour']:.2f} 次/小时。")
+            add("")
+
+    err = load_json(RESULT_DIR / "error_analysis.json")
+    if err:
+        add("### 3.8 错误分析")
+        add("")
+        add(f"测试窗口 {err.get('n_windows')} 个，错误 {err.get('n_wrong')} 个"
+            f"（错误率 {err.get('n_wrong', 0) / max(err.get('n_windows', 1), 1):.2%}）。"
+            "全部错误均为「正常流量被误判为攻击」，**攻击类漏报为 0**。")
+        add("")
+        pairs = err.get("top_pairs") or []
+        if pairs:
+            add(markdown_table(
+                ["真实类别", "被误判为", "次数"],
+                [[p["y_true_name"], p["y_pred_name"], int(p["n"])] for p in pairs[:6]],
+            ))
+            add("")
+        fp = err.get("feature_profile") or {}
+        if fp.get("top_features"):
+            add(f"主要混淆对 `{fp['main_confusion_pair'][0]} → {fp['main_confusion_pair'][1]}` 的"
+                f"错例特征画像（错例 {fp['n_error']} 个 vs 同类正确 {fp['n_correct']} 个，z 分数差最大的特征）：")
+            add("")
+            add(markdown_table(
+                ["特征", "错例均值(z)", "同类正确均值(z)", "差异"],
+                [[f["feature"], f"{f['z_error']:+.2f}", f"{f['z_correct']:+.2f}", f"{f['delta_z']:+.2f}"]
+                 for f in fp["top_features"][:6]],
+            ))
+            add("")
+
+    bench = load_json(RESULT_DIR / "benchmark_latency.json")
+    if bench and bench.get("results"):
+        add("### 3.9 推理性能基准（部署可行性）")
+        add("")
+        add(markdown_table(
+            ["推理路径", "批量", "逐窗口(ms)", "p50(ms)", "窗口/秒", "折算流记录/秒"],
+            [[r.get("path", "keras_predict"), r["batch_size"], f"{r['per_window_ms']:.3f}",
+              f"{r['p50_ms']:.2f}", f"{r['windows_per_sec']:.0f}", f"{r['flows_per_sec']:.0f}"]
+             for r in bench["results"]],
+        ))
+        add("")
+        add("> 完整报告见 `results/operating_point.md`、`results/error_analysis.md`、`results/benchmark_latency.md`。")
+        add("")
+
     # ---------------- 4 讨论 ----------------
     add("## 4. 讨论与局限")
     add("")

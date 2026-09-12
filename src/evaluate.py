@@ -182,12 +182,32 @@ def multiclass_metrics(y_mc, p_mc, class_names: list[str]) -> dict:
 # ======================================================================================
 # 在线告警级评估
 # ======================================================================================
+def confirm_alarms(alarmed: np.ndarray, confirm: int) -> np.ndarray:
+    """告警确认（去抖）：要求**连续 confirm 个窗口**都超阈值才真正告警。
+
+    confirm=1 表示不确认（原行为）。这是工业界 IDS/EDR 的标准做法：
+    用少量时延换取误报的大幅下降——生产环境里"少打扰"往往比"早几毫秒"更重要。
+    本工程的贡献是把它与**窗口长度、判定阈值**放在同一个评估框架里量化，
+    从而给出可复现的"检测工作点选择"方法（见 tools/operating_point.py）。
+    """
+    alarmed = np.asarray(alarmed, dtype=bool)
+    if confirm <= 1:
+        return alarmed
+    out = np.zeros_like(alarmed)
+    run = 0
+    for i, a in enumerate(alarmed):
+        run = run + 1 if a else 0
+        out[i] = run >= confirm
+    return out
+
+
 def online_alarm_evaluation(
     data: PreparedData,
     p_attack_windows: np.ndarray,
     win_starts: np.ndarray,
     cfg: Config,
     threshold: float | None = None,
+    confirm: int | None = None,
 ) -> dict:
     """在连续测试流上评估"报警行为"：时延、误报率（次/小时）、漏报片段。
 
@@ -223,6 +243,9 @@ def online_alarm_evaluation(
     n_ignored = len(raw_segments) - len(segments)
 
     alarmed = np.asarray(p_attack_windows) >= thr
+    n_confirm = int(confirm if confirm is not None else getattr(cfg, "online_confirm_windows", 1))
+    n_raw_alarms = int(alarmed.sum())
+    alarmed = confirm_alarms(alarmed, n_confirm)
     span_sec = max(float(times[-1] - times[0]), 1e-6)
 
     detected, delays_rows, delays_sec = 0, [], []
@@ -255,6 +278,7 @@ def online_alarm_evaluation(
     hours = span_sec / 3600.0
     return {
         "threshold": thr,
+        "confirm_windows": n_confirm,
         "stream_rows": int(n),
         "stream_hours": round(hours, 4),
         "min_segment_rows": min_len,
@@ -272,6 +296,7 @@ def online_alarm_evaluation(
         "false_alarms_per_hour": float(false_alarms / hours) if hours > 0 else None,
         "n_windows": int(len(win_starts)),
         "n_alarmed_windows": int(alarmed.sum()),
+        "n_raw_alarmed_windows": n_raw_alarms,
         "alarm_rate": float(alarmed.mean()),
     }
 
@@ -304,6 +329,23 @@ def evaluate_model(
     thr_best, _ = best_threshold(data.y_test_bin, p_bin)
     bin_best = binary_metrics(data.y_test_bin, p_bin, thr_best, cfg)
 
+    # 缓存"测试集窗口级预测"，供错误分析与工作点工具复用（不必重跑模型）
+    try:
+        cache = pd.DataFrame({
+            "window_index": np.arange(len(p_mc)),
+            "y_true": data.y_test_mc,
+            "y_true_name": [class_names[i] for i in data.y_test_mc],
+            "y_pred": np.argmax(p_mc, axis=1),
+            "p_attack": np.asarray(p_bin),
+        })
+        cache["y_pred_name"] = [class_names[i] for i in cache["y_pred"].to_numpy()]
+        cache["correct"] = (cache["y_true"] == cache["y_pred"]).astype(int)
+        for i, name in enumerate(class_names):
+            cache[f"p_{name}"] = np.asarray(p_mc)[:, i]
+        cache.to_csv(artifact_dir / f"predictions_windows_{tag}.csv", index=False, encoding="utf-8")
+    except Exception as exc:  # pragma: no cover
+        LOGGER.warning("窗口级预测缓存失败：%s", exc)
+
     LOGGER.info(
         "[%s] 多分类 acc=%.4f macroF1=%.4f | 二分类 AUC=%.4f F1=%.4f (阈值 %.2f) | 最优阈值 %.3f F1=%.4f",
         tag, mc["accuracy"], mc["macro_f1"], binm["roc_auc"], binm["f1"],
@@ -331,6 +373,15 @@ def evaluate_model(
                 data, p_mc_s, p_bin_s, starts, class_names, cfg,
                 artifact_dir / f"predictions_{tag}.csv",
             )
+        # 把在线窗口的异常概率单独存一份，供工作点工具（tools/operating_point.py）枚举阈值/确认次数
+        try:
+            np.savez_compressed(
+                artifact_dir / f"online_scores_{tag}.npz",
+                p_attack=np.asarray(p_bin_s, dtype=np.float32),
+                starts=np.asarray(starts, dtype=np.int64),
+            )
+        except Exception as exc:  # pragma: no cover
+            LOGGER.warning("在线概率缓存失败：%s", exc)
 
     # ---------- 3) 注意力权重（可解释性）----------
     attn_path = None
