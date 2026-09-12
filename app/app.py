@@ -364,14 +364,29 @@ def api_segment(idx: int):
 
 @app.route("/api/first_segment_of/<cls>")
 def api_first_segment_of(cls: str):
-    """按类型注入：返回该攻击类型第一个片段的起点。"""
+    """按类型注入：返回该攻击类型的**代表性片段**起点。
+
+    为什么要按长度挑：测试流里同一类攻击有很多很短的片段（甚至只有 1 条流），
+    如果直接取「第一个」，现场演示很可能跳到一个 1 条流的片段上——曲线刚起跳就结束了，
+    看起来像模型没报出来。这里改为优先返回**长度足够长**（≥ 窗口长度的 2 倍，且取其中最长的一批里
+    时间上最早的一个）的片段，保证「注入 → 曲线爬升 → 告警区间出现」在屏幕上看得清。
+    若该类型没有长片段，则退回该类型最长的那个；再退回第一个。
+    """
     if not STATE.ok:
         return jsonify({"error": STATE.reason}), 400
-    for idx, seg in enumerate(STATE.segments):
-        if seg["class"].lower() == str(cls).lower():
-            pos = max(0, seg["start"] - STATE.window_size)
-            return jsonify({"segment": seg, "index": idx, "pos": int(pos)})
-    return jsonify({"error": f"测试流里没有 {cls} 片段"}), 404
+    want = str(cls).lower()
+    cands = [(i, s) for i, s in enumerate(STATE.segments) if s["class"].lower() == want]
+    if not cands:
+        return jsonify({"error": f"测试流里没有 {cls} 片段"}), 404
+    min_len = max(2 * STATE.window_size, 8)
+    good = [(i, s) for i, s in cands if int(s.get("length") or 0) >= min_len]
+    pool = good or cands
+    # 在「够长」的片段里取最长的（并列时取时间最早的），保证演示效果稳定
+    idx, seg = max(pool, key=lambda t: (int(t[1].get("length") or 0), -int(t[1]["start"])))
+    pos = max(0, int(seg["start"]) - STATE.window_size)
+    return jsonify({"segment": seg, "index": idx, "pos": pos,
+                    "candidates": len(cands), "long_enough": len(good),
+                    "length": int(seg.get("length") or 0)})
 
 
 @app.route("/api/metrics")

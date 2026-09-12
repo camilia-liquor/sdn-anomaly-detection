@@ -40,6 +40,8 @@ artifacts/*/*.joblib
 artifacts/*.npz
 artifacts/_smoke/
 results/_smoke/
+# 各工具的临时/试跑目录（results/_xxx/，例如校准阶梯的冒烟输出）
+results/_*/
 results/figures_real*/
 results/predictions_cli.csv
 results/summary_backup.json
