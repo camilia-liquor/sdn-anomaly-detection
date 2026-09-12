@@ -40,6 +40,11 @@ artifacts/*/*.joblib
 artifacts/*.npz
 artifacts/_smoke/
 results/_smoke/
+# `run_all.py --smoke` 会用 `<tag>_smoke` 后缀把产物写在正式目录里（数据目录已隔离，
+# 但 results/artifacts 是共用的）。这些是每次快跑都会重算的验证产物，不进版本库，
+# 否则跑一次 `--smoke` 就会把工作区弄脏。
+artifacts/*_smoke*
+results/*_smoke*
 # 各工具的临时/试跑目录（results/_xxx/，例如校准阶梯的冒烟输出）
 results/_*/
 results/figures_real*/

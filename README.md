@@ -1,4 +1,4 @@
-﻿# SDN 流量异常检测：CNN + BiLSTM 混合模型（开源工程版）
+# SDN 流量异常检测：CNN + BiLSTM 混合模型（开源工程版）
 
 [![CI](https://github.com/OWNER/REPO/actions/workflows/ci.yml/badge.svg)](./.github/workflows/ci.yml)
 
@@ -108,8 +108,9 @@ python app/app.py            # 浏览器打开 http://127.0.0.1:5000
 > 数据生成 → 预处理 → 评估 → 出图 全流程（约 3 秒）。
 >
 > **快跑/自检不会污染正式结果**：`--smoke` 与 `smoke_test.py` 使用独立的
-> `data/raw_smoke`、`data/processed_smoke`、`results/_smoke/`，也不会改写 `artifacts/main_model.json`，
-> 因此在正式实验之后随时可以再跑一次快跑做验证。
+> `data/raw_smoke`、`data/processed_smoke`、`results/_smoke/`，也不会改写 `artifacts/main_model.json`；
+> 它们产生的 `*_smoke*` 产物已加入 `.gitignore`，所以在正式实验之后随时可以再跑一次快跑做验证，
+> **工作区不会变脏**。
 >
 > **工程质量**：`python tests/test_core.py` 跑 10 项单元测试（生成器物理自洽性、列名自动识别、
 > 行号泄漏回归测试、滑窗纯窗口/多数投票、类别逆频加权、评估口径边界），无需 pytest；
