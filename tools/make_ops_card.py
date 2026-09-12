@@ -197,7 +197,7 @@ def render(d: dict, out: Path) -> Path | None:
     # ---------- 页脚：边界 ----------
     ax.plot([4, 96], [4.6, 4.6], color="#2a3a4a", lw=1.2)
     ax.text(4, 2.0,
-            _L("不要对外承诺：真实交换机上的处置未验证（适配层用桩件测 25 项）｜"
+            _L("不要对外承诺：物理交换机上的处置未验证（真实 Ryu + OF1.3 线协议已实测 16/16）｜"
                "只有控制器字段时精度降至宏 F1 0.844（召回仍 100%，代价是时延 18→41 ms）｜"
                "跨网络零样本迁移不可用；未做长期稳定性/SLA",
                "Not committed: real-switch enforcement untested | controller-native fields drop to 0.844 | "

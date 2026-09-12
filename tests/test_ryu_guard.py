@@ -354,6 +354,36 @@ def test_throttle_falls_back_to_drop(mod, tmpdir: Path) -> None:
               f"hard_timeout={flowmods[0].get('hard_timeout')}")
 
 
+def test_repeated_alerts_are_idempotent(mod, tmpdir: Path) -> None:
+    """防回归：同一条攻击流的连续告警（滑窗会连报十几个窗口）只下发一次规则。
+
+    早期版本的 `self.blocked` 只写不读 —— 一次 60 s 的攻击会往交换机塞进几十条内容
+    完全相同的流表项（真机联调时暴露：10 条告警 = 10 条重复 DROP 规则）。
+    """
+    guard = _make_guard(mod, tmpdir, execute=True)
+    dp = _FakeDatapath()
+    alert = {"src_ip": "10.0.0.99", "pred_class": "DDoS", "p_attack": 0.99, "action": "block"}
+    for _ in range(5):
+        guard._handle_alert(dict(alert), dp)
+    mods = dp.flowmods()
+    check(len(mods) == 1, "5 次连续告警只下发 1 条规则（封禁窗口内幂等）",
+          f"实际下发 {len(mods)} 条")
+    recs = [json.loads(x) for x in
+            Path(guard.audit_path).read_text(encoding="utf-8").strip().splitlines() if x.strip()]
+    recs = [r for r in recs if r.get("src_ip") == "10.0.0.99"]     # 台账文件在用例间复用
+    check(len(recs) == 5 and sum(1 for r in recs if r.get("executed")) == 1
+          and sum(1 for r in recs if r.get("suppressed")) == 4,
+          "台账逐条留痕：5 条告警里 1 条真正执行、4 条标注为幂等抑制",
+          f"executed={sum(1 for r in recs if r.get('executed'))} "
+          f"suppressed={sum(1 for r in recs if r.get('suppressed'))}")
+
+    # 封禁窗口过期后，新的告警必须重新下发（幂等不能变成"永久失灵"）
+    guard.blocked["10.0.0.99"] = 0.0
+    guard._handle_alert(dict(alert), dp)
+    check(len(dp.flowmods()) == 2, "封禁窗口过期后同源 IP 的新告警会重新下发规则",
+          f"实际下发 {len(dp.flowmods())} 条")
+
+
 def test_observe_action_is_inert(mod, tmpdir: Path) -> None:
     guard = _make_guard(mod, tmpdir, execute=True)
     dp = _FakeDatapath()
@@ -382,6 +412,7 @@ def _run_all() -> int:
             test_dry_run_sends_nothing(mod, tmpdir)
             test_whitelist_blocks_enforcement(mod, tmpdir)
             test_block_actually_pushes_rule(mod, tmpdir)
+            test_repeated_alerts_are_idempotent(mod, tmpdir)
             test_throttle_falls_back_to_drop(mod, tmpdir)
             test_observe_action_is_inert(mod, tmpdir)
     n_fail = sum(1 for ok, _, _ in _results if not ok)

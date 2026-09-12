@@ -377,6 +377,9 @@ def check_deployable(r: Report) -> None:
             "Ryu 适配层结构完整（参数注册 / 流表统计 / 规则下发 / 白名单）")
     r.check("未在真实交换机上实跑" in guard or "未做运行验证" in guard or "dry_run" in guard,
             "Ryu 适配层已声明运行边界与演练默认（不夸大验证范围）")
+    r.check("仍未覆盖" in guard and "物理交换机" in guard and "ryu_live_check" in guard,
+            "Ryu 适配层文档已更新为「真实 Ryu + 真实 OF1.3 已验，仅剩物理交换机」",
+            "适配层头部注明已验证范围与仍未覆盖的部分（物理交换机 / 真实攻击流量 / 厂商扩展）")
     guard_test = ROOT / "tests" / "test_ryu_guard.py"
     if guard_test.exists():
         import contextlib
@@ -842,8 +845,14 @@ def check_supplementary_experiments(r: Report) -> None:
 
 
 def check_ryu_harness(r: Report) -> None:
-    """Ryu 真机验证脚本：本机装不上 ryu（系统代理失效导致 pip 卡死），因此只验证脚本可用性。"""
-    section("10) Ryu 真机验证脚本（本机无法安装 ryu，故验证脚本自身）")
+    """Ryu 真机验证：脚本离线自检 + 若已跑过真机联调，则校验其产物与结论。
+
+    为什么分两层：`--self-test` 是毫秒级的编解码自检，谁都能跑；
+    真机联调（`tools/ryu_live_check.py`，需带 ryu 的解释器，约 1 分钟）会生成
+    `results/ryu_live_check.json`，验收时**只校验产物**（不重复起 Ryu 进程），
+    但一旦产物存在就必须是"全过"状态 —— 防止"边界改写了、证据却是失败的"。
+    """
+    section("10) Ryu 真机验证（离线自检 + 真机联调产物校验）")
     ryu_tool = ROOT / "tools" / "ryu_live_check.py"
     if not ryu_tool.exists():
         r.warn(False, "Ryu 真机验证脚本（可选）", "未找到 tools/ryu_live_check.py")
@@ -859,9 +868,43 @@ def check_ryu_harness(r: Report) -> None:
         r.check(ok, "OF1.3 线协议编解码离线自检通过（不需要 ryu，保证真机脚本本身正确）", detail)
         r.check("--ryu-python" in (out.stdout or "") or True,
                 "真机验证脚本支持指定带 ryu 的解释器（可在有 Ryu 的机器上直接跑）",
-                "用法见 README 第 3 节末的说明；本机因 pip/代理环境未能安装 ryu，如实标注")
+                "用法见 README；本机用 _tmp/ryu_venv 里的 ryu 4.34 实跑过")
     except Exception as exc:  # noqa: BLE001
         r.check(False, "OF1.3 线协议编解码离线自检", f"执行失败：{type(exc).__name__}: {exc}")
+
+    # —— 真机联调产物：存在即必须全过，且必须回答了"为什么这次能跑通"
+    live = ROOT / "results" / "ryu_live_check.json"
+    if not live.exists():
+        r.warn(False, "Ryu 真机联调产物（可选）",
+               "未生成 results/ryu_live_check.json：跑 python tools/ryu_live_check.py "
+               "--ryu-python <带 ryu 的解释器>")
+        return
+    try:
+        d = json.loads(live.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        r.check(False, "Ryu 真机联调产物可解析", f"{exc}")
+        return
+    checks = d.get("checks") or {}
+    n_pass = sum(1 for v in checks.values() if v.get("pass"))
+    r.check(bool(d.get("passed")) and len(checks) >= 16 and n_pass == len(checks),
+            "真机联调全部通过（真实 ryu-manager + 真实 OF1.3 线协议）",
+            f"{n_pass}/{len(checks)} 项通过；Ryu {d.get('ryu_version')}；"
+            f"端口 {d.get('ofp_port')}")
+    r.check(int(d.get("ryu_parse_errors") or 0) == 0,
+            "真机联调中 Ryu 未报任何报文解析错误（线格式真的合规）",
+            f"parse_errors={d.get('ryu_parse_errors')}")
+    executed = [a for a in (d.get("audit") or []) if a.get("executed")]
+    guard_mods = [m for m in (d.get("messages") or [])
+                  if m.get("type") == "FLOW_MOD" and (m.get("match") or {}).get("ipv4_src")]
+    r.check(bool(executed) and bool(guard_mods),
+            "真机联调里检测→告警→下发规则→落台账 全链路有据可查",
+            f"台账执行 {len(executed)} 条；交换机实收处置规则 {len(guard_mods)} 条")
+    md = ROOT / "results" / "ryu_live_check.md"
+    if md.exists():
+        text = md.read_text(encoding="utf-8")
+        r.check("仅剩「物理交换机」这一项未覆盖" in text and "局限" in text,
+                "真机联调报告写明了新的边界表述与局限（不夸大验证范围）",
+                "边界已从「未在真实交换机上实跑」改写为「真实 Ryu + 真实 OF1.3 已验，仅剩物理交换机」")
 
 
 def check_launchers(r: Report) -> None:

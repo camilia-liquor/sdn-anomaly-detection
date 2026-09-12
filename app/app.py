@@ -950,11 +950,16 @@ def api_judge():
     bnds = []
     ry = _rj("ryu_live_check.json")
     bnds.append({
-        "item": "Ryu 控制平面", "status": "已在真实 Ryu 进程验证" if ry else "未在物理交换机实跑",
-        "detail": ("results/ryu_live_check.json 已生成" if ry else
-                   "真机验证脚本已就绪（真实 ryu-manager + 模拟 OF1.3 交换机，含 8 项离线自检），"
-                   "但本机因系统代理失效无法安装 ryu，脚本未在本机执行；适配层逻辑由 25 项桩件测试覆盖"),
-        "ok": bool(ry),
+        "item": "Ryu 控制平面（剩余：物理交换机）",
+        "status": "真实 Ryu + 真实 OF1.3 已实测" if ry else "未在物理交换机实跑",
+        "detail": (f"真实 ryu-manager（Ryu {ry.get('ryu_version')}）加载适配层，经真实 OF1.3 线协议完成"
+                   f"握手/流表上报/下发校验：{sum(1 for v in (ry.get('checks') or {}).values() if v.get('pass'))}"
+                   f"/{len(ry.get('checks') or {})} 项通过、{ry.get('ryu_parse_errors', 0)} 条解析错误；"
+                   "攻击轮实收按源 IP 匹配的 DROP 规则、正常轮 0 条（results/ryu_live_check.md）。"
+                   "未覆盖：物理交换机、真实攻击流量、厂商私有扩展" if ry else
+                   "真机验证脚本已就绪（tools/ryu_live_check.py，含离线自检）；"
+                   "适配层逻辑由 28 项桩件测试覆盖"),
+        "ok": False,
     })
     cd = _rj("cross_dataset_report.json")
     bnds.append({

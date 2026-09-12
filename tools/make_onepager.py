@@ -218,8 +218,8 @@ def render(d: dict, out: Path) -> Path | None:
            f"per-class delay: fastest {d['fast_cls']}, slowest {d['slow_cls']}"),
         _L("错误分析：3,513 个测试窗口漏报 0（错误率 0.48%）",
            "error analysis: zero misses on 3,513 windows"),
-        _L("111 项交付自检 + 10/25/58 项测试 + CI 全过",
-           "111-item acceptance + tests + CI"),
+        _L("116 项交付自检 + 10/28/58 项测试 + CI 全过",
+           "116-item acceptance + tests + CI"),
         _L("包序列复研：卷积落后最好单分支 0.1354 → 0.0071（缩小 19 倍）",
            "packet-level input: CNN gap shrinks 19x"),
     ]
@@ -236,7 +236,7 @@ def render(d: dict, out: Path) -> Path | None:
     ax.text(4, 3.4, _L("主动交代的边界", "Disclosed limits"), color=WARN, fontsize=12,
             fontweight="bold", va="center")
     ax.text(19, 3.4,
-            _L("Ryu 适配层未在真实交换机实跑（接口与下发路径已用桩件测 25 项）｜"
+            _L("真实 Ryu + 真实 OF1.3 线协议已实测 16/16（仅剩物理交换机未覆盖）｜"
                "控制器原生 17 列字段精度降至宏 F1 0.844（召回仍 100%，代价是时延 18→41 ms）｜"
                "零样本跨域不可用，且只重定标会让 AUC 从 0.67 掉到 0.47（AUROC 好 ≠ 能上线）",
                "Ryu adapter not run on real switch | controller-native 17-field accuracy drops to 0.844 | "

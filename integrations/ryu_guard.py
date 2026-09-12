@@ -7,26 +7,48 @@
 
 ⚠️ 运行前提与安全说明（**务必先读**）
 ------------------------------------
-* 本脚本**需要真实 Ryu + OpenFlow 交换机环境**（如 Mininet），本机（无 Ryu）**未做运行验证**；
-  与检测服务之间的接口、判定与处置逻辑，已由 `tools/controller_simulator.py` 在无 Ryu 环境下
-  端到端验证（见 `results/e2e_controller_report.md`）。
+* 本脚本需要真实 Ryu + OpenFlow 交换机环境（如 Mininet）。**已验证范围**：
+  ① 与检测服务之间的接口、判定与处置逻辑由 `tools/controller_simulator.py` 端到端验证
+  （`results/e2e_controller_report.md`）；
+  ② 本适配层已在**真实 `ryu-manager` 进程**下、通过**真实 OF1.3 线协议**完成
+  握手 → 流表统计上报 → 告警 → 下发 DROP 规则 → 落台账的全链路验证（16 项检查全过，
+  见 `results/ryu_live_check.md`，由 `tools/ryu_live_check.py` 复现）。
+  **仍未覆盖**：物理交换机、真实攻击流量、厂商私有扩展。
 * **默认演练模式（dry_run=True）**：只打印将要下发的规则，不真正改流表。
   确认无误后再用 `--execute` 打开真实处置。
 * **白名单**：控制器自身、管理网段、网关必须在 `--whitelist` 里，否则可能把管理链路断掉。
 * 处置动作有超时（`--block-seconds`），到期自动解除，避免误封长时间影响业务。
+* **处置幂等**：同一源 IP 在封禁窗口内重复告警时**不重复下发规则**（只写台账），
+  避免一次持续攻击往流表里塞进几十条相同规则。
 
 用法（在 Mininet 环境中）::
 
-    # 1) 先起检测服务（可跑在控制器同一台机器上）
-    #    python app/app.py --port 5000 --processed-dir data/processed      # CICFlowMeter 字段模型
-    #    python app/app.py --port 5000 --processed-dir data/processed_sdn  # 控制器原生字段模型
-    # 2) 起 Ryu 控制器
-    ryu-manager integrations/ryu_guard.py --observe-links \\
-        --detect-url http://127.0.0.1:5000 --whitelist 10.0.0.1 --block-seconds 60
-    # 3) 打开真实处置（确认演练输出无误后）
-    ryu-manager integrations/ryu_guard.py --execute
+    用 **oslo.config 的 user-flags 机制**传自定义参数（Ryu ≥ 4.34 的正确做法）：
+    先写一个 flag 文件，例如 `ryu_guard.conf`::
 
-说明：`ryu-manager` 会把 `--xxx` 参数透传给本模块的 `add_arguments` 所定义的选项。
+        [DEFAULT]
+        detect_url = http://127.0.0.1:5000
+        execute = true
+        block_seconds = 60
+        whitelist = 10.0.0.1,10.0.0.254
+        audit = results/audit_alerts_ryu.jsonl
+
+    然后::
+
+        # 1) 先起检测服务（可跑在控制器同一台机器上）
+        #    python app/app.py --port 5000 --processed-dir data/processed      # CICFlowMeter 字段模型
+        #    python app/app.py --port 5000 --processed-dir data/processed_sdn  # 控制器原生字段模型
+        # 2) 起 Ryu 控制器
+        ryu-manager --user-flags ryu_guard.conf integrations/ryu_guard.py
+        # 3) 也可以完全不带参数启动（用下面的默认值：演练模式 + 本机 5000 端口）
+
+⚠️ **参数机制的真实情况（本机真机通电后才发现的）**：Ryu 4.34 的 `ryu-manager` **不再调用**
+各 app 的 `add_arguments()` —— 老教程（以及本文件早期版本）依赖的那个钩子已经失效，
+自定义 `--xxx` 会被 oslo.config 判为 `unrecognized arguments` 而启动失败。
+正确做法是用 `--user-flags <conf>` 把选项喂给 oslo.config。
+本模块因此**同时注册两种方式**：`RYU_GUARD_OPTS`（oslo.config 选项，供 user-flags 使用）
+与 `add_arguments()`（保留给仍调用它的旧版 Ryu / 第三方启动器）。
+命令行参数会被解析进 `DEFAULT` 组，`GuardSwitch.__init__` 会优先读它们。
 """
 from __future__ import annotations
 
@@ -58,11 +80,23 @@ class GuardSwitch(simple_switch_13.SimpleSwitch13):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.datapaths = {}
-        self.detect_url = kwargs.get("detect_url", "http://127.0.0.1:5000")
-        self.execute = bool(kwargs.get("execute", False))
-        self.block_seconds = int(kwargs.get("block_seconds", 60))
-        self.whitelist = set(kwargs.get("whitelist", []) or [])
-        self.audit_path = kwargs.get("audit", os.path.join("results", "audit_alerts_ryu.jsonl"))
+        # 参数可以在三个地方给（按优先级）：① ryu-manager 传进来的 kwargs（旧机制）
+        # ② oslo.config DEFAULT 组（--user-flags 文件 或 命令行，Ryu 4.34 的正确姿势）
+        # ③ 模块内默认值。这样"带参数"和"不带参数直接起"都能工作。
+        def pick(key, default, conf_key=None):
+            if key in kwargs:
+                return kwargs[key]
+            v = _conf_get(conf_key or key, None)
+            return default if v in (None, "") else v
+
+        self.detect_url = pick("detect_url", "http://127.0.0.1:5000")
+        self.execute = bool(pick("execute", False))
+        self.block_seconds = int(pick("block_seconds", 60))
+        wl = pick("whitelist", [])
+        if isinstance(wl, str):
+            wl = [x.strip() for x in wl.split(",") if x.strip()]
+        self.whitelist = set(wl or [])
+        self.audit_path = pick("audit", os.path.join("results", "audit_alerts_ryu.jsonl"))
         self.blocked: dict[str, float] = {}
         os.makedirs(os.path.dirname(self.audit_path) or ".", exist_ok=True)
         self.logger.info("[guard] 检测服务=%s 真实处置=%s 白名单=%s",
@@ -155,8 +189,18 @@ class GuardSwitch(simple_switch_13.SimpleSwitch13):
         src = alert.get("src_ip") or ""
         action = alert.get("action", "observe")
         executed = False
+        suppressed = False
         if action in ("block", "throttle") and src and src not in self.whitelist:
-            if self.execute:
+            now = time.time()
+            # 幂等：同一条攻击流的连续告警（在线检测是滑动窗口，一次攻击会连续报好几个窗口）
+            # 在封禁窗口内**不重复下发**规则。否则 60 s 的攻击会往交换机塞进几十条内容完全
+            # 相同的流表项，既造成流表抖动，也让"处置动作数"这个指标失去意义。
+            # 早期版本的 `self.blocked` 只写不读，等于没有这个保护（真机联调时暴露出来）。
+            if self.blocked.get(src, 0.0) > now:
+                suppressed = True
+                self.logger.info("[guard] src=%s 仍在封禁窗口内（剩余 %.0fs），本次告警不重复下发规则",
+                                 src, self.blocked[src] - now)
+            elif self.execute:
                 # ⚠️ 这里必须真的把规则下发出去：早期实现写成 `executed = True if action == "block" ...`，
                 # 结果是 block 动作只把 executed 记成 True、却**从未调用 `_drop()`**——
                 # 审计台账会显示"已下发"，而交换机上什么都没变。对一套声称能处置的系统来说，
@@ -164,7 +208,7 @@ class GuardSwitch(simple_switch_13.SimpleSwitch13):
                 executed = (self._meter_or_limit(datapath, src) if action == "throttle"
                             else self._drop(datapath, src))
                 if executed:
-                    self.blocked[src] = time.time() + self.block_seconds
+                    self.blocked[src] = now + self.block_seconds
                 else:
                     self.logger.error("[guard] 动作 %s 下发失败，src=%s —— 已记入台账但未生效", action, src)
             else:
@@ -175,6 +219,7 @@ class GuardSwitch(simple_switch_13.SimpleSwitch13):
             "dst_port": alert.get("dst_port"), "pred_class": alert.get("pred_class"),
             "p_attack": alert.get("p_attack"), "action": action,
             "executed": executed, "dry_run": not self.execute,
+            "suppressed": suppressed,          # True = 该源 IP 已在封禁窗口内，未重复下发
             "block_seconds": self.block_seconds,
             "datapath_id": datapath.id if datapath else None,
         }
@@ -182,7 +227,8 @@ class GuardSwitch(simple_switch_13.SimpleSwitch13):
             f.write(json.dumps(record, ensure_ascii=False) + "\n")
         self.logger.warning("[guard] 告警：%s p=%.3f src=%s → %s%s",
                             record["pred_class"], float(record["p_attack"] or 0), src, action,
-                            "（已下发）" if executed else "（仅记录）")
+                            "（已下发）" if executed else ("（封禁窗口内，幂等抑制）" if suppressed
+                                                          else "（仅记录）"))
 
     def _meter_or_limit(self, datapath, src):
         """限速：下发 Meter **并把流表项挂到这个 Meter 上**，失败则退化为丢弃。
@@ -224,8 +270,49 @@ class GuardSwitch(simple_switch_13.SimpleSwitch13):
         return True
 
 
+# ======================================================================================
+# 参数注册：**两条路都铺**（Ryu 4.34 用 oslo.config user-flags，旧版才调 add_arguments）
+# --------------------------------------------------------------------------------------
+# 真机实测结论：ryu-manager 4.34 只会注册自己那几个选项（app / app-lists / pid-file …），
+# 不再遍历各 app 的 add_arguments()，于是 `--detect-url` 这类参数会被判为
+# "unrecognized arguments" 直接启动失败。这里用 oslo.config 注册同名的选项，
+# 既支持 `--user-flags guard.conf`，也支持命令行直接传（若启动器允许）。
+# ======================================================================================
+try:  # pragma: no cover - 只有在装了 ryu 的环境里才会走到
+    from oslo_config import cfg as _oslo_cfg
+
+    RYU_GUARD_OPTS = [
+        _oslo_cfg.StrOpt("detect_url", default="http://127.0.0.1:5000",
+                         help="检测服务地址（如 http://127.0.0.1:5000）"),
+        _oslo_cfg.BoolOpt("execute", default=False,
+                          help="开启真实处置（默认仅演练，不改流表）"),
+        _oslo_cfg.IntOpt("block_seconds", default=60, help="处置有效期（秒）"),
+        _oslo_cfg.ListOpt("whitelist", default=[], help="永不处置的源 IP（逗号分隔）"),
+        _oslo_cfg.StrOpt("audit", default=os.path.join("results", "audit_alerts_ryu.jsonl"),
+                         help="审计台账路径（JSONL）"),
+        _oslo_cfg.StrOpt("schema", default="", help="模型特征口径（留空自动判断）"),
+    ]
+    _oslo_cfg.CONF.register_opts(RYU_GUARD_OPTS)
+except Exception:  # noqa: BLE001 - 没装 ryu 时（例如单元测试打桩）静默跳过
+    RYU_GUARD_OPTS = []
+
+
+def _conf_get(name: str, default=None):
+    """从 oslo.config 的 DEFAULT 组读参数（读不到就返回默认值 —— 不抛异常）。"""
+    try:
+        from oslo_config import cfg as _cfg
+
+        return getattr(_cfg.CONF, name, default)
+    except Exception:  # noqa: BLE001
+        return default
+
+
 def add_arguments(parser):
-    """向 ryu-manager 注册命令行参数。"""
+    """（兼容旧版 Ryu）向启动器注册命令行参数。
+
+    ⚠️ Ryu 4.34 已不再调用本函数；请改用 `--user-flags <conf>`（见模块 docstring）。
+    保留它只是为了兼容仍会调用的旧版 Ryu 与第三方启动器。
+    """
     parser.add_argument("--detect-url", default="http://127.0.0.1:5000", help="检测服务地址")
     parser.add_argument("--execute", action="store_true", help="开启真实处置（默认仅演练，不改流表）")
     parser.add_argument("--block-seconds", type=int, default=60, help="处置有效期（秒），到期自动解除")

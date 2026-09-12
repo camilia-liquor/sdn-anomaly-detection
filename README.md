@@ -57,7 +57,7 @@ then `python app/app.py` for the live dashboard. See sections below for details.
 | 10 | **未知攻击（开集）检测：直面"新型攻击"这个真问题** | 把整类攻击从训练中拿掉再评估：**不做拒识时 100% 的未知攻击被自信地错判成已知类**（U2R→WebAttack 84%、Botnet→Normal 96%，后者连告警都不触发）；加入 OOD 拒识后 U2R 在 1% 误报预算下可检出 **70%**、Botnet **44%**，且已知类精度几乎不受损。诚实指出 **AUROC 会骗人**（三者都在 0.978，但低误报预算下的尾部表现差一个数量级） |
 | 11 | **一条命令看一场攻防 + 直接吃真实抓包** | `python tools/live_demo.py`：一条命令在屏幕上演完"安静→攻击爆发→告警→处置→恢复"，自动出事件报告，**检测时延 0.4 毫秒（8 条流记录）、227/227 个窗口与离线评估逐窗口一致（最大 Δp 4.94e-05）**；`python tools/pcap_to_flows.py`：**零依赖**解析 pcap/pcapng（含 VLAN/SLL/分片/纳秒时基），往返 **17 个特征 × 800 条流逐位一致** |
 | 12 | **可核验的方法学** | 错误分析（**漏报 0**、误报集中在 4 组混淆对、错例特征画像）、性能基准（单窗口 **p50 0.92 ms**）、泄漏诊断（公开数据集 **85% 近似重复**）、多种子均值±标准差、分布漂移测试 |
-| 13 | **一键复现 + 现场演示 + 工程规范** | `python run_all.py` 一条命令跑完全流程；**111 项交付验收自检 + 10 项单元测试 + 25 项 Ryu 行为测试 + 58 项 pcap 测试 + CI**；`python app/app.py` 起一个离线可用的实时大屏（迷你 SOC 控制台：攻击拓扑动画 + 处置控制台 + 审计台账 + 服务状态条） |
+| 13 | **一键复现 + 现场演示 + 工程规范** | `python run_all.py` 一条命令跑完全流程；**116 项交付验收自检 + 10 项单元测试 + 28 项 Ryu 行为测试 + 58 项 pcap 测试 + CI**；`python app/app.py` 起一个离线可用的实时大屏（迷你 SOC 控制台：攻击拓扑动画 + 处置控制台 + 审计台账 + 服务状态条） |
 
 ---
 
@@ -115,9 +115,9 @@ python tools/controller_simulator.py --rows 3000 --batch 50 --policy block --no-
 # 7) 生成实验报告 + 交付验收自检
 python tools/make_report.py
 python tests/test_core.py                 # 单元测试（10 项，不依赖 TensorFlow）
-python tests/test_ryu_guard.py            # Ryu 适配层行为测试（25 项，不需要安装 Ryu）
+python tests/test_ryu_guard.py            # Ryu 适配层行为测试（28 项，不需要安装 Ryu）
 python tests/test_pcap_tools.py           # pcap 往返一致性测试（58 项，不需要真实抓包）
-python tools/acceptance_check.py          # 111 项全过 = 可以直接提交
+python tools/acceptance_check.py          # 116 项全过 = 可以直接提交
 
 # 7) 启动演示大屏
 python app/app.py            # 浏览器打开 http://127.0.0.1:5000
@@ -138,9 +138,9 @@ python app/app.py            # 浏览器打开 http://127.0.0.1:5000
 >
 > **工程质量**：`python tests/test_core.py` 跑 10 项单元测试（生成器物理自洽性、列名自动识别、
 > 行号泄漏回归测试、滑窗纯窗口/多数投票、类别逆频加权、评估口径边界），无需 pytest；
-> `python tests/test_ryu_guard.py` 再跑 25 项 **Ryu 适配层行为测试**（桩件替代 Ryu，验证接口契约、
+> `python tests/test_ryu_guard.py` 再跑 28 项 **Ryu 适配层行为测试**（桩件替代 Ryu，验证接口契约、
 > 演练默认、白名单与规则下发路径），**同样不需要安装 Ryu**；
-> `acceptance_check.py` 会把两者一并纳入 111 项验收。
+> `acceptance_check.py` 会把两者一并纳入 116 项验收。
 
 ---
 
@@ -461,11 +461,12 @@ CPU 单进程实测（`python tools/benchmark_latency.py`）：
 后降到 **30 ms（1,364~1,918 条流/秒）**，**提速约 43~60 倍**。这说明在线部署的关键不是模型本身，
 而是**把推理调用攒成批**这一层工程实现。
 
-> 诚实声明：`integrations/ryu_guard.py` 是按 Ryu 官方 API 写好的适配层，**本机没有 Ryu/OpenFlow 交换机，
-> 因此未在真实交换机上实跑**；上面这份报告验证的是**控制器↔检测服务之间的接口与处置逻辑**。
+> 边界声明：上面这份报告验证的是**控制器↔检测服务之间的接口与处置逻辑**；
+> 而适配层本体已在**真实 `ryu-manager` 进程 + 真实 OF1.3 线协议**下跑通全链路（16 项检查全过，
+> 见 3.15 节与 `results/ryu_live_check.md`），两者互为补充。
 >
-> 但"没装 Ryu 就跑不了"**不等于"没法验证"**：`tests/test_ryu_guard.py` 用桩件替代 `ryu` 模块、
-> **真的调用适配层核心逻辑**，锁死 25 项接口契约与安全默认值（含「记录字段必须覆盖模型全部 17 个特征名」
+> 另外，`tests/test_ryu_guard.py` 用桩件替代 `ryu` 模块、
+> **真的调用适配层核心逻辑**，锁死 28 项接口契约与安全默认值（含「记录字段必须覆盖模型全部 17 个特征名」
 > 这条硬接口契约）。这个测试当场抓出并修掉了两处**「账实不符」**缺陷：
 > `block` 只记账不下发规则、`throttle` 只建 Meter 却没把流表项挂上去（**只建 Meter 是不限速的**）——
 > 它们是最危险的一类问题：台账显示"已处置"，交换机上其实什么都没发生。
@@ -628,22 +629,30 @@ CPU 单进程实测（`python tools/benchmark_latency.py`）：
 > 该面板**不需要 TensorFlow**（数据来自窗口级预测缓存），因此断网、没装 TF 的机器上照样能演示。
 > ⚠️ 改动 `app/templates/index.html` 后**必须重启** `app.py`（Jinja 会缓存模板，否则浏览器拿到旧页面）。
 
-> **「真实 Ryu 控制器」这条边界的当前状态（如实记录，不粉饰）**
-> 我们写好了一个**可直接运行的真机验证脚本** `tools/ryu_live_check.py`：①启动检测服务 →
-> ②用官方 `ryu-manager` 加载本作品的适配层（**不是桩件**）→ ③起一个**模拟 OpenFlow 1.3 交换机**，
-> 与 Ryu 完成 HELLO/FEATURES 握手、用**真实线协议**上报流表统计，并逐字段校验控制器回发的
-> `OFPFlowMod`（阻断）/ `OFPMeterMod`+`OFPFlowMod`（限速）是否指向那条可疑源 IP、以及审计台账是否留痕。
-> 脚本自带**离线自检**（`python tools/ryu_live_check.py --self-test`，8 项全过，不需要 ryu、不联网），
-> 用来保证它的 OF1.3 编解码本身是对的——写自检时确实抓出了 3 个真 bug（OXM 字符串编码、
-> match 长度与补齐不一致、把指令填充当成 action）。
-> **但本机没能真正跑成这一次**：装 Ryu 要联网，而本机系统代理 `127.0.0.1:8086` 已失效、pip 会走这个死代理，
-> `pip install ryu` 卡在"创建隔离构建环境"一步（换 Ryu 的官方维护分支 `os-ken` 同样卡死）。
-> 因此这条边界**仍然成立**：适配层判定逻辑由 **25 项桩件测试**覆盖，**端到端线协议验证脚本已就绪、但未在本机执行**。
-> 在有 Ryu 的机器上执行（把解释器换成装了 `ryu` 的那个即可）：
+> **「真实 Ryu 控制器」这条边界：已经从「未跑过」推进到「跑通并留证」**
+> 我们不仅写了脚本，还在本机装了 **Ryu 4.34**（独立 venv，不污染项目依赖），把整条控制链路实跑了一遍：
+> ①启动检测服务 →②用官方 `ryu-manager` 加载本作品的适配层（**不是桩件**）→③起一个**模拟 OpenFlow 1.3 交换机**，
+> 与 Ryu 完成真实握手、用**真实线协议**上报流表统计，再逐字段校验控制器回发的 `OFPFlowMod`。
+> 结果：**16/16 项检查通过**，Ryu 侧**零报文解析错误**；攻击轮次触发告警后交换机实收一条
+> `priority=100`、按可疑源 IP 精确匹配、指令为「空 action 列表 = DROP」的流表项，审计台账
+> `executed=true` 与报文逐项对账一致；正常轮次**一条规则都没下发**（处置路径有选择性）。
+> 完整证据（握手时间线、逐条报文、台账）：`results/ryu_live_check.md`，一键复现：
 > ```bash
-> python tools/ryu_live_check.py --ryu-python /path/to/ryu_venv/bin/python \
+> python tools/ryu_live_check.py --self-test          # 离线自检：OF1.3 编解码，秒级、不需要 ryu
+> python tools/ryu_live_check.py \
+>     --ryu-python /path/to/ryu_venv/bin/python \
 >     --model-tag sdn_ctrl_s0 --processed-dir data/processed_sdn
 > ```
+>
+> **这条边界是怎么被真正推开的（比结论更值得说）**：难点从来不是「写个脚本」，而是
+> ①**在 Windows/Python 3.11 上把 Ryu 4.34 装起来**（`pbr + 新版 setuptools` 的 flat-layout 报错、
+> `eventlet ≥0.33` 改了 `ALREADY_HANDLED`、`dnspython 1.16` 用了 `collections.MutableMapping`，
+> 三处都要动手修才能 import）；②**真实的 OF1.3 握手比规范文档多一步**——Ryu 收到 `FEATURES_REPLY` 后
+> 不会直接进 `MAIN_DISPATCHER`，还要交换机回一条 `OFPPortDescStatsReply`（`ryu/controller/ofp_handler.py`）。
+> 少了这一步，TCP 通、HELLO 通、FEATURES 通，**链路上看不出任何异常，但控制器永远不会进入检测流程**。
+> 这就是「只做单元测试、不做线协议实跑」必然漏掉的那类 bug。
+> 顺带，实跑一轮就把自检从 8 项扩到 **12 项**，并抓出**第 3 个真编码 bug**：OXM TLV 之间**不该**逐条补齐
+> （只有整个 `ofp_match` 才补齐），此前的「自己发自己收」完全自洽、只有真实 Ryu 会拒绝。
 
 ### 3.16 包序列复研：把「卷积到底有没有用」问到底（`results/packet_seq.md`）
 
@@ -823,7 +832,7 @@ generate_normal_traffic/
 ├─ deploy/                     ★ 部署样例（systemd 单元 / 环境变量模板 / nginx 反代 / Windows 服务脚本）
 ├─ tools/
 │  ├─ check_env.py             环境自检
-│  ├─ acceptance_check.py      ★ 交付验收自检（提交前跑这个：111 项全过才算完整）
+│  ├─ acceptance_check.py      ★ 交付验收自检（提交前跑这个：116 项全过才算完整）
 │  ├─ smoke_test.py            无 TF 依赖的全链路自检（独立目录，不污染正式结果）
 │  ├─ reevaluate.py            改口径/阈值后重新评估（不用重训）
 │  ├─ operating_point.py       ★ 检测工作点选择器（阈值×窗口×确认次数的 Pareto 表与图）
@@ -858,7 +867,7 @@ generate_normal_traffic/
 │  └─ predict_cli.py           对新流量 CSV 做推理（演示"上线怎么用"）
 ├─ tests/
 │  ├─ test_core.py             单元测试（生成器/管线/滑窗/评估口径，10 项，无需 pytest）
-│  ├─ test_ryu_guard.py        Ryu 适配层行为测试（桩件替代 Ryu，25 项）
+│  ├─ test_ryu_guard.py        Ryu 适配层行为测试（桩件替代 Ryu，28 项）
 │  └─ test_pcap_tools.py       pcap 往返一致性测试（58 项）
 ├─ competition/                AIC「AI+开源」参赛材料（技术报告/资源清单/视频脚本/合规自查）
 ├─ DEPLOYMENT.md               ★ 部署与对接指南（环境/服务/控制器/安全清单/排障）
@@ -1131,7 +1140,7 @@ python app/app.py --processed-dir data/processed_sdn --model-tag sdn_ctrl
 - [x] **窗口长度消融**（T=10/16/24/32/48，关键档 3 种子）与**困难基准复测**（难度拉满后重测"卷积有没有用"，含逐种子配对符号检验）——两条负面/机理结论都留了完整复现工具
 - [x] 答辩级图表 10+ 张（类别分布/特征画像/训练曲线/混淆矩阵/ROC-PR/检测工作点/在线时间轴/注意力热力图/消融对比/运维负载/**窗口消融趋势/困难基准对比/开集四联/运维 SLO 卡/一页纸结论图**）
 - [x] **在线检测服务**：`POST /api/detect` + 策略热更新 + 白名单 + 演练模式 + JSONL 审计台账 + Prometheus `/metrics`
-- [x] **Ryu 控制器适配层** `integrations/ryu_guard.py`（默认演练模式，未在真实交换机上实跑——已在文档中声明）
+- [x] **Ryu 控制器适配层** `integrations/ryu_guard.py`（默认演练模式；已在**真实 ryu-manager + 真实 OF1.3 线协议**下跑通全链路，16 项检查全过，仅剩「物理交换机」未覆盖）
 - [x] **无 Ryu 环境下的控制平面闭环实测** `tools/controller_simulator.py`（吞吐/时延/处置/审计）
 - [x] **两种特征口径**都训练评估过：完整流特征（84 列）与控制器原生字段（17 列）
 - [x] **跨域适用边界**：零样本跨域诊断 + 逐特征漂移分析 + 四级校准阶梯（含"只重定标反而让 AUC 掉到 0.47"的反直觉结论）
@@ -1142,7 +1151,7 @@ python app/app.py --processed-dir data/processed_sdn --model-tag sdn_ctrl
 - [x] 可现场演示的实时大屏（**迷你 SOC 控制台**：攻击拓扑动画 + 处置控制台 + 审计台账 + 服务状态条；离线可用）
 - [x] 文档：README、**部署与对接指南 DEPLOYMENT.md**、原代码问题清单、实验报告（自动生成）、答辩要点、配置速查
 - [x] 工具（34 个，含交付验收自检）：环境自检、无 TF 自检、重新评估、漂移测试、工作点选择、运维换算、**窗口消融**、**困难基准复测**、跨域诊断、开集评估与阈值标定、实况演示、多攻击连演、逐类在线指标、pcap 转换、报告生成、命令行推理、**一页纸/运维 SLO 卡**、大文件下载器
-- [x] 测试：10 项单元测试 + 25 项 Ryu 行为测试 + **58 项 pcap 测试** + **111 项交付验收自检** + CI
+- [x] 测试：10 项单元测试 + 28 项 Ryu 行为测试 + **58 项 pcap 测试** + **116 项交付验收自检** + CI
 
 > **目录体积提示**：`data/`（原始 CSV + 预处理张量，约 200MB）、`artifacts/`（模型，约 190MB，
 > 其中未剪枝的 ET/RF 基线占了 140MB）、`.venv/`（依赖，约 1.8GB）都是**可再生成的**，

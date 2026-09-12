@@ -81,7 +81,7 @@ python tools/smoke_test.py        # 冒烟：小样本全链路跑通（约 1 �
 python tests/test_core.py         # 单元测试：10 个用例，覆盖数据切分/窗口/泄漏防护
 python tests/test_ryu_guard.py    # Ryu 适配层行为测试：25 个用例，无需安装 Ryu（见 3.5）
 python tests/test_pcap_tools.py   # pcap 解析往返一致性：58 个用例，无需真实抓包
-python tools/acceptance_check.py  # 交付验收：文件齐全性 + 指标复算 + 在线接口真实调用（111 项）
+python tools/acceptance_check.py  # 交付验收：文件齐全性 + 指标复算 + 在线接口真实调用（116 项）
 ```
 
 ---
@@ -304,14 +304,16 @@ ryu-manager integrations/ryu_guard.py --execute --whitelist 10.0.0.1 10.0.0.254 
 
 ### 3.5 诚实声明（重要）
 
-* 本仓库**在没有 Ryu / OpenFlow 交换机的机器上完成了全部开发与验证**，
-  因此 `integrations/ryu_guard.py` **未在真实交换机上实跑**，它属于「按 Ryu 官方 API 写好的适配层」。
-* 但**控制器↔检测服务之间的完整闭环已经被实测验证**：`tools/controller_simulator.py`
+* `integrations/ryu_guard.py` 已在**真实 `ryu-manager`（Ryu 4.34）+ 真实 OF1.3 线协议**下实跑：
+  16/16 项检查通过、Ryu 侧 0 条报文解析错误，攻击轮实收按源 IP 匹配的 DROP 规则、正常轮 0 条，
+  审计台账 `executed=true` 与报文对账一致（`results/ryu_live_check.md`，复现命令见该文件末节）。
+  **仍未覆盖**：物理交换机、真实攻击流量、厂商私有扩展。
+* 另外，**控制器↔检测服务之间的完整闭环也已被实测验证**：`tools/controller_simulator.py`
   在无 Ryu 环境下扮演控制器，实测吞吐 **1,364~1,918 条流/秒**、判定时延
   **p50 29.8 ms / p95 44.7 ms / p99 45.7 ms**（剔除首批 TensorFlow 计算图构建的约 0.5 s 一次性开销）、
   端到端处置动作全部正确执行，报告见 `results/e2e_controller_report.md`。
 * 另外，「没装 Ryu 就跑不了」**不等于「没法验证」**：`tests/test_ryu_guard.py` 用桩件替代 `ryu` 模块，
-  **真的调用适配层的核心逻辑**，把 25 项接口契约与安全默认值锁死（见下表）。
+  **真的调用适配层的核心逻辑**，把 28 项接口契约与安全默认值锁死（见下表）。
   这个测试在编写过程中就抓出了两处**「账实不符」**的真缺陷并已修复——
   它们恰好是最危险的一类问题：台账显示"已处置"，交换机上其实什么都没发生。
 
