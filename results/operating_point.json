@@ -1,7 +1,7 @@
 {
   "tag": "cnn_bilstm_main_s0",
   "window_size": 16,
-  "budget": 10.0,
+  "budget": 1.0,
   "table": [
     {
       "threshold": 0.3,
@@ -229,17 +229,17 @@
     }
   ],
   "recommended": {
-    "threshold": 0.5,
-    "confirm": 1,
+    "threshold": 0.9,
+    "confirm": 2,
     "segment_recall": 1.0,
     "n_segments_detected": 24,
     "n_attack_segments": 24,
-    "false_alarms": 26,
-    "false_alarms_per_hour": 8.557965391460678,
-    "mean_detection_delay_sec": 0.009942968686421713,
-    "p95_detection_delay_sec": 0.03698328733444213,
-    "n_alarmed_windows": 2177,
-    "n_raw_alarmed_windows": 2177,
-    "alarm_rate": 0.3042627533193571
+    "false_alarms": 1,
+    "false_alarms_per_hour": 0.32915251505617993,
+    "mean_detection_delay_sec": 0.016060700019200642,
+    "p95_detection_delay_sec": 0.06038897037506103,
+    "n_alarmed_windows": 2103,
+    "n_raw_alarmed_windows": 2134,
+    "alarm_rate": 0.2939203354297694
   }
 }
