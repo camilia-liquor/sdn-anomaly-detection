@@ -381,7 +381,7 @@ def build_report(tag: str, bundle: dict) -> str:
     # ---------------- 3.6 分布漂移鲁棒性 ----------------
     drift_md = RESULT_DIR / "drift_report.md"
     if drift_md.exists():
-        add("### 3.5 分布漂移鲁棒性")
+        add("### 3.6 分布漂移鲁棒性")
         add("")
         body = drift_md.read_text(encoding="utf-8")
         # 去掉原文件的一级标题，只保留表格与说明
