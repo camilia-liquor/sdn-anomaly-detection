@@ -84,3 +84,7 @@ artifacts/_pub_baselines/
 # æ”¾åœ¨ _tmp/refs/ ä¸‹å³å¯ï¼ˆ_tmp/ å·²åœ¨ä¸Šé¢æ•´ä½“å¿½ç•¥ï¼‰ã€‚
 refs/
 _tmp/refs/
+
+# Univer Éú³ÉÈİÆ÷£¨.docx ½»¸¶¸åµÄ¿É±à¼­Ô´£¬ÊôÖĞ¼ä²úÎï£©
+*.univer
+
