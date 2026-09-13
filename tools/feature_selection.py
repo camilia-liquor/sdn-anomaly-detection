@@ -350,7 +350,7 @@ def slice_features(data: PreparedData, cols: np.ndarray, names: list[str]) -> Pr
 
 
 def project_pca(data: PreparedData, n_components: int) -> tuple[PreparedData, list[str], float]:
-    """PCA 对照：把每个时间步投影到前 k 个主成分（注意：这不是"选特征"，是"造特征"）。
+    """PCA 对照：把每个时间步投影到前 k 个主成分（注意：这不是「选特征」，是「造特征」）。
 
     报告里必须把这点说清楚：PCA 的结果不可解释成"哪几列被选中了"，
     因此它和 bPLO/PSO 不在同一类方法上，论文把它当对照其实口径不同。
@@ -590,6 +590,47 @@ def build_report(p: dict) -> str:
               f"—— 注意它造的是**新特征**，不是「选了哪几列」，与前两者口径不同。")
         A("")
     L.append("")
+
+    # ---- 混淆矩阵 / 逐类识别率（对标论文图 5、图 6 的实验方法） ----
+    conf = (p.get("confusion") or {}).get("per_class") or []
+    if conf:
+        L.append("## 3. 混淆矩阵与逐类识别率对比（对标论文图 5 / 图 6）")
+        L.append("")
+        A("论文最核心的视觉证据是「有/无 PLO 特征选择」的混淆矩阵对比（其图 5/图 6），"
+          "文字结论是「小样本攻击的识别率明显提高」。我们按同样方式复算"
+          "（**不重训**：直接加载已保存的模型，重建当时那份特征子集后重新预测，逐种子取平均）。")
+        L.append("")
+        for ds in datasets:
+            rows = [r for r in conf if r["dataset"] == ds]
+            if not rows:
+                continue
+            names = rows[0]["class_names"]
+            methods = [m for m in ("none", "pca", "pso", "bplo")
+                       if any(r["method"] == m for r in rows)]
+            variants = sorted({r["variant"] for r in rows})
+            A(f"### {DATASET_INFO.get(ds, {}).get('title', ds)}（{rows[0]['n_features']} 维起）")
+            L.append("")
+            L.append("| 特征选择 | 特征数 | 模型 | " + " | ".join(names) + " | 宏召回 |")
+            L.append("|---|---|---|" + "---|" * len(names) + "---|")
+            for method in methods:
+                for variant in variants:
+                    r = next((x for x in rows if x["method"] == method and x["variant"] == variant),
+                             None)
+                    if not r:
+                        continue
+                    cells = []
+                    for c in names:
+                        v = r["recall"].get(c)
+                        # 把"最差的那一类"标出来：论文的论点正是"小样本攻击最容易漏"
+                        mark = "**" if c == r["worst_class"] else ""
+                        cells.append(f"{mark}{_f(v, 4)}{mark}")
+                    A(f"| {method} | {r['n_features']} | {variant} | " + " | ".join(cells)
+                      + f" | **{_f(r['macro_recall'], 4)}** |")
+            L.append("")
+        A("> 图上每个格子是**行归一化**的混淆矩阵（= 该类别的识别率），数值只显示 ≥0.005 的项。"
+          "对照论文的表述方式：我们同样报「每一类的识别率」，并把**最差类别**加粗——"
+          "因为它才是安全上真正要盯的那个数（论文图 5 的论点是 Botnet/WebAttack 这类小样本识别率低）。")
+        L.append("")
 
     # ---- 参数敏感性（论文表 4 的对应物） ----
     sweep = None
@@ -844,6 +885,164 @@ def _self_test() -> int:
 
 
 # ======================================================================================
+# 5b) 混淆矩阵 + 逐类识别率对比（对标论文图 5 / 图 6 的实验方法）
+# ======================================================================================
+def _load_predict(dataset: str, method: str, variant: str, seed: int, data: PreparedData,
+                  k_ref: int):
+    """**不重训**：加载该配置已保存的模型，在测试集上复算预测。
+
+    为什么能这么干：`train_and_eval` 把每次训练的模型都存到了
+    `artifacts/_featsel/<口径>/<tag>/model.keras`，而特征子集的下标就在
+    `results/feature_selection.json` 的 `selections` 里 —— 两者合起来足以精确重建
+    「当时那个模型看到的那份输入」，因此混淆矩阵可以直接复算，不需要 40 秒 × N 的重训。
+
+    ⚠️ `k_ref` 必须用**当时实际的**目标维数：PCA 那一组是按 bPLO 选出的维数（11）投影的，
+    不是按原始维数（17）——否则喂给模型的张量形状对不上（本函数第一次跑就撞上了这个错）。
+    """
+    from src.model import load_model_bundle, predict_probs
+
+    sel = PreparedData.load(ROOT / "data" / dataset)
+    if method == "none":
+        sliced = sel
+    elif method == "pca":
+        sliced, _, _ = project_pca(sel, int(k_ref))
+    else:
+        raise ValueError(method)
+    path = (ARTIFACT_DIR / "_featsel" / dataset
+            / f"featsel_{dataset}_{method}_{variant}_s{seed}" / "model.keras")
+    if not path.exists():
+        return None
+    model = load_model_bundle(path)
+    p_mc, _ = predict_probs(model, sliced.X_test)
+    return np.argmax(p_mc, axis=1), sliced
+
+
+def collect_confusion(args) -> dict:
+    """按口径×方法×模型×种子复算预测，返回逐类召回与平均混淆矩阵。"""
+    from sklearn.metrics import confusion_matrix
+
+    p = json.loads((RESULT_DIR / "feature_selection.json").read_text(encoding="utf-8"))
+    selections = p.get("selections") or {}
+    out: dict = {"per_class": [], "matrices": {}}
+    for ds in args.confusion_datasets:
+        base = PreparedData.load(ROOT / "data" / ds)
+        names = list(base.class_names)
+        cols_map = selections.get(ds, {}).get("methods", {})
+        k_ref = int(selections.get(ds, {}).get("k_reference") or base.n_features)
+        for variant in args.confusion_variants:
+            for method in args.confusion_methods:
+                mats, recalls, n_ok = [], [], 0
+                for seed in args.seeds:
+                    if method in ("bplo", "pso"):
+                        cols = (cols_map.get(method) or {}).get("cols")
+                        if not cols:
+                            continue
+                        sel = PreparedData.load(ROOT / "data" / ds)
+                        sliced = slice_features(sel, cols, [sel.feature_names[i] for i in cols])
+                        from src.model import load_model_bundle, predict_probs
+
+                        path = (ARTIFACT_DIR / "_featsel" / ds
+                                / f"featsel_{ds}_{method}_{variant}_s{seed}" / "model.keras")
+                        if not path.exists():
+                            continue
+                        y_pred = np.argmax(predict_probs(load_model_bundle(path), sliced.X_test)[0],
+                                           axis=1)
+                        y_true = sliced.y_test_mc
+                        n_feat = sliced.n_features
+                    else:
+                        r = _load_predict(ds, method, variant, seed, base, k_ref)
+                        if r is None:
+                            continue
+                        y_pred, sliced = r
+                        y_true = sliced.y_test_mc
+                        n_feat = sliced.n_features
+                    cm = confusion_matrix(y_true, y_pred, labels=list(range(len(names))))
+                    mats.append(cm / np.maximum(cm.sum(axis=1, keepdims=True), 1))
+                    recalls.append(np.diag(mats[-1]))
+                    n_ok += 1
+                if not n_ok:
+                    continue
+                mean_cm = np.mean(mats, axis=0)
+                rec = np.mean(recalls, axis=0)
+                out["matrices"][f"{ds}|{method}|{variant}"] = mean_cm.tolist()
+                out["per_class"].append({
+                    "dataset": ds, "method": method, "variant": variant, "n_features": int(n_feat),
+                    "n_seeds": n_ok, "class_names": names,
+                    "recall": {names[i]: float(rec[i]) for i in range(len(names))},
+                    "macro_recall": float(np.mean(rec)),
+                    "worst_class": names[int(np.argmin(rec))],
+                    "worst_recall": float(np.min(rec)),
+                })
+                LOGGER.info("[混淆对比] %s | %s | %s（%d 维，%d 种子）：宏召回 %.4f，最差类 %s %.4f",
+                            ds, method, variant, n_feat, n_ok, float(np.mean(rec)),
+                            names[int(np.argmin(rec))], float(np.min(rec)))
+    return out
+
+
+def make_confusion_figure(p: dict, out: Path) -> Path | None:
+    """对齐论文图 5/图 6：同一口径下「不选特征 vs bPLO」的混淆矩阵并排对比。
+
+    论文那两张图是它的核心视觉证据（"有 PLO 时小样本攻击的识别率明显更高"），
+    所以我们也按同样方式出图：行 = 特征选择方法，列 = 模型，格子 = 行归一化混淆矩阵。
+    """
+    try:
+        setup_matplotlib()
+        import matplotlib.pyplot as plt
+    except Exception as exc:  # noqa: BLE001
+        LOGGER.warning("画图不可用：%s", exc)
+        return None
+    cf = p.get("confusion") or {}
+    mats = cf.get("matrices") or {}
+    per = cf.get("per_class") or []
+    if not mats or not per:
+        return None
+    ds = per[0]["dataset"]
+    names = per[0]["class_names"]
+    variants = sorted({r["variant"] for r in per if r["dataset"] == ds})
+    methods = [m for m in ("none", "pca", "pso", "bplo")
+               if any(r["method"] == m for r in per if r["dataset"] == ds)]
+    fig, axes = plt.subplots(len(methods), len(variants),
+                             figsize=(5.2 * len(variants), 4.8 * len(methods)), squeeze=False)
+    short = [n[:9] for n in names]
+    acc_label = {m: m for m in methods}
+    for i, method in enumerate(methods):
+        for j, variant in enumerate(variants):
+            ax = axes[i][j]
+            key = f"{ds}|{method}|{variant}"
+            cm = np.asarray(mats.get(key, []))
+            if cm.size == 0:
+                ax.axis("off")
+                continue
+            im = ax.imshow(cm, cmap="Blues", vmin=0, vmax=1)
+            ax.set_xticks(range(len(names)), short, rotation=45, ha="right", fontsize=7)
+            ax.set_yticks(range(len(names)), short, fontsize=7)
+            for a in range(len(names)):
+                for b in range(len(names)):
+                    v = cm[a, b]
+                    if v >= 0.005:
+                        ax.text(b, a, f"{v:.2f}".lstrip("0"), ha="center", va="center",
+                                fontsize=6.2, color="white" if v > 0.6 else "#333")
+            rec = next((r for r in per if r["dataset"] == ds and r["method"] == method
+                        and r["variant"] == variant), {})
+            nf = rec.get("n_features")
+            ax.set_title(f"{acc_label[method]}（{nf} 维） · {variant}\n"
+                         f"宏召回 {rec.get('macro_recall', float('nan')):.4f}"
+                         f"（最差 {rec.get('worst_class', '')} {rec.get('worst_recall', 0):.2f}）",
+                         fontsize=9.5)
+            ax.set_ylabel("真实类别" if j == 0 else "")
+            ax.set_xlabel("预测类别")
+            fig.colorbar(im, ax=ax, fraction=0.046)
+    fig.suptitle(f"特征选择前后的混淆矩阵对比（行归一化=逐类识别率）｜口径：{ds}",
+                 fontsize=12, y=0.995)
+    fig.tight_layout(rect=(0, 0, 1, 0.98))
+    out.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out, dpi=140)
+    plt.close(fig)
+    LOGGER.info("混淆矩阵对比图已生成 → %s", out)
+    return out
+
+
+# ======================================================================================
 # 6) 主流程
 # ======================================================================================
 def build_payload(args, selections, records) -> dict:
@@ -1020,9 +1219,51 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--redraw", action="store_true",
                     help="不改设置、不重训：读已有的 results/feature_selection.json，"
                          "只重新生成报告与图（改了画图/排版代码后用这个）")
+    ap.add_argument("--confusion", action="store_true",
+                    help="复算「不选特征 / PSO / bPLO」的混淆矩阵与逐类识别率（复用已保存的模型，"
+                         "不重训），产出 results/figures/confusion_fs_*.png 并写回 JSON")
+    ap.add_argument("--confusion-datasets", default="",
+                    help="做混淆对比的口径（缺省：全部口径各出一张图）")
+    ap.add_argument("--confusion-variants", default="cnn_bilstm,bilstm")
+    ap.add_argument("--confusion-methods", default="none,pca,pso,bplo")
     args = ap.parse_args(argv)
     if args.self_test:
         return _self_test()
+    if args.confusion:
+        # 逐口径出图：复用已保存模型复算混淆矩阵，再把逐类识别率写回 JSON 与报告
+        p = json.loads((RESULT_DIR / "feature_selection.json").read_text(encoding="utf-8"))
+        all_ds = list(p.get("datasets") or [])
+        targets = ([x.strip() for x in args.confusion_datasets.split(",") if x.strip()]
+                   or all_ds)
+        merged: dict = {"per_class": [], "matrices": {}}
+        args.confusion_variants = tuple(x.strip() for x in args.confusion_variants.split(",")
+                                        if x.strip())
+        args.confusion_methods = tuple(x.strip() for x in args.confusion_methods.split(",")
+                                       if x.strip())
+        for ds in targets:
+            args.confusion_datasets = [ds]
+            got = collect_confusion(args)
+            merged["per_class"] += got["per_class"]
+            merged["matrices"].update(got["matrices"])
+            if merged["per_class"]:
+                make_confusion_figure({"confusion": got},
+                                      FIGURE_DIR / f"confusion_fs_{ds}.png")
+        # ⚠️ 必须**合并**而不是覆盖：`--confusion-datasets` 允许逐口径分开跑，
+        #    直接赋值会把上一次跑出来的那个口径的结果丢掉（第一次实现就踩了这个坑）。
+        old_cf = p.get("confusion") or {"per_class": [], "matrices": {}}
+        tset = set(targets)
+        keep_per = [r for r in (old_cf.get("per_class") or []) if r.get("dataset") not in tset]
+        keep_mat = {k: v for k, v in (old_cf.get("matrices") or {}).items()
+                    if k.split("|")[0] not in tset}
+        keep_mat.update(merged["matrices"])
+        p["confusion"] = {"per_class": keep_per + merged["per_class"], "matrices": keep_mat}
+        save_json(p, RESULT_DIR / "feature_selection.json")
+        save_text(build_report(p), RESULT_DIR / "feature_selection.md")
+        if not args.no_figure:
+            make_figure(p, FIGURE_DIR / "feature_selection.png")
+        LOGGER.info("混淆矩阵与逐类识别率已复算并写回（本次 %d 个配置，累计 %d 个）",
+                    len(merged["per_class"]), len(p["confusion"]["per_class"]))
+        return 0
     if args.redraw:
         # 只读已有 JSON：**重新做一次汇总**（build_payload）再出报告与图。
         # 为什么要重算而不是直接渲染：汇总逻辑（分口径结论、降维比例、配对检验…）

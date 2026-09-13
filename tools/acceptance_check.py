@@ -1020,6 +1020,24 @@ def check_published_benchmarks(r: Report) -> None:
             r.check(bool(d.get("reference_paper", {}).get("doi")),
                     "产物里记录了被对标的论文（DOI 可追溯）",
                     (d.get("reference_paper") or {}).get("doi", ""))
+            # ---- 论文图 5/图 6 对应的实验方法：混淆矩阵 + 逐类识别率 ----
+            conf = (d.get("confusion") or {}).get("per_class") or []
+            mats = (d.get("confusion") or {}).get("matrices") or {}
+            r.check(len(conf) >= 8 and len(mats) >= 8,
+                    "混淆矩阵对比已复算（对标论文图 5/图 6 的实验方法）",
+                    f"{len(conf)} 个配置的逐类识别率、{len(mats)} 张归一化混淆矩阵")
+            judged = [r_ for r_ in conf if r_.get("worst_class") and r_.get("recall")]
+            r.check(bool(judged) and all(0.0 <= v <= 1.0 for r_ in judged
+                                         for v in r_["recall"].values()),
+                    "逐类识别率数值合法（每类 0~1，且标注了最差类别）",
+                    (f"示例：{judged[0]['dataset']}/{judged[0]['method']}/{judged[0]['variant']} "
+                     f"最差类 {judged[0]['worst_class']} {judged[0]['worst_recall']:.4f}"
+                     if judged else "无记录"))
+            figs = [FIGURE_DIR / f"confusion_fs_{ds}.png" for ds in (d.get("datasets") or [])]
+            have = [f.name for f in figs if f.exists()]
+            r.check(len(have) == len(figs) and bool(figs),
+                    "每个口径都出了混淆矩阵对比图（可直接进报告/PPT）",
+                    "、".join(have) if have else "未找到 confusion_fs_*.png")
     # ---- ③ 对标基线：RNN / LSTM / Transformer ----
     pb = RESULT_DIR / "published_baselines.json"
     if not pb.exists():
