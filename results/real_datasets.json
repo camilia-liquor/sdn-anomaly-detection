@@ -1,0 +1,1087 @@
+{
+  "feature_reference": {
+    "source": "data/processed/meta.json",
+    "n_features": 71,
+    "schema": "CICFlowMeter 全称命名"
+  },
+  "datasets": {
+    "cic_ids2017": {
+      "title": "CIC-IDS2017（原始 MachineLearningCSV，逐日 CICFlowMeter 结果）",
+      "repo": "bencorn/CICIDS2017",
+      "license": "CIC / University of New Brunswick，学术研究用途；引用 Sharafaldin et al., 2018",
+      "why": "逐日抓包（周一~周五）、BENIGN + 7 类攻击；列名与本工程 71 维特征族一致，是唯一同时支持「多类」与「按时序/在线」评测的公开集。MachineLearningCSV 是 78 特征压缩版（无时间列），GeneratedLabelledFlows 带 Timestamp，在线告警口径（检测时延/误报每小时）必须用后者",
+      "files": [
+        {
+          "name": "Friday-WorkingHours-Afternoon-DDos.pcap_ISCX.csv",
+          "rows": 225745,
+          "cols": 85,
+          "encoding": "utf-8-sig",
+          "label_col": "Label",
+          "time_col": "Timestamp"
+        },
+        {
+          "name": "Friday-WorkingHours-Afternoon-PortScan.pcap_ISCX.csv",
+          "rows": 286467,
+          "cols": 85,
+          "encoding": "utf-8-sig",
+          "label_col": "Label",
+          "time_col": "Timestamp"
+        },
+        {
+          "name": "Friday-WorkingHours-Morning.pcap_ISCX.csv",
+          "rows": 191033,
+          "cols": 85,
+          "encoding": "utf-8-sig",
+          "label_col": "Label",
+          "time_col": "Timestamp"
+        },
+        {
+          "name": "Monday-WorkingHours.pcap_ISCX.csv",
+          "rows": 529918,
+          "cols": 85,
+          "encoding": "utf-8-sig",
+          "label_col": "Label",
+          "time_col": "Timestamp"
+        },
+        {
+          "name": "Thursday-WorkingHours-Afternoon-Infilteration.pcap_ISCX.csv",
+          "rows": 288602,
+          "cols": 85,
+          "encoding": "utf-8-sig",
+          "label_col": "Label",
+          "time_col": "Timestamp"
+        },
+        {
+          "name": "Thursday-WorkingHours-Morning-WebAttacks.pcap_ISCX.csv",
+          "rows": 458968,
+          "cols": 85,
+          "encoding": "latin-1",
+          "label_col": "Label",
+          "time_col": "Timestamp"
+        },
+        {
+          "name": "Tuesday-WorkingHours.pcap_ISCX.csv",
+          "rows": 445909,
+          "cols": 85,
+          "encoding": "utf-8-sig",
+          "label_col": "Label",
+          "time_col": "Timestamp"
+        },
+        {
+          "name": "Wednesday-workingHours.pcap_ISCX.csv",
+          "rows": 692703,
+          "cols": 85,
+          "encoding": "utf-8-sig",
+          "label_col": "Label",
+          "time_col": "Timestamp"
+        },
+        {
+          "name": "Friday-WorkingHours-Afternoon-DDos.pcap_ISCX.csv",
+          "rows": 225745,
+          "cols": 79,
+          "encoding": "utf-8-sig",
+          "label_col": "Label",
+          "time_col": null
+        },
+        {
+          "name": "Friday-WorkingHours-Afternoon-PortScan.pcap_ISCX.csv",
+          "rows": 286467,
+          "cols": 79,
+          "encoding": "utf-8-sig",
+          "label_col": "Label",
+          "time_col": null
+        },
+        {
+          "name": "Friday-WorkingHours-Morning.pcap_ISCX.csv",
+          "rows": 191033,
+          "cols": 79,
+          "encoding": "utf-8-sig",
+          "label_col": "Label",
+          "time_col": null
+        },
+        {
+          "name": "Monday-WorkingHours.pcap_ISCX.csv",
+          "rows": 529918,
+          "cols": 79,
+          "encoding": "utf-8-sig",
+          "label_col": "Label",
+          "time_col": null
+        },
+        {
+          "name": "Thursday-WorkingHours-Afternoon-Infilteration.pcap_ISCX.csv",
+          "rows": 288602,
+          "cols": 79,
+          "encoding": "utf-8-sig",
+          "label_col": "Label",
+          "time_col": null
+        },
+        {
+          "name": "Thursday-WorkingHours-Morning-WebAttacks.pcap_ISCX.csv",
+          "rows": 170366,
+          "cols": 79,
+          "encoding": "utf-8-sig",
+          "label_col": "Label",
+          "time_col": null
+        },
+        {
+          "name": "Tuesday-WorkingHours.pcap_ISCX.csv",
+          "rows": 445909,
+          "cols": 79,
+          "encoding": "utf-8-sig",
+          "label_col": "Label",
+          "time_col": null
+        },
+        {
+          "name": "Wednesday-workingHours.pcap_ISCX.csv",
+          "rows": 692703,
+          "cols": 79,
+          "encoding": "utf-8-sig",
+          "label_col": "Label",
+          "time_col": null
+        }
+      ],
+      "total_rows": 5950088,
+      "columns": [
+        "Flow ID",
+        "Source IP",
+        "Source Port",
+        "Destination IP",
+        "Destination Port",
+        "Protocol",
+        "Timestamp",
+        "Flow Duration",
+        "Total Fwd Packets",
+        "Total Backward Packets",
+        "Total Length of Fwd Packets",
+        "Total Length of Bwd Packets",
+        "Fwd Packet Length Max",
+        "Fwd Packet Length Min",
+        "Fwd Packet Length Mean",
+        "Fwd Packet Length Std",
+        "Bwd Packet Length Max",
+        "Bwd Packet Length Min",
+        "Bwd Packet Length Mean",
+        "Bwd Packet Length Std",
+        "Flow Bytes/s",
+        "Flow Packets/s",
+        "Flow IAT Mean",
+        "Flow IAT Std",
+        "Flow IAT Max",
+        "Flow IAT Min",
+        "Fwd IAT Total",
+        "Fwd IAT Mean",
+        "Fwd IAT Std",
+        "Fwd IAT Max",
+        "Fwd IAT Min",
+        "Bwd IAT Total",
+        "Bwd IAT Mean",
+        "Bwd IAT Std",
+        "Bwd IAT Max",
+        "Bwd IAT Min",
+        "Fwd PSH Flags",
+        "Bwd PSH Flags",
+        "Fwd URG Flags",
+        "Bwd URG Flags",
+        "Fwd Header Length",
+        "Bwd Header Length",
+        "Fwd Packets/s",
+        "Bwd Packets/s",
+        "Min Packet Length",
+        "Max Packet Length",
+        "Packet Length Mean",
+        "Packet Length Std",
+        "Packet Length Variance",
+        "FIN Flag Count",
+        "SYN Flag Count",
+        "RST Flag Count",
+        "PSH Flag Count",
+        "ACK Flag Count",
+        "URG Flag Count",
+        "CWE Flag Count",
+        "ECE Flag Count",
+        "Down/Up Ratio",
+        "Average Packet Size",
+        "Avg Fwd Segment Size",
+        "Avg Bwd Segment Size",
+        "Fwd Header Length.1",
+        "Fwd Avg Bytes/Bulk",
+        "Fwd Avg Packets/Bulk",
+        "Fwd Avg Bulk Rate",
+        "Bwd Avg Bytes/Bulk",
+        "Bwd Avg Packets/Bulk",
+        "Bwd Avg Bulk Rate",
+        "Subflow Fwd Packets",
+        "Subflow Fwd Bytes",
+        "Subflow Bwd Packets",
+        "Subflow Bwd Bytes",
+        "Init_Win_bytes_forward",
+        "Init_Win_bytes_backward",
+        "act_data_pkt_fwd",
+        "min_seg_size_forward",
+        "Active Mean",
+        "Active Std",
+        "Active Max",
+        "Active Min",
+        "Idle Mean",
+        "Idle Std",
+        "Idle Max",
+        "Idle Min",
+        "Label"
+      ],
+      "label_col": "Label",
+      "label_columns": {
+        "Label": {
+          "BENIGN": 4546194,
+          "DoS Hulk": 462146,
+          "PortScan": 317860,
+          "nan": 288602,
+          "DDoS": 256054,
+          "DoS GoldenEye": 20586,
+          "FTP-Patator": 15876,
+          "SSH-Patator": 11794,
+          "DoS slowloris": 11592,
+          "DoS Slowhttptest": 10998,
+          "Bot": 3932,
+          "Web Attack  Brute Force": 1507,
+          "Web Attack � Brute Force": 1507,
+          "Web Attack  XSS": 652,
+          "Web Attack � XSS": 652,
+          "Infiltration": 72,
+          "Heartbleed": 22,
+          "Web Attack  Sql Injection": 21,
+          "Web Attack � Sql Injection": 21
+        }
+      },
+      "label_distribution": {
+        "BENIGN": 4546194,
+        "DoS Hulk": 462146,
+        "PortScan": 317860,
+        "nan": 288602,
+        "DDoS": 256054,
+        "DoS GoldenEye": 20586,
+        "FTP-Patator": 15876,
+        "SSH-Patator": 11794,
+        "DoS slowloris": 11592,
+        "DoS Slowhttptest": 10998,
+        "Bot": 3932,
+        "Web Attack  Brute Force": 1507,
+        "Web Attack � Brute Force": 1507,
+        "Web Attack  XSS": 652,
+        "Web Attack � XSS": 652,
+        "Infiltration": 72,
+        "Heartbleed": 22,
+        "Web Attack  Sql Injection": 21,
+        "Web Attack � Sql Injection": 21
+      },
+      "n_labels": 19,
+      "label_source": "数据列 `Label`",
+      "notes": [
+        "MachineLearningCSV（78 特征版）与 GeneratedLabelledFlows（含 Timestamp 与流标识版）是**同一批流量的两种格式**，上表行数是两者之和，真实规模约为其一半；使用时只应二选一，不可合并计数。",
+        "周四下午（Infiltration）当日存在缺失标签（`nan`），归类前必须剔除或单独处理，否则「19 类」里会多出一个假类别。",
+        "标签字符串存在编码变体（如 Web Attack 的连字符在不同文件里不同），聚合成 8 大类前必须先做标签归一化。"
+      ],
+      "time_col": "Timestamp",
+      "time_detail": [
+        {
+          "file": "Friday-WorkingHours-Afternoon-DDos.pcap_ISCX.csv",
+          "parse_rate": 1.0,
+          "monotonic": true
+        },
+        {
+          "file": "Friday-WorkingHours-Afternoon-PortScan.pcap_ISCX.csv",
+          "parse_rate": 1.0,
+          "monotonic": true
+        },
+        {
+          "file": "Friday-WorkingHours-Morning.pcap_ISCX.csv",
+          "parse_rate": 1.0,
+          "monotonic": true
+        },
+        {
+          "file": "Monday-WorkingHours.pcap_ISCX.csv",
+          "parse_rate": 1.0,
+          "monotonic": false
+        },
+        {
+          "file": "Thursday-WorkingHours-Afternoon-Infilteration.pcap_ISCX.csv",
+          "parse_rate": 1.0,
+          "monotonic": true
+        },
+        {
+          "file": "Thursday-WorkingHours-Morning-WebAttacks.pcap_ISCX.csv",
+          "parse_rate": 0.3712,
+          "monotonic": true
+        },
+        {
+          "file": "Tuesday-WorkingHours.pcap_ISCX.csv",
+          "parse_rate": 1.0,
+          "monotonic": false
+        },
+        {
+          "file": "Wednesday-workingHours.pcap_ISCX.csv",
+          "parse_rate": 1.0,
+          "monotonic": false
+        }
+      ],
+      "exact_duplicate_rate": 0.0836,
+      "mapping": {
+        "matched": 71,
+        "coverage": 1.0,
+        "method_counts": {
+          "exact": 43,
+          "explicit": 28
+        },
+        "unmatched": []
+      },
+      "verdicts": [
+        {
+          "aspect": "二分类（正常/攻击）",
+          "ok": true,
+          "note": "数据列 `Label`"
+        },
+        {
+          "aspect": "多分类",
+          "ok": true,
+          "note": "标签取值 19 个"
+        },
+        {
+          "aspect": "可直接用本工程 71 维模型",
+          "ok": true,
+          "note": "特征映射命中 71/71"
+        },
+        {
+          "aspect": "时序 / 在线评测（告警级）",
+          "ok": true,
+          "note": "时间列可解析且（多数文件）行序即时间序 → 可直接做在线告警口径评测"
+        },
+        {
+          "aspect": "可做无泄漏切分",
+          "ok": true,
+          "note": "精确重复率 0.084（重复率低）"
+        }
+      ]
+    },
+    "cic_ids2018": {
+      "title": "CSE-CIC-IDS2018（逐日 CICFlowMeter CSV，先取 3 天）",
+      "repo": "c01dsnap/CIC-IDS2018",
+      "license": "CIC / UNB + AWS，学术研究用途；引用 Sharafaldin et al., 2019",
+      "why": "与 2017 同 schema 但实验床、攻击工具、年份都不同 → 检验「同族特征跨实验床」的迁移性",
+      "files": [
+        {
+          "name": "Friday-16-02-2018_TrafficForML_CICFlowMeter.csv",
+          "rows": 1048575,
+          "cols": 80,
+          "encoding": "utf-8-sig",
+          "label_col": "Label",
+          "time_col": "Timestamp"
+        },
+        {
+          "name": "Thursday-15-02-2018_TrafficForML_CICFlowMeter.csv",
+          "rows": 1048575,
+          "cols": 80,
+          "encoding": "utf-8-sig",
+          "label_col": "Label",
+          "time_col": "Timestamp"
+        },
+        {
+          "name": "Wednesday-14-02-2018_TrafficForML_CICFlowMeter.csv",
+          "rows": 1048575,
+          "cols": 80,
+          "encoding": "utf-8-sig",
+          "label_col": "Label",
+          "time_col": "Timestamp"
+        }
+      ],
+      "total_rows": 3145725,
+      "columns": [
+        "Dst Port",
+        "Protocol",
+        "Timestamp",
+        "Flow Duration",
+        "Tot Fwd Pkts",
+        "Tot Bwd Pkts",
+        "TotLen Fwd Pkts",
+        "TotLen Bwd Pkts",
+        "Fwd Pkt Len Max",
+        "Fwd Pkt Len Min",
+        "Fwd Pkt Len Mean",
+        "Fwd Pkt Len Std",
+        "Bwd Pkt Len Max",
+        "Bwd Pkt Len Min",
+        "Bwd Pkt Len Mean",
+        "Bwd Pkt Len Std",
+        "Flow Byts/s",
+        "Flow Pkts/s",
+        "Flow IAT Mean",
+        "Flow IAT Std",
+        "Flow IAT Max",
+        "Flow IAT Min",
+        "Fwd IAT Tot",
+        "Fwd IAT Mean",
+        "Fwd IAT Std",
+        "Fwd IAT Max",
+        "Fwd IAT Min",
+        "Bwd IAT Tot",
+        "Bwd IAT Mean",
+        "Bwd IAT Std",
+        "Bwd IAT Max",
+        "Bwd IAT Min",
+        "Fwd PSH Flags",
+        "Bwd PSH Flags",
+        "Fwd URG Flags",
+        "Bwd URG Flags",
+        "Fwd Header Len",
+        "Bwd Header Len",
+        "Fwd Pkts/s",
+        "Bwd Pkts/s",
+        "Pkt Len Min",
+        "Pkt Len Max",
+        "Pkt Len Mean",
+        "Pkt Len Std",
+        "Pkt Len Var",
+        "FIN Flag Cnt",
+        "SYN Flag Cnt",
+        "RST Flag Cnt",
+        "PSH Flag Cnt",
+        "ACK Flag Cnt",
+        "URG Flag Cnt",
+        "CWE Flag Count",
+        "ECE Flag Cnt",
+        "Down/Up Ratio",
+        "Pkt Size Avg",
+        "Fwd Seg Size Avg",
+        "Bwd Seg Size Avg",
+        "Fwd Byts/b Avg",
+        "Fwd Pkts/b Avg",
+        "Fwd Blk Rate Avg",
+        "Bwd Byts/b Avg",
+        "Bwd Pkts/b Avg",
+        "Bwd Blk Rate Avg",
+        "Subflow Fwd Pkts",
+        "Subflow Fwd Byts",
+        "Subflow Bwd Pkts",
+        "Subflow Bwd Byts",
+        "Init Fwd Win Byts",
+        "Init Bwd Win Byts",
+        "Fwd Act Data Pkts",
+        "Fwd Seg Size Min",
+        "Active Mean",
+        "Active Std",
+        "Active Max",
+        "Active Min",
+        "Idle Mean",
+        "Idle Std",
+        "Idle Max",
+        "Idle Min",
+        "Label"
+      ],
+      "label_col": "Label",
+      "label_columns": {
+        "Label": {
+          "Benign": 2110475,
+          "DoS attacks-Hulk": 461912,
+          "FTP-BruteForce": 193360,
+          "SSH-Bruteforce": 187589,
+          "DoS attacks-SlowHTTPTest": 139890,
+          "DoS attacks-GoldenEye": 41508,
+          "DoS attacks-Slowloris": 10990,
+          "Label": 1
+        }
+      },
+      "label_distribution": {
+        "Benign": 2110475,
+        "DoS attacks-Hulk": 461912,
+        "FTP-BruteForce": 193360,
+        "SSH-Bruteforce": 187589,
+        "DoS attacks-SlowHTTPTest": 139890,
+        "DoS attacks-GoldenEye": 41508,
+        "DoS attacks-Slowloris": 10990,
+        "Label": 1
+      },
+      "n_labels": 8,
+      "label_source": "数据列 `Label`",
+      "notes": [
+        "镜像里三个文件的样本数完全相同（都是 1,048,575 = 2^20−1，即 Excel 行数上限），疑似经表格工具导出时被截断；使用前应与原始发布方的行数核对，并按截断风险下调结论强度。"
+      ],
+      "time_col": "Timestamp",
+      "time_detail": [
+        {
+          "file": "Friday-16-02-2018_TrafficForML_CICFlowMeter.csv",
+          "parse_rate": 1.0,
+          "monotonic": false
+        },
+        {
+          "file": "Thursday-15-02-2018_TrafficForML_CICFlowMeter.csv",
+          "parse_rate": 1.0,
+          "monotonic": false
+        },
+        {
+          "file": "Wednesday-14-02-2018_TrafficForML_CICFlowMeter.csv",
+          "parse_rate": 1.0,
+          "monotonic": false
+        }
+      ],
+      "exact_duplicate_rate": 0.3251,
+      "mapping": {
+        "matched": 71,
+        "coverage": 1.0,
+        "method_counts": {
+          "explicit": 71
+        },
+        "unmatched": []
+      },
+      "verdicts": [
+        {
+          "aspect": "二分类（正常/攻击）",
+          "ok": true,
+          "note": "数据列 `Label`"
+        },
+        {
+          "aspect": "多分类",
+          "ok": true,
+          "note": "标签取值 8 个"
+        },
+        {
+          "aspect": "可直接用本工程 71 维模型",
+          "ok": true,
+          "note": "特征映射命中 71/71"
+        },
+        {
+          "aspect": "时序 / 在线评测（告警级）",
+          "ok": true,
+          "note": "时间列可解析但**当前行序不是时间序** → 必须先按时间列排序再切分，否则时序评测无效"
+        },
+        {
+          "aspect": "可做无泄漏切分",
+          "ok": false,
+          "note": "精确重复率 0.325（必须先按特征去重，否则同文件内切分必然泄漏）"
+        }
+      ]
+    },
+    "unsw_nb15": {
+      "title": "UNSW-NB15（官方训练/测试集 + 特征说明）",
+      "repo": "Mireu-Lab/UNSW-NB15",
+      "license": "UNSW Canberra，学术研究用途；引用 Moustafa & Slay, 2015",
+      "why": "特征体系完全不同（Zeek/Argus 系，49 维）→ 检验「换一套特征族还能不能用」，且官方自带 train/test 划分，避免自己切分带来的口径争议",
+      "files": [
+        {
+          "name": "test.csv",
+          "rows": 175341,
+          "cols": 45,
+          "encoding": "utf-8-sig",
+          "label_col": "label",
+          "time_col": null
+        },
+        {
+          "name": "train.csv",
+          "rows": 82332,
+          "cols": 45,
+          "encoding": "utf-8-sig",
+          "label_col": "label",
+          "time_col": null
+        }
+      ],
+      "total_rows": 257673,
+      "columns": [
+        "id",
+        "dur",
+        "proto",
+        "service",
+        "state",
+        "spkts",
+        "dpkts",
+        "sbytes",
+        "dbytes",
+        "rate",
+        "sttl",
+        "dttl",
+        "sload",
+        "dload",
+        "sloss",
+        "dloss",
+        "sinpkt",
+        "dinpkt",
+        "sjit",
+        "djit",
+        "swin",
+        "stcpb",
+        "dtcpb",
+        "dwin",
+        "tcprtt",
+        "synack",
+        "ackdat",
+        "smean",
+        "dmean",
+        "trans_depth",
+        "response_body_len",
+        "ct_srv_src",
+        "ct_state_ttl",
+        "ct_dst_ltm",
+        "ct_src_dport_ltm",
+        "ct_dst_sport_ltm",
+        "ct_dst_src_ltm",
+        "is_ftp_login",
+        "ct_ftp_cmd",
+        "ct_flw_http_mthd",
+        "ct_src_ltm",
+        "ct_srv_dst",
+        "is_sm_ips_ports",
+        "attack_cat",
+        "label"
+      ],
+      "label_col": "attack_cat",
+      "label_columns": {
+        "attack_cat": {
+          "Normal": 93000,
+          "Generic": 58871,
+          "Exploits": 44525,
+          "Fuzzers": 24246,
+          "DoS": 16353,
+          "Reconnaissance": 13987,
+          "Analysis": 2677,
+          "Backdoor": 2329,
+          "Shellcode": 1511,
+          "Worms": 174
+        },
+        "label": {
+          "1": 164673,
+          "0": 93000
+        }
+      },
+      "label_distribution": {
+        "Normal": 93000,
+        "Generic": 58871,
+        "Exploits": 44525,
+        "Fuzzers": 24246,
+        "DoS": 16353,
+        "Reconnaissance": 13987,
+        "Analysis": 2677,
+        "Backdoor": 2329,
+        "Shellcode": 1511,
+        "Worms": 174
+      },
+      "n_labels": 10,
+      "label_source": "数据列 `attack_cat`",
+      "notes": [
+        "该镜像的 train.csv = 82,332 行、test.csv = 175,341 行，与官方发布（训练 175,341 / 测试 82,332）相反，疑为文件名对调；引用具体数字前必须核对官方口径。",
+        "特征为 Zeek/Argus 短名体系（45 列），与本工程 CICFlowMeter 71 维不通用（映射 0/71）。"
+      ],
+      "time_col": null,
+      "time_detail": [],
+      "exact_duplicate_rate": 0.3885,
+      "mapping": {
+        "matched": 0,
+        "coverage": 0.0,
+        "method_counts": {},
+        "unmatched": [
+          "Protocol",
+          "Flow Duration",
+          "Total Fwd Packets",
+          "Total Backward Packets",
+          "Total Length of Fwd Packets",
+          "Total Length of Bwd Packets",
+          "Fwd Packet Length Max",
+          "Fwd Packet Length Min",
+          "Fwd Packet Length Mean",
+          "Fwd Packet Length Std",
+          "Bwd Packet Length Max",
+          "Bwd Packet Length Min",
+          "Bwd Packet Length Mean",
+          "Bwd Packet Length Std",
+          "Flow Bytes/s"
+        ]
+      },
+      "verdicts": [
+        {
+          "aspect": "二分类（正常/攻击）",
+          "ok": true,
+          "note": "数据列 `attack_cat`"
+        },
+        {
+          "aspect": "多分类",
+          "ok": true,
+          "note": "标签取值 10 个"
+        },
+        {
+          "aspect": "可直接用本工程 71 维模型",
+          "ok": false,
+          "note": "特征映射命中 0/71 → 特征体系不同，需另建特征映射与模型，不能沿用现有权重"
+        },
+        {
+          "aspect": "时序 / 在线评测（告警级）",
+          "ok": false,
+          "note": "无可用时间列 → 只能做静态窗口分类（不得报告检测时延/误报每小时）"
+        },
+        {
+          "aspect": "可做无泄漏切分",
+          "ok": false,
+          "note": "精确重复率 0.389（必须先按特征去重，否则同文件内切分必然泄漏）"
+        }
+      ]
+    },
+    "ton_iot": {
+      "title": "TON_IoT（网络流量合并表）",
+      "repo": "codymlewis/TON_IoT_network",
+      "license": "UNSW Canberra，学术研究用途；引用 Moustafa et al., 2020",
+      "why": "IoT/IIoT 场景、含 label 与 type 两级标签、有时间列；与本工程的「校园网/企业网」场景形成对照",
+      "files": [
+        {
+          "name": "train_test_network.csv",
+          "rows": 211043,
+          "cols": 44,
+          "encoding": "utf-8-sig",
+          "label_col": "label",
+          "time_col": null
+        }
+      ],
+      "total_rows": 211043,
+      "columns": [
+        "src_ip",
+        "src_port",
+        "dst_ip",
+        "dst_port",
+        "proto",
+        "service",
+        "duration",
+        "src_bytes",
+        "dst_bytes",
+        "conn_state",
+        "missed_bytes",
+        "src_pkts",
+        "src_ip_bytes",
+        "dst_pkts",
+        "dst_ip_bytes",
+        "dns_query",
+        "dns_qclass",
+        "dns_qtype",
+        "dns_rcode",
+        "dns_AA",
+        "dns_RD",
+        "dns_RA",
+        "dns_rejected",
+        "ssl_version",
+        "ssl_cipher",
+        "ssl_resumed",
+        "ssl_established",
+        "ssl_subject",
+        "ssl_issuer",
+        "http_trans_depth",
+        "http_method",
+        "http_uri",
+        "http_version",
+        "http_request_body_len",
+        "http_response_body_len",
+        "http_status_code",
+        "http_user_agent",
+        "http_orig_mime_types",
+        "http_resp_mime_types",
+        "weird_name",
+        "weird_addl",
+        "weird_notice",
+        "label",
+        "type"
+      ],
+      "label_col": "type",
+      "label_columns": {
+        "label": {
+          "1": 161043,
+          "0": 50000
+        },
+        "type": {
+          "normal": 50000,
+          "backdoor": 20000,
+          "ddos": 20000,
+          "dos": 20000,
+          "injection": 20000,
+          "password": 20000,
+          "ransomware": 20000,
+          "scanning": 20000,
+          "xss": 20000,
+          "mitm": 1043
+        }
+      },
+      "label_distribution": {
+        "normal": 50000,
+        "backdoor": 20000,
+        "ddos": 20000,
+        "dos": 20000,
+        "injection": 20000,
+        "password": 20000,
+        "ransomware": 20000,
+        "scanning": 20000,
+        "xss": 20000,
+        "mitm": 1043
+      },
+      "n_labels": 10,
+      "label_source": "数据列 `type`",
+      "notes": [
+        "特征为 Argus/Zeek 体系（44 列），无时间列；与本工程 71 维不通用（映射 0/71），只能用于独立建模或标签级对照。"
+      ],
+      "time_col": null,
+      "time_detail": [],
+      "exact_duplicate_rate": 0.5726,
+      "mapping": {
+        "matched": 0,
+        "coverage": 0.0,
+        "method_counts": {},
+        "unmatched": [
+          "Protocol",
+          "Flow Duration",
+          "Total Fwd Packets",
+          "Total Backward Packets",
+          "Total Length of Fwd Packets",
+          "Total Length of Bwd Packets",
+          "Fwd Packet Length Max",
+          "Fwd Packet Length Min",
+          "Fwd Packet Length Mean",
+          "Fwd Packet Length Std",
+          "Bwd Packet Length Max",
+          "Bwd Packet Length Min",
+          "Bwd Packet Length Mean",
+          "Bwd Packet Length Std",
+          "Flow Bytes/s"
+        ]
+      },
+      "verdicts": [
+        {
+          "aspect": "二分类（正常/攻击）",
+          "ok": true,
+          "note": "数据列 `type`"
+        },
+        {
+          "aspect": "多分类",
+          "ok": true,
+          "note": "标签取值 10 个"
+        },
+        {
+          "aspect": "可直接用本工程 71 维模型",
+          "ok": false,
+          "note": "特征映射命中 0/71 → 特征体系不同，需另建特征映射与模型，不能沿用现有权重"
+        },
+        {
+          "aspect": "时序 / 在线评测（告警级）",
+          "ok": false,
+          "note": "无可用时间列 → 只能做静态窗口分类（不得报告检测时延/误报每小时）"
+        },
+        {
+          "aspect": "可做无泄漏切分",
+          "ok": false,
+          "note": "精确重复率 0.573（必须先按特征去重，否则同文件内切分必然泄漏）"
+        }
+      ]
+    },
+    "cic_iot2023": {
+      "title": "CIC-IoT2023（CICFlowMeter 逐攻击族 CSV，取 Benign + 7 族 DDoS）",
+      "repo": "baalajimaestro/DDoS-CICIoT2023",
+      "license": "CIC / UNB（CIC-IoT2023），学术研究用途；引用 Neto et al., 2023",
+      "why": "同为 CICFlowMeter 特征族（能被本工程 71 维模型直接消费），但攻击族与 2017 完全不同，且含 SlowLoris / 分片洪泛这类低速隐蔽攻击 → 可在真实数据上做「训练未见过的攻击族」检验",
+      "files": [
+        {
+          "name": "BenignTraffic.pcap.csv",
+          "rows": 362361,
+          "cols": 39,
+          "encoding": "utf-8-sig",
+          "label_col": null,
+          "time_col": null
+        },
+        {
+          "name": "BenignTraffic1.pcap.csv",
+          "rows": 295585,
+          "cols": 39,
+          "encoding": "utf-8-sig",
+          "label_col": null,
+          "time_col": null
+        },
+        {
+          "name": "DDoS-ICMP_Flood.pcap.csv",
+          "rows": 268010,
+          "cols": 39,
+          "encoding": "utf-8-sig",
+          "label_col": null,
+          "time_col": null
+        },
+        {
+          "name": "DDoS-ICMP_Fragmentation.pcap.csv",
+          "rows": 20696,
+          "cols": 39,
+          "encoding": "utf-8-sig",
+          "label_col": null,
+          "time_col": null
+        },
+        {
+          "name": "DDoS-PSHACK_Flood.pcap.csv",
+          "rows": 267811,
+          "cols": 39,
+          "encoding": "utf-8-sig",
+          "label_col": null,
+          "time_col": null
+        },
+        {
+          "name": "DDoS-SlowLoris.pcap.csv",
+          "rows": 23426,
+          "cols": 39,
+          "encoding": "utf-8-sig",
+          "label_col": null,
+          "time_col": null
+        },
+        {
+          "name": "DDoS-SYN_Flood.pcap.csv",
+          "rows": 266024,
+          "cols": 39,
+          "encoding": "utf-8-sig",
+          "label_col": null,
+          "time_col": null
+        },
+        {
+          "name": "DDoS-TCP_Flood.pcap.csv",
+          "rows": 265776,
+          "cols": 39,
+          "encoding": "utf-8-sig",
+          "label_col": null,
+          "time_col": null
+        },
+        {
+          "name": "DDoS-UDP_Flood.pcap.csv",
+          "rows": 266605,
+          "cols": 39,
+          "encoding": "utf-8-sig",
+          "label_col": null,
+          "time_col": null
+        },
+        {
+          "name": "DDoS-UDP_Fragmentation.pcap.csv",
+          "rows": 22542,
+          "cols": 39,
+          "encoding": "utf-8-sig",
+          "label_col": null,
+          "time_col": null
+        }
+      ],
+      "total_rows": 2058836,
+      "columns": [
+        "Header_Length",
+        "Protocol Type",
+        "Time_To_Live",
+        "Rate",
+        "fin_flag_number",
+        "syn_flag_number",
+        "rst_flag_number",
+        "psh_flag_number",
+        "ack_flag_number",
+        "ece_flag_number",
+        "cwr_flag_number",
+        "ack_count",
+        "syn_count",
+        "fin_count",
+        "rst_count",
+        "HTTP",
+        "HTTPS",
+        "DNS",
+        "Telnet",
+        "SMTP",
+        "SSH",
+        "IRC",
+        "TCP",
+        "UDP",
+        "DHCP",
+        "ARP",
+        "ICMP",
+        "IGMP",
+        "IPv",
+        "LLC",
+        "Tot sum",
+        "Min",
+        "Max",
+        "AVG",
+        "Std",
+        "Tot size",
+        "IAT",
+        "Number",
+        "Variance"
+      ],
+      "label_col": "__from_filename__",
+      "label_columns": {
+        "__from_filename__": {
+          "BenignTraffic": 657946,
+          "DDoS-ICMP_Flood": 268010,
+          "DDoS-PSHACK_Flood": 267811,
+          "DDoS-UDP_Flood": 266605,
+          "DDoS-SYN_Flood": 266024,
+          "DDoS-TCP_Flood": 265776,
+          "DDoS-SlowLoris": 23426,
+          "DDoS-UDP_Fragmentation": 22542,
+          "DDoS-ICMP_Fragmentation": 20696
+        }
+      },
+      "label_distribution": {
+        "BenignTraffic": 657946,
+        "DDoS-ICMP_Flood": 268010,
+        "DDoS-PSHACK_Flood": 267811,
+        "DDoS-UDP_Flood": 266605,
+        "DDoS-SYN_Flood": 266024,
+        "DDoS-TCP_Flood": 265776,
+        "DDoS-SlowLoris": 23426,
+        "DDoS-UDP_Fragmentation": 22542,
+        "DDoS-ICMP_Fragmentation": 20696
+      },
+      "n_labels": 9,
+      "label_source": "文件名推断（数据内无标签列）",
+      "notes": [
+        "数据里没有标签列，攻击族由文件名给出（工程按文件名推断标签并明确标注来源）。",
+        "特征为 CICIoT2023 的 39 维（Header_Length / Tot sum / flag 计数 …），与本工程 71 维不通用（映射 0/71）。"
+      ],
+      "time_col": null,
+      "time_detail": [],
+      "exact_duplicate_rate": 0.2415,
+      "mapping": {
+        "matched": 0,
+        "coverage": 0.0,
+        "method_counts": {},
+        "unmatched": [
+          "Protocol",
+          "Flow Duration",
+          "Total Fwd Packets",
+          "Total Backward Packets",
+          "Total Length of Fwd Packets",
+          "Total Length of Bwd Packets",
+          "Fwd Packet Length Max",
+          "Fwd Packet Length Min",
+          "Fwd Packet Length Mean",
+          "Fwd Packet Length Std",
+          "Bwd Packet Length Max",
+          "Bwd Packet Length Min",
+          "Bwd Packet Length Mean",
+          "Bwd Packet Length Std",
+          "Flow Bytes/s"
+        ]
+      },
+      "verdicts": [
+        {
+          "aspect": "二分类（正常/攻击）",
+          "ok": true,
+          "note": "文件名推断（数据内无标签列）"
+        },
+        {
+          "aspect": "多分类",
+          "ok": true,
+          "note": "标签取值 9 个"
+        },
+        {
+          "aspect": "可直接用本工程 71 维模型",
+          "ok": false,
+          "note": "特征映射命中 0/71 → 特征体系不同，需另建特征映射与模型，不能沿用现有权重"
+        },
+        {
+          "aspect": "时序 / 在线评测（告警级）",
+          "ok": false,
+          "note": "无可用时间列 → 只能做静态窗口分类（不得报告检测时延/误报每小时）"
+        },
+        {
+          "aspect": "可做无泄漏切分",
+          "ok": false,
+          "note": "精确重复率 0.241（必须先按特征去重，否则同文件内切分必然泄漏）"
+        }
+      ]
+    }
+  }
+}
