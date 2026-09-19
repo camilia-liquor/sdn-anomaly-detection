@@ -87,6 +87,45 @@ DATASETS: dict[str, dict] = {
                   "含大量空值/Infinity：按 clean_dataframe 的「任一特征缺失即丢行」实测只剩 0.002% 数据，"
                   "故本数据集走 light 轻清洗（特征缺失保留，由标准化承接）"],
     },
+    # ---- 以下三份的特征体系与本工程 71 维不通用（映射 0/71），只能用「原生特征自训」口径 ----
+    "unsw_nb15": {
+        "title": "UNSW-NB15（官方 train/test，Zeek/Argus 短名 45 列）",
+        "files": ["data/real/unsw_nb15"],
+        "label": "label",            # 0/1
+        "label_multi": "attack_cat",  # 9 类攻击族
+        "time": None,
+        "group": None,               # 该版本无 IP/端口列，做不了身份级组切分
+        "day_from": None,
+        "family": {},
+        "clean": "light",
+        "notes": ["镜像的 train.csv = 82,332 行、test.csv = 175,341 行，与官方（175,341/82,332）相反，疑为文件名对调",
+                  "特征映射 0/71：Zeek/Argus 体系与本工程 CICFlowMeter 71 维不通用，不得沿用现有权重"],
+    },
+    "ton_iot": {
+        "title": "TON_IoT（Argus/Zeek 44 列，含 label 与 type 两级标签）",
+        "files": ["data/real/ton_iot"],
+        "label": "label",
+        "label_multi": "type",
+        "time": None,
+        "group": ["src_ip", "dst_ip", "dst_port", "proto"],
+        "day_from": None,
+        "family": {},
+        "clean": "light",
+        "notes": ["特征映射 0/71：Argus 体系不通用", "无时间列，不能做在线告警口径评测"],
+    },
+    "cic_iot2023": {
+        "title": "CIC-IoT2023（CICIoT2023 39 列，Benign + 8 族 DDoS，标签只在文件名）",
+        "files": ["data/real/cic_iot2023"],
+        "label": None,               # 数据里没有标签列 → 按文件名推断
+        "label_multi": None,
+        "time": None,
+        "group": None,
+        "day_from": None,
+        "family": {},
+        "clean": "light",
+        "notes": ["标签由文件名推断（DDoS-SlowLoris / BenignTraffic …），已明确标注来源",
+                  "特征映射 0/71：CICIoT2023 的 39 维不通用", "无时间列"],
+    },
 }
 
 # CIC-IDS2017 / 2018 的原始标签 → 本工程 8 大类（含编码变体归一化）
@@ -318,6 +357,9 @@ def main(argv=None) -> int:
                     help="block=连续段内前后切分（默认，保住连续性）；group=按流身份组切分；cross_day=按天切分")
     ap.add_argument("--budget", type=float, default=0.01, help="主指标误报预算（默认 1%%）")
     ap.add_argument("--fit-frac", type=float, default=0.4, help="group 协议下拟合段占比")
+    ap.add_argument("--fit-days", type=int, default=2, help="cross_day 协议下用前几天做拟合段（默认 2）")
+    ap.add_argument("--native", action="store_true",
+                    help="额外跑「原生特征自训」臂：用该数据自己的数值列 + 逻辑回归（特征映射 0/71 时必须用这个）")
     ap.add_argument("--window", type=int, default=16)
     ap.add_argument("--stride", type=int, default=3)
     ap.add_argument("--row-cap", type=int, default=250000, help="总行数上限（0=不限；按文件等间隔抽样）")
@@ -356,21 +398,52 @@ def main(argv=None) -> int:
     log(f"读入 {len(df):,} 行 × {len(df.columns)} 列（{len(files)} 个文件）")
 
     # ---- 标签归一化 ----
-    raw_labels = df[spec["label"]].astype(str)
-    df["__raw_label__"] = raw_labels.map(norm_label)
-    if spec["family"]:
-        df["__fam__"] = df["__raw_label__"].map(lambda x: spec["family"].get(x, "Other:" + x))
+    # 两种口径：① 0/1 编码列（UNSW-NB15/TON_IoT/inSDN）→ 直接当二分类，细类取 label_multi；
+    #            ② 带类别名的列（CIC-IDS2017/2018）或多分类列 → 按家族规则归一化。
+    if spec.get("label") and spec["label"] in df.columns:
+        lb = df[spec["label"]]
+        as_num = pd.to_numeric(lb, errors="coerce")
+        is_binary_code = bool(as_num.isin([0, 1]).mean() > 0.99)
     else:
-        df["__fam__"] = df["__raw_label__"].map(to_family)
-    fam_counts = df["__fam__"].value_counts()
-    log("家族分布（归一化后）：" + "、".join(f"{k}={v:,}" for k, v in fam_counts.items()))
-    n_missing = int((df["__raw_label__"].str.lower().isin(["nan", "", "none"])).sum())
-    if n_missing:
-        log(f"  ! 缺失标签 {n_missing:,} 行，已剔除（不得当成一个类别）")
-        df = df[~df["__raw_label__"].str.lower().isin(["nan", "", "none"])].reset_index(drop=True)
+        is_binary_code = False
 
-    # ---- 标签列改为二分类（Normal vs 攻击）供阈值口径使用 ----
-    df["__y__"] = (df["__fam__"] != "Normal").astype(int)
+    if is_binary_code:
+        ybin = (as_num.fillna(0) > 0).astype(int)
+        multi = spec.get("label_multi")
+        if multi and multi in df.columns:
+            fams = df[multi].astype(str).map(norm_label)
+            fams = np.where(ybin == 1, np.where(fams.isin(["", "nan", "None"]), "Attack", fams), "Normal")
+        else:
+            fams = np.where(ybin == 1, "Attack", "Normal")
+        df["__y__"] = ybin.to_numpy()
+        df["__fam__"] = fams
+        df["__raw_label__"] = df[spec["label"]].astype(str).map(norm_label)
+        n_missing = int(as_num.isna().sum())
+        log(f"标签口径：0/1 编码列 `{spec['label']}`（细类来自 `{multi}`）｜缺失标签 {n_missing:,} 行")
+    else:
+        if spec.get("label") and spec["label"] in df.columns:
+            raw_labels = df[spec["label"]].astype(str)
+            df["__raw_label__"] = raw_labels.map(norm_label)
+            df["__fam__"] = (df["__raw_label__"].map(lambda x: spec["family"].get(x, "Other:" + x))
+                             if spec["family"] else df["__raw_label__"].map(to_family))
+        else:
+            # 无标签列 → 按文件名推断（CIC-IoT2023 的攻击族只在文件名里）
+            stem = df["__day__"].astype(str).str.split(".").str[0]
+            df["__raw_label__"] = stem
+            df["__fam__"] = stem.str.replace(r"\d+$", "", regex=True)
+        n_missing = int(df["__raw_label__"].str.lower().isin(["nan", "", "none"]).sum())
+        # Normal 判定：家族名含 benign/normal 的一律算正常（CIC-IoT2023 的 benign 文件名是
+        # BenignTraffic，不识别会把攻击先验算成 1.0000 —— 那是会直接把结论带偏的错误）
+        is_normal = df["__fam__"].astype(str).str.lower().str.contains("benign|normal", regex=True)
+        df["__y__"] = (~is_normal).astype(int)
+        if n_missing:
+            log(f"  ! 缺失标签 {n_missing:,} 行，已剔除（不得当成一个类别）")
+            df = df[~df["__raw_label__"].str.lower().isin(["nan", "", "none"])].reset_index(drop=True)
+            is_normal = df["__fam__"].astype(str).str.lower().str.contains("benign|normal", regex=True)
+            df["__y__"] = (~is_normal).astype(int)
+
+    fam_counts = df["__fam__"].value_counts()
+    log("家族分布（归一化后）：" + "、".join(f"{k}={v:,}" for k, v in fam_counts.head(12).items()))
     log(f"二分类先验：攻击 {df['__y__'].mean():.4f}")
 
     # ---- 去重（与项目口径一致）----
@@ -383,7 +456,7 @@ def main(argv=None) -> int:
         # 「任一特征缺失即丢行」——实测 5,000 行只剩 129 行、全量只剩 7 行，
         # 会把数据集清空。特征缺失改由后面的标准化承接：映射不到的维度填 0
         # （标准化空间 = 拟合段/合成域均值），既不丢行也不引入评估段信息。
-        df2 = df.dropna(subset=[spec["label"]]).copy()
+        df2 = df.dropna(subset=[spec["label"]]).copy() if spec.get("label") else df.copy()
         df2 = df2.replace([np.inf, -np.inf], np.nan)
         feat_cols_all = [c for c in df2.columns if not c.startswith("__") and c != spec["label"]]
         df2 = df2.drop_duplicates(subset=feat_cols_all, keep="first").reset_index(drop=True)
@@ -399,13 +472,24 @@ def main(argv=None) -> int:
     real_cols = [c for c in df2.columns if not c.startswith("__")]
     mapping, mp_info = build_mapping(FEATURES, real_cols)
     log(f"特征映射：{len(mapping)}/{len(FEATURES)}（{len(mapping)/len(FEATURES)*100:.1f}%）")
+    if not mapping and not args.native:
+        raise SystemExit("特征映射为 0：这份数据的特征体系与本工程 71 维不通用，"
+                         "不能用现有模型评测；若要评测请加 --native（用其原生特征自训）")
     if not mapping:
-        raise SystemExit("特征映射为 0：这份数据的特征体系与本工程 71 维不通用，不能用现有模型评测")
+        log("  ! 映射为 0：本工程 71 维不可用，仅出「原生特征自训」臂的结果（--native）")
 
     # ---- 全局近似去重（在**映射后的特征子集**上，N 位有效数字）----
     # 放在切分之前：这样「训练/评估近重复交集 = 0」是构造上的保证，
     # 后面的校验才有意义（用 3 位有效数字与项目主实验同一开关口径）。
     mapped_cols = [mapping[f] for f in FEATURES if f in mapping]
+    if not mapped_cols:
+        # 映射为空时若继续用空特征列做哈希，所有行会被判成"同一行"→ 数据被压成 1 行。
+        # 这种静默毁数据的路径必须堵死：退回用该数据集自己的数值列做去重键与泄漏校验键。
+        mapped_cols = [c for c in df2.columns if not c.startswith("__")
+                       and c != (spec.get("label") or "") and pd.api.types.is_numeric_dtype(df2[c])]
+        log(f"  ! 无映射特征：近似去重与泄漏校验改用该数据集自己的 {len(mapped_cols)} 个数值列")
+    if not mapped_cols:
+        raise SystemExit("既没有可映射特征、也没有数值列：无法去重与泄漏校验，拒绝出结论")
     raw_feat_all = df2[mapped_cols].apply(pd.to_numeric, errors="coerce").to_numpy(np.float64)
     dig = args.dedup_digits
     if dig > 0:
@@ -426,18 +510,19 @@ def main(argv=None) -> int:
 
     # ---- 切分 ----
     rng = np.random.default_rng(args.seed)
-    gcol = [c for c in spec["group"] if c in df2.columns]
-    if not gcol:
-        raise SystemExit(f"找不到流身份列 {spec['group']}，无法做组切分")
-    gkey = df2[gcol].astype(str).agg("|".join, axis=1)
+    gcol = [c for c in (spec.get("group") or []) if c in df2.columns]
+    if args.protocol == "group" and not gcol:
+        raise SystemExit(f"{args.dataset} 没有流身份列（{spec.get('group')}），无法做组切分："
+                         "请改用 --protocol block（连续段前后切分），不要假装做了身份级隔离")
+    gkey = df2[gcol].astype(str).agg("|".join, axis=1) if gcol else pd.Series(["__nogroup__"] * len(df2))
     if args.protocol == "cross_day" and spec["day_from"]:
         # 按真实星期顺序排（文件名里含 Monday..Friday），不能按字母序——
         # 字母序会把 Friday 排到最前，得到「用周五训练、用周一~周四评测」这种没有依据的口径。
         days = sorted(df2["__day__"].unique(), key=day_rank)
-        fit_days = set(days[:2])
+        fit_days = set(days[:max(1, args.fit_days)])
         side = np.where(df2["__day__"].isin(fit_days), 0, 1).astype(np.int64)
-        log(f"按天切分（时间顺序）：拟合段 {[d[:38] for d in days[:2]]}")
-        log(f"                   评估段 {[d[:38] for d in days[2:]]}")
+        log(f"按天切分（时间顺序）：拟合段 {[d[:38] for d in days[:max(1, args.fit_days)]]}")
+        log(f"                   评估段 {[d[:38] for d in days[max(1, args.fit_days):]]}")
     elif args.protocol == "block":
         # 连续同标签段内前后切分 + purge 间隔：保住连续性（窗口可开），
         # 又让两侧都含正常与攻击（不退化）。近重复由全局去重保证，切分后仍会校验。
@@ -474,7 +559,7 @@ def main(argv=None) -> int:
     log(f"可用于开窗的行：{len(df2):,}（拟合 {int((side==0).sum()):,} / 评估 {int((side==1).sum()):,}）")
 
     # ---- 泄漏校验（必须全为 0）----
-    raw_feat = df2[[mapping[f] for f in FEATURES if f in mapping]].to_numpy(np.float64)
+    raw_feat = df2[mapped_cols].apply(pd.to_numeric, errors="coerce").to_numpy(np.float64)
     fit_rows = np.where(side == 0)[0]
     ev_rows = np.where(side == 1)[0]
     grp_fit = set(gkey.iloc[fit_rows]); grp_ev = set(gkey.iloc[ev_rows])
@@ -548,6 +633,16 @@ def main(argv=None) -> int:
         entry["roc_auc"] = round(roc_auc(y_ev, ev_scores), 4) if len(np.unique(y_ev)) > 1 else None
         entry["tpr_at_fpr1pct"] = round(tpr_at_fpr(y_ev, ev_scores, 0.01), 4)
         entry["tpr_at_fpr0p1pct"] = round(tpr_at_fpr(y_ev, ev_scores, 0.001), 4)
+        # 按组分数分布：这是解释「AUC < 0.5（反转）」的关键诊断——
+        # 若 eval 正常窗口的分数高于 eval 攻击窗口，排序本身就反了，
+        # 根因通常是目标域正常流量画像漂移（跨日/跨场景），而不是模型"学到了反向规律"。
+        m_fit_n = float(np.median(fit_scores)) if fit_scores.size else float("nan")
+        m_ev_n = float(np.median(ev_scores[y_ev == 0])) if int((y_ev == 0).sum()) else float("nan")
+        m_ev_a = float(np.median(ev_scores[y_ev == 1])) if int((y_ev == 1).sum()) else float("nan")
+        entry["score_median"] = {"fit_normal": round(m_fit_n, 4), "eval_normal": round(m_ev_n, 4),
+                                 "eval_attack": round(m_ev_a, 4),
+                                 "attack_minus_normal": round(m_ev_a - m_ev_n, 4),
+                                 "inverted": bool(m_ev_a < m_ev_n)}
         results[name] = entry
         store[name] = (np.asarray(fit_scores, dtype=np.float64), np.asarray(ev_scores, dtype=np.float64))
         main = entry[f"at_{args.budget:g}"]
@@ -556,11 +651,18 @@ def main(argv=None) -> int:
             f"｜TPR@FPR1% {entry['tpr_at_fpr1pct']:.4f}｜AUC {entry['roc_auc']}")
 
     # A0：合成域标准化器 + 主模型（零样本迁移）
+    # 映射为 0 时 X 全是填 0 的常数 → 模型对每个窗口给同一个分数，
+    # 阈值等于该常数 → 全部判为攻击（实测误报率 1.0000、AUC 0.5）。
+    # 那是**纯假象**，必须整臂跳过，不允许出现在结果里。
+    skip_deep = (len(mapping) == 0)
+    if skip_deep:
+        log("  ! 映射为 0：跳过全部依赖本工程 71 维的评测臂（否则得到常数输入 → 全判攻击的假象）")
     X_syn, clip_syn = scale_safe(syn_scaler, Xw)
     log(f"  合成域标准化：被裁剪(±10)比例 {clip_syn:.4%}")
     _, p_syn = predict_probs(model, X_syn)
-    add_arm("zeroshot_syn_scaler", p_syn[fit_norm_rows], p_syn[ev_pure],
-            "合成域 scaler + 主模型权重，零样本迁移到目标域")
+    if not skip_deep:
+        add_arm("zeroshot_syn_scaler", p_syn[fit_norm_rows], p_syn[ev_pure],
+                "合成域 scaler + 主模型权重，零样本迁移到目标域")
 
     # A1：在目标域重拟合标准化器（只用拟合段正常行）
     fit_norm_flat = np.nan_to_num(Xw[fit_norm_rows].reshape(-1, Xw.shape[-1]),
@@ -569,8 +671,9 @@ def main(argv=None) -> int:
     X_tgt, clip_tgt = scale_safe(tgt_scaler, Xw)
     log(f"  目标域标准化：被裁剪(±10)比例 {clip_tgt:.4%}")
     _, p_tgt = predict_probs(model, X_tgt)
-    add_arm("refit_scaler", p_tgt[fit_norm_rows], p_tgt[ev_pure],
-            "在目标域正常流量上重拟合 scaler，权重不变")
+    if not skip_deep:
+        add_arm("refit_scaler", p_tgt[fit_norm_rows], p_tgt[ev_pure],
+                "在目标域正常流量上重拟合 scaler，权重不变")
 
     # A2/A3：无标签的目标域原生基线（稳健马氏 / 近邻距离）
     flat_tgt = X_tgt.reshape(len(X_tgt), -1)
@@ -581,7 +684,7 @@ def main(argv=None) -> int:
     mad = np.median(np.abs(ref - med), axis=0) * 1.4826 + 1e-3
     d2 = (((flat_tgt - med) / mad) ** 2).mean(axis=1)
     add_arm("normal_maha", d2[fit_norm_rows], d2[ev_pure],
-            "只用拟合段正常窗口的稳健马氏距离（中位数+MAD，无监督、不需要任何标签）")
+            "只用拟合段正常窗口的稳健马氏距离（中位数+MAD，无监督、不需要任何标签）") if not skip_deep else None
 
     sub = np.where(fit_norm_rows)[0]
     if len(sub) > 3000:
@@ -590,7 +693,7 @@ def main(argv=None) -> int:
     dk, _ = nn.kneighbors(flat_tgt)
     knn_score = dk[:, -1]
     add_arm("normal_knn", knn_score[fit_norm_rows], knn_score[ev_pure],
-            "只用拟合段正常窗口的 kNN 距离（无监督）")
+            "只用拟合段正常窗口的 kNN 距离（无监督）") if not skip_deep else None
 
     # A4：融合——把两个互补分数各自按拟合段正常分数做秩归一化后平均。
     # 动机：深度模型排序尚可（AUC 高）但固定预算下抓不到攻击；马氏在固定预算下能抓到。
@@ -606,6 +709,34 @@ def main(argv=None) -> int:
                 (rankify(f1r, e1r) + rankify(f2r, e2r)) / 2.0,
                 "深度迁移分数与目标域马氏分数各自秩归一化后等权平均（无监督、只看拟合段正常流量）")
 
+    # A5：原生特征自训——用该数据集自己的数值列，不依赖本工程 71 维映射。
+    # 映射覆盖率 0/71 的数据集（UNSW-NB15 / TON_IoT / CIC-IoT2023）只能走这个口径；
+    # 它使用拟合段的标签（这是真实部署里"少量标注"的等价物），阈值仍只取拟合段正常分数的分位。
+    if args.native:
+        from sklearn.linear_model import LogisticRegression
+        native_cols = [c for c in df2.columns
+                       if not c.startswith("__") and c != (spec.get("label") or "")
+                       and pd.api.types.is_numeric_dtype(df2[c])]
+        if len(native_cols) < 3:
+            log("  ! 原生臂跳过：可用数值列不足 3 个")
+        else:
+            Xn_raw = df2[native_cols].apply(pd.to_numeric, errors="coerce").to_numpy(np.float64)
+            Xnw, yw_n, pure_n, side_n = build_windows(Xn_raw, df2["__y__"].to_numpy(), side,
+                                                      args.window, args.stride, log)
+            Xnw, yw_n, pure_n, side_n = cap([Xnw, yw_n, pure_n, side_n])
+            if not (np.array_equal(yw_n, yw) and np.array_equal(side_n, win_side)):
+                raise SystemExit("原生臂的窗口与主臂不一致：拒绝出结论（切分实现有问题）")
+            flat_n = np.nan_to_num(Xnw.reshape(-1, len(native_cols)), nan=0.0, posinf=0.0, neginf=0.0)
+            sc_n = StandardScaler().fit(flat_n[(np.repeat(fit_norm_rows, args.window))])
+            Z = np.clip(np.nan_to_num(sc_n.transform(flat_n), nan=0.0, posinf=0.0, neginf=0.0),
+                        -10, 10).reshape(len(Xnw), -1)
+            lr = LogisticRegression(max_iter=3000, class_weight="balanced", n_jobs=1)
+            lr.fit(Z[fit_w], yw[fit_w])
+            s_nat = lr.predict_proba(Z)[:, 1]
+            add_arm("native_lr", s_nat[fit_norm_rows], s_nat[ev_pure],
+                    f"用该数据集自己的 {len(native_cols)} 个数值列 + 逻辑回归自训"
+                    "（拟合段标签全用；特征映射 0/71 时这是唯一可行口径）")
+
     # ---- 产物 ----
     RESULT_DIR.mkdir(parents=True, exist_ok=True)
     out = {
@@ -618,6 +749,14 @@ def main(argv=None) -> int:
                  "missing_labels_removed": n_missing},
         "leakage_check": {"group_overlap": grp_overlap, "near_duplicate_overlap": dup_overlap,
                           "fit_rows": int(len(fit_rows)), "eval_rows": int(len(ev_rows))},
+        # 两侧的文件构成：block/cross_day 下若两侧共用同一文件，说明评测只反映
+        # 「同场景内插值」，不能当作跨场景泛化能力（CIC-IoT2023 这类逐族文件尤其明显）。
+        "files_per_side": {
+            "fit": sorted(set(df2["__day__"].iloc[fit_rows].astype(str))),
+            "eval": sorted(set(df2["__day__"].iloc[ev_rows].astype(str))),
+            "shared": sorted(set(df2["__day__"].iloc[fit_rows].astype(str))
+                             & set(df2["__day__"].iloc[ev_rows].astype(str))),
+        },
         "mapping": {"matched": len(mapping), "coverage": round(len(mapping) / len(FEATURES), 4)},
         "windows": {"fit": int(fit_w.sum()), "eval": int(ev_w.sum()),
                     "fit_pure": int((pure & fit_w).sum()), "eval_pure": int(ev_pure.sum()),

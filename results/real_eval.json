@@ -32,40 +32,47 @@
       "coverage": 1.0
     },
     "windows": {
-      "fit": 13213,
-      "eval": 19831,
-      "fit_pure": 13213,
-      "eval_pure": 19831,
+      "fit": 11997,
+      "eval": 18003,
+      "fit_pure": 11997,
+      "eval_pure": 18003,
       "eval_attack_prior": 0.6274
     },
     "arms": {
       "zeroshot_syn_scaler": {
         "desc": "合成域 scaler + 主模型权重，零样本迁移到目标域",
         "at_0.01": {
-          "threshold": 0.70744,
-          "recall": 0.4976,
-          "precision": 0.9751,
-          "f1": 0.6589,
-          "fpr": 0.0214,
-          "tp": 6191,
-          "fp": 158,
-          "fn": 6251,
-          "tn": 7231
+          "threshold": 0.708938,
+          "recall": 0.4969,
+          "precision": 0.9753,
+          "f1": 0.6583,
+          "fpr": 0.0212,
+          "tp": 5612,
+          "fp": 142,
+          "fn": 5683,
+          "tn": 6566
         },
         "at_0.001": {
-          "threshold": 0.869646,
-          "recall": 0.446,
-          "precision": 0.9991,
-          "f1": 0.6167,
+          "threshold": 0.87089,
+          "recall": 0.4458,
+          "precision": 0.999,
+          "f1": 0.6165,
           "fpr": 0.0007,
-          "tp": 5549,
+          "tp": 5035,
           "fp": 5,
-          "fn": 6893,
-          "tn": 7384
+          "fn": 6260,
+          "tn": 6703
         },
         "roc_auc": 0.9077,
-        "tpr_at_fpr1pct": 0.4714,
-        "tpr_at_fpr0p1pct": 0.4479
+        "tpr_at_fpr1pct": 0.472,
+        "tpr_at_fpr0p1pct": 0.4477,
+        "score_median": {
+          "fit_normal": 0.0093,
+          "eval_normal": 0.007,
+          "eval_attack": 0.7027,
+          "attack_minus_normal": 0.6956,
+          "inverted": false
+        }
       },
       "refit_scaler": {
         "desc": "在目标域正常流量上重拟合 scaler，权重不变",
@@ -77,8 +84,8 @@
           "fpr": 0.0,
           "tp": 0,
           "fp": 0,
-          "fn": 12442,
-          "tn": 7389
+          "fn": 11295,
+          "tn": 6708
         },
         "at_0.001": {
           "threshold": 0.999999,
@@ -88,100 +95,128 @@
           "fpr": 0.0,
           "tp": 0,
           "fp": 0,
-          "fn": 12442,
-          "tn": 7389
+          "fn": 11295,
+          "tn": 6708
         },
-        "roc_auc": 0.556,
+        "roc_auc": 0.5539,
         "tpr_at_fpr1pct": 0.0001,
-        "tpr_at_fpr0p1pct": 0.0
+        "tpr_at_fpr0p1pct": 0.0,
+        "score_median": {
+          "fit_normal": 0.9952,
+          "eval_normal": 0.9985,
+          "eval_attack": 0.9998,
+          "attack_minus_normal": 0.0013,
+          "inverted": false
+        }
       },
       "normal_maha": {
         "desc": "只用拟合段正常窗口的稳健马氏距离（中位数+MAD，无监督、不需要任何标签）",
         "at_0.01": {
-          "threshold": 1436322.0125,
-          "recall": 0.3944,
-          "precision": 0.9984,
-          "f1": 0.5654,
-          "fpr": 0.0011,
-          "tp": 4907,
+          "threshold": 1434470.255,
+          "recall": 0.3946,
+          "precision": 0.9982,
+          "f1": 0.5656,
+          "fpr": 0.0012,
+          "tp": 4457,
           "fp": 8,
-          "fn": 7535,
-          "tn": 7381
+          "fn": 6838,
+          "tn": 6700
         },
         "at_0.001": {
-          "threshold": 1720585.7505,
-          "recall": 0.3002,
-          "precision": 0.9997,
-          "f1": 0.4617,
-          "fpr": 0.0001,
-          "tp": 3735,
-          "fp": 1,
-          "fn": 8707,
-          "tn": 7388
+          "threshold": 1674844.8105,
+          "recall": 0.3013,
+          "precision": 1.0,
+          "f1": 0.4631,
+          "fpr": 0.0,
+          "tp": 3403,
+          "fp": 0,
+          "fn": 7892,
+          "tn": 6708
         },
-        "roc_auc": 0.6971,
-        "tpr_at_fpr1pct": 0.4339,
-        "tpr_at_fpr0p1pct": 0.3937
+        "roc_auc": 0.6977,
+        "tpr_at_fpr1pct": 0.4336,
+        "tpr_at_fpr0p1pct": 0.3941,
+        "score_median": {
+          "fit_normal": 237214.9844,
+          "eval_normal": 220327.5,
+          "eval_attack": 704735.875,
+          "attack_minus_normal": 484408.375,
+          "inverted": false
+        }
       },
       "normal_knn": {
         "desc": "只用拟合段正常窗口的 kNN 距离（无监督）",
         "at_0.01": {
-          "threshold": 45.618244,
-          "recall": 0.3012,
-          "precision": 0.9928,
+          "threshold": 45.335962,
+          "recall": 0.3011,
+          "precision": 0.993,
           "f1": 0.4621,
-          "fpr": 0.0037,
-          "tp": 3747,
-          "fp": 27,
-          "fn": 8695,
-          "tn": 7362
+          "fpr": 0.0036,
+          "tp": 3401,
+          "fp": 24,
+          "fn": 7894,
+          "tn": 6684
         },
         "at_0.001": {
-          "threshold": 53.215681,
-          "recall": 0.244,
-          "precision": 0.999,
-          "f1": 0.3922,
+          "threshold": 52.587895,
+          "recall": 0.2465,
+          "precision": 0.9989,
+          "f1": 0.3954,
           "fpr": 0.0004,
-          "tp": 3036,
+          "tp": 2784,
           "fp": 3,
-          "fn": 9406,
-          "tn": 7386
+          "fn": 8511,
+          "tn": 6705
         },
-        "roc_auc": 0.7354,
-        "tpr_at_fpr1pct": 0.4,
-        "tpr_at_fpr0p1pct": 0.2569
+        "roc_auc": 0.7359,
+        "tpr_at_fpr1pct": 0.3455,
+        "tpr_at_fpr0p1pct": 0.2562,
+        "score_median": {
+          "fit_normal": 19.9163,
+          "eval_normal": 18.4848,
+          "eval_attack": 30.1093,
+          "attack_minus_normal": 11.6245,
+          "inverted": false
+        }
       },
       "fusion_deep_maha": {
         "desc": "深度迁移分数与目标域马氏分数各自秩归一化后等权平均（无监督、只看拟合段正常流量）",
         "at_0.01": {
-          "threshold": 0.831813,
-          "recall": 0.5385,
-          "precision": 0.9987,
-          "f1": 0.6997,
-          "fpr": 0.0012,
-          "tp": 6700,
-          "fp": 9,
-          "fn": 5742,
-          "tn": 7380
+          "threshold": 0.829828,
+          "recall": 0.5409,
+          "precision": 0.9989,
+          "f1": 0.7017,
+          "fpr": 0.001,
+          "tp": 6109,
+          "fp": 7,
+          "fn": 5186,
+          "tn": 6701
         },
         "at_0.001": {
-          "threshold": 0.88032,
-          "recall": 0.3832,
-          "precision": 0.9998,
-          "f1": 0.5541,
-          "fpr": 0.0001,
-          "tp": 4768,
-          "fp": 1,
-          "fn": 7674,
-          "tn": 7388
+          "threshold": 0.886229,
+          "recall": 0.3744,
+          "precision": 1.0,
+          "f1": 0.5448,
+          "fpr": 0.0,
+          "tp": 4229,
+          "fp": 0,
+          "fn": 7066,
+          "tn": 6708
         },
-        "roc_auc": 0.8609,
-        "tpr_at_fpr1pct": 0.6311,
-        "tpr_at_fpr0p1pct": 0.5122
+        "roc_auc": 0.8614,
+        "tpr_at_fpr1pct": 0.6328,
+        "tpr_at_fpr0p1pct": 0.5203,
+        "score_median": {
+          "fit_normal": 0.5189,
+          "eval_normal": 0.4589,
+          "eval_attack": 0.842,
+          "attack_minus_normal": 0.3831,
+          "inverted": false
+        }
       }
     },
-    "elapsed_sec": 15.2,
-    "generated_at": "2026-09-19 19:53:26"
+    "elapsed_sec": 14.3,
+    "generated_at": "2026-09-19 19:59:08"
   },
   "cic_ids2017_cross_day": {
     "tag": "cic_ids2017_cross_day",
@@ -208,7 +243,6 @@
       "duplicate_removed_frac": 0.1767,
       "families": {
         "Normal": 218948,
-        "Other:nan": 23580,
         "DDoS": 21266,
         "Probe": 20804,
         "DoS": 13698,
@@ -230,40 +264,47 @@
       "coverage": 1.0
     },
     "windows": {
-      "fit": 11872,
-      "eval": 28128,
-      "fit_pure": 10532,
-      "eval_pure": 24831,
-      "eval_attack_prior": 0.1853
+      "fit": 8904,
+      "eval": 21096,
+      "fit_pure": 7911,
+      "eval_pure": 18616,
+      "eval_attack_prior": 0.1858
     },
     "arms": {
       "zeroshot_syn_scaler": {
         "desc": "合成域 scaler + 主模型权重，零样本迁移到目标域",
         "at_0.01": {
           "threshold": 0.999991,
-          "recall": 0.0656,
-          "precision": 0.4786,
-          "f1": 0.1154,
-          "fpr": 0.0163,
-          "tp": 302,
-          "fp": 329,
-          "fn": 4299,
-          "tn": 19901
+          "recall": 0.0648,
+          "precision": 0.4686,
+          "f1": 0.1138,
+          "fpr": 0.0168,
+          "tp": 224,
+          "fp": 254,
+          "fn": 3234,
+          "tn": 14904
         },
         "at_0.001": {
-          "threshold": 0.999997,
-          "recall": 0.0141,
-          "precision": 0.3439,
-          "f1": 0.0271,
-          "fpr": 0.0061,
-          "tp": 65,
-          "fp": 124,
-          "fn": 4536,
-          "tn": 20106
+          "threshold": 0.999996,
+          "recall": 0.0243,
+          "precision": 0.3944,
+          "f1": 0.0458,
+          "fpr": 0.0085,
+          "tp": 84,
+          "fp": 129,
+          "fn": 3374,
+          "tn": 15029
         },
-        "roc_auc": 0.332,
-        "tpr_at_fpr1pct": 0.0456,
-        "tpr_at_fpr0p1pct": 0.0013
+        "roc_auc": 0.3308,
+        "tpr_at_fpr1pct": 0.0379,
+        "tpr_at_fpr0p1pct": 0.0017,
+        "score_median": {
+          "fit_normal": 0.9872,
+          "eval_normal": 0.9686,
+          "eval_attack": 0.7528,
+          "attack_minus_normal": -0.2159,
+          "inverted": true
+        }
       },
       "refit_scaler": {
         "desc": "在目标域正常流量上重拟合 scaler，权重不变",
@@ -272,114 +313,142 @@
           "recall": 0.0,
           "precision": 0.0,
           "f1": 0.0,
-          "fpr": 0.0216,
+          "fpr": 0.0208,
           "tp": 0,
-          "fp": 436,
-          "fn": 4601,
-          "tn": 19794
+          "fp": 316,
+          "fn": 3458,
+          "tn": 14842
         },
         "at_0.001": {
           "threshold": 0.999998,
           "recall": 0.0,
           "precision": 0.0,
           "f1": 0.0,
-          "fpr": 0.0087,
+          "fpr": 0.0086,
           "tp": 0,
-          "fp": 175,
-          "fn": 4601,
-          "tn": 20055
+          "fp": 131,
+          "fn": 3458,
+          "tn": 15027
         },
-        "roc_auc": 0.2142,
+        "roc_auc": 0.2123,
         "tpr_at_fpr1pct": 0.0,
-        "tpr_at_fpr0p1pct": 0.0
+        "tpr_at_fpr0p1pct": 0.0,
+        "score_median": {
+          "fit_normal": 0.9883,
+          "eval_normal": 0.9702,
+          "eval_attack": 0.1216,
+          "attack_minus_normal": -0.8486,
+          "inverted": true
+        }
       },
       "normal_maha": {
         "desc": "只用拟合段正常窗口的稳健马氏距离（中位数+MAD，无监督、不需要任何标签）",
         "at_0.01": {
-          "threshold": 1604133.92875,
-          "recall": 0.4571,
-          "precision": 0.6875,
-          "f1": 0.5491,
-          "fpr": 0.0473,
-          "tp": 2103,
-          "fp": 956,
-          "fn": 2498,
-          "tn": 19274
+          "threshold": 1592438.33625,
+          "recall": 0.4598,
+          "precision": 0.6868,
+          "f1": 0.5508,
+          "fpr": 0.0478,
+          "tp": 1590,
+          "fp": 725,
+          "fn": 1868,
+          "tn": 14433
         },
         "at_0.001": {
-          "threshold": 2231525.4035,
-          "recall": 0.4006,
-          "precision": 0.7018,
-          "f1": 0.51,
-          "fpr": 0.0387,
-          "tp": 1843,
-          "fp": 783,
-          "fn": 2758,
-          "tn": 19447
+          "threshold": 2263247.73275,
+          "recall": 0.4008,
+          "precision": 0.705,
+          "f1": 0.5111,
+          "fpr": 0.0383,
+          "tp": 1386,
+          "fp": 580,
+          "fn": 2072,
+          "tn": 14578
         },
-        "roc_auc": 0.8159,
-        "tpr_at_fpr1pct": 0.2489,
-        "tpr_at_fpr0p1pct": 0.1878
+        "roc_auc": 0.816,
+        "tpr_at_fpr1pct": 0.2527,
+        "tpr_at_fpr0p1pct": 0.1848,
+        "score_median": {
+          "fit_normal": 313323.6875,
+          "eval_normal": 354799.3438,
+          "eval_attack": 1299398.25,
+          "attack_minus_normal": 944598.9062,
+          "inverted": false
+        }
       },
       "normal_knn": {
         "desc": "只用拟合段正常窗口的 kNN 距离（无监督）",
         "at_0.01": {
-          "threshold": 46.788565,
-          "recall": 0.8118,
-          "precision": 0.7712,
-          "f1": 0.791,
-          "fpr": 0.0548,
-          "tp": 3735,
-          "fp": 1108,
-          "fn": 866,
-          "tn": 19122
+          "threshold": 46.279633,
+          "recall": 0.8149,
+          "precision": 0.7687,
+          "f1": 0.7911,
+          "fpr": 0.0559,
+          "tp": 2818,
+          "fp": 848,
+          "fn": 640,
+          "tn": 14310
         },
         "at_0.001": {
-          "threshold": 56.068051,
-          "recall": 0.7455,
-          "precision": 0.7827,
-          "f1": 0.7637,
-          "fpr": 0.0471,
-          "tp": 3430,
-          "fp": 952,
-          "fn": 1171,
-          "tn": 19278
+          "threshold": 55.678061,
+          "recall": 0.7522,
+          "precision": 0.7856,
+          "f1": 0.7685,
+          "fpr": 0.0468,
+          "tp": 2601,
+          "fp": 710,
+          "fn": 857,
+          "tn": 14448
         },
-        "roc_auc": 0.8751,
-        "tpr_at_fpr1pct": 0.2745,
-        "tpr_at_fpr0p1pct": 0.093
+        "roc_auc": 0.8767,
+        "tpr_at_fpr1pct": 0.2851,
+        "tpr_at_fpr0p1pct": 0.0853,
+        "score_median": {
+          "fit_normal": 24.2578,
+          "eval_normal": 25.0372,
+          "eval_attack": 80.2455,
+          "attack_minus_normal": 55.2083,
+          "inverted": false
+        }
       },
       "fusion_deep_maha": {
         "desc": "深度迁移分数与目标域马氏分数各自秩归一化后等权平均（无监督、只看拟合段正常流量）",
         "at_0.01": {
-          "threshold": 0.769784,
+          "threshold": 0.766167,
           "recall": 0.0052,
-          "precision": 0.0692,
-          "f1": 0.0097,
-          "fpr": 0.016,
-          "tp": 24,
-          "fp": 323,
-          "fn": 4577,
-          "tn": 19907
+          "precision": 0.0614,
+          "f1": 0.0096,
+          "fpr": 0.0181,
+          "tp": 18,
+          "fp": 275,
+          "fn": 3440,
+          "tn": 14883
         },
         "at_0.001": {
-          "threshold": 0.835046,
-          "recall": 0.0026,
-          "precision": 0.169,
-          "f1": 0.0051,
-          "fpr": 0.0029,
-          "tp": 12,
-          "fp": 59,
-          "fn": 4589,
-          "tn": 20171
+          "threshold": 0.836292,
+          "recall": 0.0032,
+          "precision": 0.1897,
+          "f1": 0.0063,
+          "fpr": 0.0031,
+          "tp": 11,
+          "fp": 47,
+          "fn": 3447,
+          "tn": 15111
         },
-        "roc_auc": 0.6775,
-        "tpr_at_fpr1pct": 0.0033,
-        "tpr_at_fpr0p1pct": 0.002
+        "roc_auc": 0.6766,
+        "tpr_at_fpr1pct": 0.0038,
+        "tpr_at_fpr0p1pct": 0.0017,
+        "score_median": {
+          "fit_normal": 0.5025,
+          "eval_normal": 0.5026,
+          "eval_attack": 0.6319,
+          "attack_minus_normal": 0.1293,
+          "inverted": false
+        }
       }
     },
-    "elapsed_sec": 39.2,
-    "generated_at": "2026-09-19 19:54:07"
+    "elapsed_sec": 37.1,
+    "generated_at": "2026-09-19 19:59:46"
   },
   "cic_ids2017_block": {
     "tag": "cic_ids2017_block",
@@ -406,7 +475,6 @@
       "duplicate_removed_frac": 0.3076,
       "families": {
         "Normal": 218948,
-        "Other:nan": 23580,
         "DDoS": 21266,
         "Probe": 20804,
         "DoS": 13698,
@@ -428,10 +496,10 @@
       "coverage": 1.0
     },
     "windows": {
-      "fit": 15483,
-      "eval": 24517,
-      "fit_pure": 15483,
-      "eval_pure": 24517,
+      "fit": 11626,
+      "eval": 18374,
+      "fit_pure": 11626,
+      "eval_pure": 18374,
       "eval_attack_prior": 0.1209
     },
     "arms": {
@@ -439,42 +507,14 @@
         "desc": "合成域 scaler + 主模型权重，零样本迁移到目标域",
         "at_0.01": {
           "threshold": 0.999994,
-          "recall": 0.0283,
-          "precision": 0.3146,
-          "f1": 0.052,
-          "fpr": 0.0085,
-          "tp": 84,
-          "fp": 183,
-          "fn": 2880,
-          "tn": 21370
-        },
-        "at_0.001": {
-          "threshold": 0.999999,
-          "recall": 0.0003,
-          "precision": 0.05,
-          "f1": 0.0007,
-          "fpr": 0.0009,
-          "tp": 1,
-          "fp": 19,
-          "fn": 2963,
-          "tn": 21534
-        },
-        "roc_auc": 0.2699,
-        "tpr_at_fpr1pct": 0.0337,
-        "tpr_at_fpr0p1pct": 0.0003
-      },
-      "refit_scaler": {
-        "desc": "在目标域正常流量上重拟合 scaler，权重不变",
-        "at_0.01": {
-          "threshold": 0.999997,
-          "recall": 0.0,
-          "precision": 0.0,
-          "f1": 0.0,
-          "fpr": 0.009,
-          "tp": 0,
-          "fp": 193,
-          "fn": 2964,
-          "tn": 21360
+          "recall": 0.0302,
+          "precision": 0.3175,
+          "f1": 0.0551,
+          "fpr": 0.0089,
+          "tp": 67,
+          "fp": 144,
+          "fn": 2154,
+          "tn": 16009
         },
         "at_0.001": {
           "threshold": 0.999999,
@@ -483,101 +523,164 @@
           "f1": 0.0,
           "fpr": 0.0008,
           "tp": 0,
-          "fp": 18,
-          "fn": 2964,
-          "tn": 21535
+          "fp": 13,
+          "fn": 2221,
+          "tn": 16140
         },
-        "roc_auc": 0.1345,
+        "roc_auc": 0.272,
+        "tpr_at_fpr1pct": 0.0342,
+        "tpr_at_fpr0p1pct": 0.0,
+        "score_median": {
+          "fit_normal": 0.9328,
+          "eval_normal": 0.986,
+          "eval_attack": 0.7191,
+          "attack_minus_normal": -0.2669,
+          "inverted": true
+        }
+      },
+      "refit_scaler": {
+        "desc": "在目标域正常流量上重拟合 scaler，权重不变",
+        "at_0.01": {
+          "threshold": 0.999997,
+          "recall": 0.0,
+          "precision": 0.0,
+          "f1": 0.0,
+          "fpr": 0.0093,
+          "tp": 0,
+          "fp": 151,
+          "fn": 2221,
+          "tn": 16002
+        },
+        "at_0.001": {
+          "threshold": 0.999999,
+          "recall": 0.0,
+          "precision": 0.0,
+          "f1": 0.0,
+          "fpr": 0.0009,
+          "tp": 0,
+          "fp": 15,
+          "fn": 2221,
+          "tn": 16138
+        },
+        "roc_auc": 0.1347,
         "tpr_at_fpr1pct": 0.0,
-        "tpr_at_fpr0p1pct": 0.0
+        "tpr_at_fpr0p1pct": 0.0,
+        "score_median": {
+          "fit_normal": 0.9825,
+          "eval_normal": 0.9944,
+          "eval_attack": 0.1457,
+          "attack_minus_normal": -0.8486,
+          "inverted": true
+        }
       },
       "normal_maha": {
         "desc": "只用拟合段正常窗口的稳健马氏距离（中位数+MAD，无监督、不需要任何标签）",
         "at_0.01": {
-          "threshold": 1738991.87,
-          "recall": 0.3944,
-          "precision": 0.6085,
-          "f1": 0.4786,
-          "fpr": 0.0349,
-          "tp": 1169,
-          "fp": 752,
-          "fn": 1795,
-          "tn": 20801
+          "threshold": 1729488.325,
+          "recall": 0.394,
+          "precision": 0.611,
+          "f1": 0.4791,
+          "fpr": 0.0345,
+          "tp": 875,
+          "fp": 557,
+          "fn": 1346,
+          "tn": 15596
         },
         "at_0.001": {
-          "threshold": 3165360.722,
-          "recall": 0.1397,
-          "precision": 0.8231,
-          "f1": 0.2388,
-          "fpr": 0.0041,
-          "tp": 414,
-          "fp": 89,
-          "fn": 2550,
-          "tn": 21464
+          "threshold": 3109600.66925,
+          "recall": 0.1472,
+          "precision": 0.8195,
+          "f1": 0.2496,
+          "fpr": 0.0045,
+          "tp": 327,
+          "fp": 72,
+          "fn": 1894,
+          "tn": 16081
         },
-        "roc_auc": 0.8498,
-        "tpr_at_fpr1pct": 0.1953,
-        "tpr_at_fpr0p1pct": 0.0887
+        "roc_auc": 0.8495,
+        "tpr_at_fpr1pct": 0.2017,
+        "tpr_at_fpr0p1pct": 0.091,
+        "score_median": {
+          "fit_normal": 330117.0938,
+          "eval_normal": 282819.375,
+          "eval_attack": 1220942.0,
+          "attack_minus_normal": 938122.625,
+          "inverted": false
+        }
       },
       "normal_knn": {
         "desc": "只用拟合段正常窗口的 kNN 距离（无监督）",
         "at_0.01": {
-          "threshold": 53.348076,
-          "recall": 0.7419,
-          "precision": 0.711,
-          "f1": 0.7261,
-          "fpr": 0.0415,
-          "tp": 2199,
-          "fp": 894,
-          "fn": 765,
-          "tn": 20659
+          "threshold": 54.939755,
+          "recall": 0.719,
+          "precision": 0.7082,
+          "f1": 0.7136,
+          "fpr": 0.0407,
+          "tp": 1597,
+          "fp": 658,
+          "fn": 624,
+          "tn": 15495
         },
         "at_0.001": {
-          "threshold": 81.615647,
-          "recall": 0.28,
-          "precision": 0.9253,
-          "f1": 0.4299,
-          "fpr": 0.0031,
-          "tp": 830,
-          "fp": 67,
-          "fn": 2134,
-          "tn": 21486
+          "threshold": 80.673725,
+          "recall": 0.2841,
+          "precision": 0.9446,
+          "f1": 0.4368,
+          "fpr": 0.0023,
+          "tp": 631,
+          "fp": 37,
+          "fn": 1590,
+          "tn": 16116
         },
-        "roc_auc": 0.9129,
-        "tpr_at_fpr1pct": 0.392,
-        "tpr_at_fpr0p1pct": 0.2227
+        "roc_auc": 0.9133,
+        "tpr_at_fpr1pct": 0.3841,
+        "tpr_at_fpr0p1pct": 0.2179,
+        "score_median": {
+          "fit_normal": 23.3107,
+          "eval_normal": 21.398,
+          "eval_attack": 71.6013,
+          "attack_minus_normal": 50.2033,
+          "inverted": false
+        }
       },
       "fusion_deep_maha": {
         "desc": "深度迁移分数与目标域马氏分数各自秩归一化后等权平均（无监督、只看拟合段正常流量）",
         "at_0.01": {
-          "threshold": 0.829657,
+          "threshold": 0.826334,
           "recall": 0.0,
           "precision": 0.0,
           "f1": 0.0,
-          "fpr": 0.0107,
+          "fpr": 0.0095,
           "tp": 0,
-          "fp": 230,
-          "fn": 2964,
-          "tn": 21323
+          "fp": 154,
+          "fn": 2221,
+          "tn": 15999
         },
         "at_0.001": {
-          "threshold": 0.884413,
+          "threshold": 0.882845,
           "recall": 0.0,
           "precision": 0.0,
           "f1": 0.0,
-          "fpr": 0.0014,
+          "fpr": 0.0013,
           "tp": 0,
-          "fp": 31,
-          "fn": 2964,
-          "tn": 21522
+          "fp": 21,
+          "fn": 2221,
+          "tn": 16132
         },
-        "roc_auc": 0.6367,
+        "roc_auc": 0.6389,
         "tpr_at_fpr1pct": 0.0,
-        "tpr_at_fpr0p1pct": 0.0
+        "tpr_at_fpr0p1pct": 0.0,
+        "score_median": {
+          "fit_normal": 0.5014,
+          "eval_normal": 0.515,
+          "eval_attack": 0.642,
+          "attack_minus_normal": 0.1271,
+          "inverted": false
+        }
       }
     },
-    "elapsed_sec": 38.5,
-    "generated_at": "2026-09-19 19:54:46"
+    "elapsed_sec": 37.5,
+    "generated_at": "2026-09-19 20:00:24"
   },
   "cic_ids2018_cross_day": {
     "tag": "cic_ids2018_cross_day",
@@ -606,165 +709,517 @@
       "missing_labels_removed": 0
     },
     "leakage_check": {
-      "group_overlap": 2104,
+      "group_overlap": 2082,
       "near_duplicate_overlap": 0,
-      "fit_rows": 138378,
-      "eval_rows": 54976
+      "fit_rows": 57342,
+      "eval_rows": 136012
     },
     "mapping": {
       "matched": 71,
       "coverage": 1.0
     },
     "windows": {
-      "fit": 28628,
-      "eval": 11372,
-      "fit_pure": 28057,
-      "eval_pure": 3015,
-      "eval_attack_prior": 0.1546
+      "fit": 8896,
+      "eval": 21104,
+      "fit_pure": 8680,
+      "eval_pure": 14630,
+      "eval_attack_prior": 0.0514
     },
     "arms": {
       "zeroshot_syn_scaler": {
         "desc": "合成域 scaler + 主模型权重，零样本迁移到目标域",
         "at_0.01": {
-          "threshold": 0.999907,
-          "recall": 0.4163,
-          "precision": 0.9327,
-          "f1": 0.5757,
-          "fpr": 0.0055,
-          "tp": 194,
-          "fp": 14,
-          "fn": 272,
-          "tn": 2535
+          "threshold": 0.999881,
+          "recall": 0.2247,
+          "precision": 0.458,
+          "f1": 0.3015,
+          "fpr": 0.0144,
+          "tp": 169,
+          "fp": 200,
+          "fn": 583,
+          "tn": 13678
         },
         "at_0.001": {
-          "threshold": 0.999978,
-          "recall": 0.118,
-          "precision": 0.9821,
-          "f1": 0.2107,
-          "fpr": 0.0004,
-          "tp": 55,
-          "fp": 1,
-          "fn": 411,
-          "tn": 2548
+          "threshold": 0.999979,
+          "recall": 0.0519,
+          "precision": 0.7959,
+          "f1": 0.0974,
+          "fpr": 0.0007,
+          "tp": 39,
+          "fp": 10,
+          "fn": 713,
+          "tn": 13868
         },
-        "roc_auc": 0.7779,
-        "tpr_at_fpr1pct": 0.5107,
-        "tpr_at_fpr0p1pct": 0.2189
+        "roc_auc": 0.8452,
+        "tpr_at_fpr1pct": 0.2035,
+        "tpr_at_fpr0p1pct": 0.0638,
+        "score_median": {
+          "fit_normal": 0.891,
+          "eval_normal": 0.976,
+          "eval_attack": 0.9993,
+          "attack_minus_normal": 0.0233,
+          "inverted": false
+        }
       },
       "refit_scaler": {
         "desc": "在目标域正常流量上重拟合 scaler，权重不变",
         "at_0.01": {
-          "threshold": 0.999975,
-          "recall": 0.2382,
-          "precision": 1.0,
-          "f1": 0.3847,
-          "fpr": 0.0,
-          "tp": 111,
-          "fp": 0,
-          "fn": 355,
-          "tn": 2549
+          "threshold": 0.999968,
+          "recall": 0.2793,
+          "precision": 0.394,
+          "f1": 0.3268,
+          "fpr": 0.0233,
+          "tp": 210,
+          "fp": 323,
+          "fn": 542,
+          "tn": 13555
         },
         "at_0.001": {
-          "threshold": 0.999995,
-          "recall": 0.088,
-          "precision": 1.0,
-          "f1": 0.1617,
-          "fpr": 0.0,
-          "tp": 41,
-          "fp": 0,
-          "fn": 425,
-          "tn": 2549
+          "threshold": 0.999996,
+          "recall": 0.0971,
+          "precision": 0.8795,
+          "f1": 0.1749,
+          "fpr": 0.0007,
+          "tp": 73,
+          "fp": 10,
+          "fn": 679,
+          "tn": 13868
         },
-        "roc_auc": 0.9998,
-        "tpr_at_fpr1pct": 1.0,
-        "tpr_at_fpr0p1pct": 0.9979
+        "roc_auc": 0.8203,
+        "tpr_at_fpr1pct": 0.234,
+        "tpr_at_fpr0p1pct": 0.129,
+        "score_median": {
+          "fit_normal": 0.9592,
+          "eval_normal": 0.99,
+          "eval_attack": 0.9998,
+          "attack_minus_normal": 0.0098,
+          "inverted": false
+        }
       },
       "normal_maha": {
         "desc": "只用拟合段正常窗口的稳健马氏距离（中位数+MAD，无监督、不需要任何标签）",
         "at_0.01": {
-          "threshold": 1337283.4375,
-          "recall": 0.0,
-          "precision": 0.0,
-          "f1": 0.0,
-          "fpr": 0.0071,
-          "tp": 0,
-          "fp": 18,
-          "fn": 466,
-          "tn": 2531
+          "threshold": 1143843.035,
+          "recall": 0.0758,
+          "precision": 0.1036,
+          "f1": 0.0876,
+          "fpr": 0.0355,
+          "tp": 57,
+          "fp": 493,
+          "fn": 695,
+          "tn": 13385
         },
         "at_0.001": {
-          "threshold": 1925325.714,
-          "recall": 0.0,
-          "precision": 0.0,
-          "f1": 0.0,
-          "fpr": 0.0,
-          "tp": 0,
-          "fp": 0,
-          "fn": 466,
-          "tn": 2549
+          "threshold": 1695125.371,
+          "recall": 0.0585,
+          "precision": 0.4835,
+          "f1": 0.1044,
+          "fpr": 0.0034,
+          "tp": 44,
+          "fp": 47,
+          "fn": 708,
+          "tn": 13831
         },
-        "roc_auc": 0.0199,
-        "tpr_at_fpr1pct": 0.0,
-        "tpr_at_fpr0p1pct": 0.0
+        "roc_auc": 0.2194,
+        "tpr_at_fpr1pct": 0.0665,
+        "tpr_at_fpr0p1pct": 0.0545,
+        "score_median": {
+          "fit_normal": 384480.0938,
+          "eval_normal": 397005.5,
+          "eval_attack": 207179.5312,
+          "attack_minus_normal": -189825.9688,
+          "inverted": true
+        }
       },
       "normal_knn": {
         "desc": "只用拟合段正常窗口的 kNN 距离（无监督）",
         "at_0.01": {
-          "threshold": 48.177015,
-          "recall": 0.0,
-          "precision": 0.0,
-          "f1": 0.0,
-          "fpr": 0.0071,
-          "tp": 0,
-          "fp": 18,
-          "fn": 466,
-          "tn": 2531
+          "threshold": 46.707211,
+          "recall": 0.0771,
+          "precision": 0.1563,
+          "f1": 0.1033,
+          "fpr": 0.0226,
+          "tp": 58,
+          "fp": 313,
+          "fn": 694,
+          "tn": 13565
         },
         "at_0.001": {
-          "threshold": 57.24576,
-          "recall": 0.0,
-          "precision": 0.0,
-          "f1": 0.0,
-          "fpr": 0.0,
-          "tp": 0,
-          "fp": 0,
-          "fn": 466,
-          "tn": 2549
+          "threshold": 55.995089,
+          "recall": 0.0625,
+          "precision": 0.6528,
+          "f1": 0.1141,
+          "fpr": 0.0018,
+          "tp": 47,
+          "fp": 25,
+          "fn": 705,
+          "tn": 13853
         },
-        "roc_auc": 0.0018,
-        "tpr_at_fpr1pct": 0.0,
-        "tpr_at_fpr0p1pct": 0.0
+        "roc_auc": 0.3876,
+        "tpr_at_fpr1pct": 0.0678,
+        "tpr_at_fpr0p1pct": 0.0598,
+        "score_median": {
+          "fit_normal": 24.4508,
+          "eval_normal": 25.739,
+          "eval_attack": 21.1675,
+          "attack_minus_normal": -4.5715,
+          "inverted": true
+        }
       },
       "fusion_deep_maha": {
         "desc": "深度迁移分数与目标域马氏分数各自秩归一化后等权平均（无监督、只看拟合段正常流量）",
         "at_0.01": {
-          "threshold": 0.820027,
-          "recall": 0.0,
-          "precision": 0.0,
-          "f1": 0.0,
-          "fpr": 0.0008,
-          "tp": 0,
-          "fp": 2,
-          "fn": 466,
-          "tn": 2547
+          "threshold": 0.838383,
+          "recall": 0.117,
+          "precision": 0.1888,
+          "f1": 0.1445,
+          "fpr": 0.0272,
+          "tp": 88,
+          "fp": 378,
+          "fn": 664,
+          "tn": 13500
         },
         "at_0.001": {
-          "threshold": 0.884188,
-          "recall": 0.0,
-          "precision": 0.0,
-          "f1": 0.0,
-          "fpr": 0.0,
-          "tp": 0,
-          "fp": 0,
-          "fn": 466,
-          "tn": 2549
+          "threshold": 0.91063,
+          "recall": 0.0479,
+          "precision": 0.5294,
+          "f1": 0.0878,
+          "fpr": 0.0023,
+          "tp": 36,
+          "fp": 32,
+          "fn": 716,
+          "tn": 13846
         },
-        "roc_auc": 0.5848,
-        "tpr_at_fpr1pct": 0.0021,
-        "tpr_at_fpr0p1pct": 0.0
+        "roc_auc": 0.4479,
+        "tpr_at_fpr1pct": 0.0811,
+        "tpr_at_fpr0p1pct": 0.0412,
+        "score_median": {
+          "fit_normal": 0.5134,
+          "eval_normal": 0.5759,
+          "eval_attack": 0.5332,
+          "attack_minus_normal": -0.0427,
+          "inverted": true
+        }
       }
     },
-    "elapsed_sec": 51.0,
-    "generated_at": "2026-09-19 19:55:38"
+    "elapsed_sec": 49.2,
+    "generated_at": "2026-09-19 20:02:05"
+  },
+  "unsw_nb15_block": {
+    "tag": "unsw_nb15_block",
+    "dataset": "unsw_nb15",
+    "protocol": "block",
+    "budget_primary": 0.01,
+    "window": 16,
+    "stride": 3,
+    "row_cap": 0,
+    "seed": 0,
+    "data": {
+      "files": [
+        "test.csv",
+        "train.csv"
+      ],
+      "rows_raw": 257673,
+      "rows_after_dedup": 179254,
+      "duplicate_removed_frac": 0.3043,
+      "families": {
+        "Normal": 93000,
+        "Generic": 58871,
+        "Exploits": 44525,
+        "Fuzzers": 24246,
+        "DoS": 16353,
+        "Reconnaissance": 13987,
+        "Analysis": 2677,
+        "Backdoor": 2329,
+        "Shellcode": 1511,
+        "Worms": 174
+      },
+      "missing_labels_removed": 0
+    },
+    "leakage_check": {
+      "group_overlap": 1,
+      "near_duplicate_overlap": 0,
+      "fit_rows": 71146,
+      "eval_rows": 108108
+    },
+    "files_per_side": {
+      "fit": [
+        "test.csv",
+        "train.csv"
+      ],
+      "eval": [
+        "test.csv",
+        "train.csv"
+      ],
+      "shared": [
+        "test.csv",
+        "train.csv"
+      ]
+    },
+    "mapping": {
+      "matched": 0,
+      "coverage": 0.0
+    },
+    "windows": {
+      "fit": 11882,
+      "eval": 18118,
+      "fit_pure": 11882,
+      "eval_pure": 18118,
+      "eval_attack_prior": 0.5378
+    },
+    "arms": {
+      "native_lr": {
+        "desc": "用该数据集自己的 40 个数值列 + 逻辑回归自训（拟合段标签全用；特征映射 0/71 时这是唯一可行口径）",
+        "at_0.01": {
+          "threshold": 0.459783,
+          "recall": 0.9861,
+          "precision": 0.9448,
+          "f1": 0.965,
+          "fpr": 0.067,
+          "tp": 9608,
+          "fp": 561,
+          "fn": 135,
+          "tn": 7814
+        },
+        "at_0.001": {
+          "threshold": 0.869077,
+          "recall": 0.9687,
+          "precision": 0.9734,
+          "f1": 0.971,
+          "fpr": 0.0308,
+          "tp": 9438,
+          "fp": 258,
+          "fn": 305,
+          "tn": 8117
+        },
+        "roc_auc": 0.9958,
+        "tpr_at_fpr1pct": 0.9249,
+        "tpr_at_fpr0p1pct": 0.5842,
+        "score_median": {
+          "fit_normal": 0.0,
+          "eval_normal": 0.0,
+          "eval_attack": 1.0,
+          "attack_minus_normal": 1.0,
+          "inverted": false
+        }
+      }
+    },
+    "elapsed_sec": 15.3,
+    "generated_at": "2026-09-19 20:05:07"
+  },
+  "ton_iot_block": {
+    "tag": "ton_iot_block",
+    "dataset": "ton_iot",
+    "protocol": "block",
+    "budget_primary": 0.01,
+    "window": 16,
+    "stride": 3,
+    "row_cap": 0,
+    "seed": 0,
+    "data": {
+      "files": [
+        "train_test_network.csv"
+      ],
+      "rows_raw": 211043,
+      "rows_after_dedup": 130772,
+      "duplicate_removed_frac": 0.3804,
+      "families": {
+        "Normal": 50000,
+        "backdoor": 20000,
+        "ddos": 20000,
+        "dos": 20000,
+        "injection": 20000,
+        "password": 20000,
+        "ransomware": 20000,
+        "scanning": 20000,
+        "xss": 20000,
+        "mitm": 1043
+      },
+      "missing_labels_removed": 0
+    },
+    "leakage_check": {
+      "group_overlap": 210,
+      "near_duplicate_overlap": 0,
+      "fit_rows": 52297,
+      "eval_rows": 78475
+    },
+    "files_per_side": {
+      "fit": [
+        "train_test_network.csv"
+      ],
+      "eval": [
+        "train_test_network.csv"
+      ],
+      "shared": [
+        "train_test_network.csv"
+      ]
+    },
+    "mapping": {
+      "matched": 0,
+      "coverage": 0.0
+    },
+    "windows": {
+      "fit": 11996,
+      "eval": 18004,
+      "fit_pure": 11996,
+      "eval_pure": 18004,
+      "eval_attack_prior": 0.7303
+    },
+    "arms": {
+      "native_lr": {
+        "desc": "用该数据集自己的 16 个数值列 + 逻辑回归自训（拟合段标签全用；特征映射 0/71 时这是唯一可行口径）",
+        "at_0.01": {
+          "threshold": 0.938466,
+          "recall": 0.6195,
+          "precision": 0.7006,
+          "f1": 0.6576,
+          "fpr": 0.717,
+          "tp": 8146,
+          "fp": 3481,
+          "fn": 5003,
+          "tn": 1374
+        },
+        "at_0.001": {
+          "threshold": 0.980524,
+          "recall": 0.1527,
+          "precision": 0.3707,
+          "f1": 0.2163,
+          "fpr": 0.7022,
+          "tp": 2008,
+          "fp": 3409,
+          "fn": 11141,
+          "tn": 1446
+        },
+        "roc_auc": 0.2905,
+        "tpr_at_fpr1pct": 0.0017,
+        "tpr_at_fpr0p1pct": 0.0011,
+        "score_median": {
+          "fit_normal": 0.0,
+          "eval_normal": 1.0,
+          "eval_attack": 0.9631,
+          "attack_minus_normal": -0.0369,
+          "inverted": true
+        }
+      }
+    },
+    "elapsed_sec": 13.0,
+    "generated_at": "2026-09-19 20:05:21"
+  },
+  "cic_iot2023_block": {
+    "tag": "cic_iot2023_block",
+    "dataset": "cic_iot2023",
+    "protocol": "block",
+    "budget_primary": 0.01,
+    "window": 16,
+    "stride": 3,
+    "row_cap": 0,
+    "seed": 0,
+    "data": {
+      "files": [
+        "BenignTraffic.pcap.csv",
+        "BenignTraffic1.pcap.csv",
+        "DDoS-ICMP_Flood.pcap.csv",
+        "DDoS-ICMP_Fragmentation.pcap.csv",
+        "DDoS-PSHACK_Flood.pcap.csv",
+        "DDoS-SlowLoris.pcap.csv",
+        "DDoS-SYN_Flood.pcap.csv",
+        "DDoS-TCP_Flood.pcap.csv",
+        "DDoS-UDP_Flood.pcap.csv",
+        "DDoS-UDP_Fragmentation.pcap.csv"
+      ],
+      "rows_raw": 2058836,
+      "rows_after_dedup": 1093920,
+      "duplicate_removed_frac": 0.4687,
+      "families": {
+        "BenignTraffic": 657946,
+        "DDoS-ICMP_Flood": 268010,
+        "DDoS-PSHACK_Flood": 267811,
+        "DDoS-UDP_Flood": 266605,
+        "DDoS-SYN_Flood": 266024,
+        "DDoS-TCP_Flood": 265776,
+        "DDoS-SlowLoris": 23426,
+        "DDoS-UDP_Fragmentation": 22542,
+        "DDoS-ICMP_Fragmentation": 20696
+      },
+      "missing_labels_removed": 0
+    },
+    "leakage_check": {
+      "group_overlap": 1,
+      "near_duplicate_overlap": 0,
+      "fit_rows": 437561,
+      "eval_rows": 656359
+    },
+    "files_per_side": {
+      "fit": [
+        "BenignTraffic.pcap.csv",
+        "DDoS-ICMP_Flood.pcap.csv",
+        "DDoS-ICMP_Fragmentation.pcap.csv",
+        "DDoS-PSHACK_Flood.pcap.csv",
+        "DDoS-SYN_Flood.pcap.csv",
+        "DDoS-SlowLoris.pcap.csv"
+      ],
+      "eval": [
+        "BenignTraffic.pcap.csv",
+        "BenignTraffic1.pcap.csv",
+        "DDoS-SYN_Flood.pcap.csv",
+        "DDoS-TCP_Flood.pcap.csv",
+        "DDoS-UDP_Flood.pcap.csv",
+        "DDoS-UDP_Fragmentation.pcap.csv"
+      ],
+      "shared": [
+        "BenignTraffic.pcap.csv",
+        "DDoS-SYN_Flood.pcap.csv"
+      ]
+    },
+    "mapping": {
+      "matched": 0,
+      "coverage": 0.0
+    },
+    "windows": {
+      "fit": 11999,
+      "eval": 18001,
+      "fit_pure": 11999,
+      "eval_pure": 18001,
+      "eval_attack_prior": 0.4062
+    },
+    "arms": {
+      "native_lr": {
+        "desc": "用该数据集自己的 39 个数值列 + 逻辑回归自训（拟合段标签全用；特征映射 0/71 时这是唯一可行口径）",
+        "at_0.01": {
+          "threshold": 0.000782,
+          "recall": 1.0,
+          "precision": 0.9501,
+          "f1": 0.9744,
+          "fpr": 0.0359,
+          "tp": 7312,
+          "fp": 384,
+          "fn": 0,
+          "tn": 10305
+        },
+        "at_0.001": {
+          "threshold": 0.001843,
+          "recall": 1.0,
+          "precision": 0.9835,
+          "f1": 0.9917,
+          "fpr": 0.0115,
+          "tp": 7312,
+          "fp": 123,
+          "fn": 0,
+          "tn": 10566
+        },
+        "roc_auc": 1.0,
+        "tpr_at_fpr1pct": 1.0,
+        "tpr_at_fpr0p1pct": 1.0,
+        "score_median": {
+          "fit_normal": 0.0001,
+          "eval_normal": 0.0001,
+          "eval_attack": 1.0,
+          "attack_minus_normal": 0.9999,
+          "inverted": false
+        }
+      }
+    },
+    "elapsed_sec": 43.9,
+    "generated_at": "2026-09-19 20:06:06"
   }
 }
