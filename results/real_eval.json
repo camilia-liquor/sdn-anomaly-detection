@@ -1,0 +1,770 @@
+{
+  "insdn_block": {
+    "tag": "insdn_block",
+    "dataset": "insdn",
+    "protocol": "block",
+    "budget_primary": 0.01,
+    "window": 16,
+    "stride": 3,
+    "row_cap": 200000,
+    "seed": 0,
+    "data": {
+      "files": [
+        "Dataset.csv"
+      ],
+      "rows_raw": 200000,
+      "rows_after_dedup": 99191,
+      "duplicate_removed_frac": 0.504,
+      "families": {
+        "Attack": 160205,
+        "Normal": 39795
+      },
+      "missing_labels_removed": 0
+    },
+    "leakage_check": {
+      "group_overlap": 253,
+      "near_duplicate_overlap": 0,
+      "fit_rows": 39669,
+      "eval_rows": 59522
+    },
+    "mapping": {
+      "matched": 71,
+      "coverage": 1.0
+    },
+    "windows": {
+      "fit": 13213,
+      "eval": 19831,
+      "fit_pure": 13213,
+      "eval_pure": 19831,
+      "eval_attack_prior": 0.6274
+    },
+    "arms": {
+      "zeroshot_syn_scaler": {
+        "desc": "合成域 scaler + 主模型权重，零样本迁移到目标域",
+        "at_0.01": {
+          "threshold": 0.70744,
+          "recall": 0.4976,
+          "precision": 0.9751,
+          "f1": 0.6589,
+          "fpr": 0.0214,
+          "tp": 6191,
+          "fp": 158,
+          "fn": 6251,
+          "tn": 7231
+        },
+        "at_0.001": {
+          "threshold": 0.869646,
+          "recall": 0.446,
+          "precision": 0.9991,
+          "f1": 0.6167,
+          "fpr": 0.0007,
+          "tp": 5549,
+          "fp": 5,
+          "fn": 6893,
+          "tn": 7384
+        },
+        "roc_auc": 0.9077,
+        "tpr_at_fpr1pct": 0.4714,
+        "tpr_at_fpr0p1pct": 0.4479
+      },
+      "refit_scaler": {
+        "desc": "在目标域正常流量上重拟合 scaler，权重不变",
+        "at_0.01": {
+          "threshold": 0.999998,
+          "recall": 0.0,
+          "precision": 0.0,
+          "f1": 0.0,
+          "fpr": 0.0,
+          "tp": 0,
+          "fp": 0,
+          "fn": 12442,
+          "tn": 7389
+        },
+        "at_0.001": {
+          "threshold": 0.999999,
+          "recall": 0.0,
+          "precision": 0.0,
+          "f1": 0.0,
+          "fpr": 0.0,
+          "tp": 0,
+          "fp": 0,
+          "fn": 12442,
+          "tn": 7389
+        },
+        "roc_auc": 0.556,
+        "tpr_at_fpr1pct": 0.0001,
+        "tpr_at_fpr0p1pct": 0.0
+      },
+      "normal_maha": {
+        "desc": "只用拟合段正常窗口的稳健马氏距离（中位数+MAD，无监督、不需要任何标签）",
+        "at_0.01": {
+          "threshold": 1436322.0125,
+          "recall": 0.3944,
+          "precision": 0.9984,
+          "f1": 0.5654,
+          "fpr": 0.0011,
+          "tp": 4907,
+          "fp": 8,
+          "fn": 7535,
+          "tn": 7381
+        },
+        "at_0.001": {
+          "threshold": 1720585.7505,
+          "recall": 0.3002,
+          "precision": 0.9997,
+          "f1": 0.4617,
+          "fpr": 0.0001,
+          "tp": 3735,
+          "fp": 1,
+          "fn": 8707,
+          "tn": 7388
+        },
+        "roc_auc": 0.6971,
+        "tpr_at_fpr1pct": 0.4339,
+        "tpr_at_fpr0p1pct": 0.3937
+      },
+      "normal_knn": {
+        "desc": "只用拟合段正常窗口的 kNN 距离（无监督）",
+        "at_0.01": {
+          "threshold": 45.618244,
+          "recall": 0.3012,
+          "precision": 0.9928,
+          "f1": 0.4621,
+          "fpr": 0.0037,
+          "tp": 3747,
+          "fp": 27,
+          "fn": 8695,
+          "tn": 7362
+        },
+        "at_0.001": {
+          "threshold": 53.215681,
+          "recall": 0.244,
+          "precision": 0.999,
+          "f1": 0.3922,
+          "fpr": 0.0004,
+          "tp": 3036,
+          "fp": 3,
+          "fn": 9406,
+          "tn": 7386
+        },
+        "roc_auc": 0.7354,
+        "tpr_at_fpr1pct": 0.4,
+        "tpr_at_fpr0p1pct": 0.2569
+      },
+      "fusion_deep_maha": {
+        "desc": "深度迁移分数与目标域马氏分数各自秩归一化后等权平均（无监督、只看拟合段正常流量）",
+        "at_0.01": {
+          "threshold": 0.831813,
+          "recall": 0.5385,
+          "precision": 0.9987,
+          "f1": 0.6997,
+          "fpr": 0.0012,
+          "tp": 6700,
+          "fp": 9,
+          "fn": 5742,
+          "tn": 7380
+        },
+        "at_0.001": {
+          "threshold": 0.88032,
+          "recall": 0.3832,
+          "precision": 0.9998,
+          "f1": 0.5541,
+          "fpr": 0.0001,
+          "tp": 4768,
+          "fp": 1,
+          "fn": 7674,
+          "tn": 7388
+        },
+        "roc_auc": 0.8609,
+        "tpr_at_fpr1pct": 0.6311,
+        "tpr_at_fpr0p1pct": 0.5122
+      }
+    },
+    "elapsed_sec": 15.2,
+    "generated_at": "2026-09-19 19:53:26"
+  },
+  "cic_ids2017_cross_day": {
+    "tag": "cic_ids2017_cross_day",
+    "dataset": "cic_ids2017",
+    "protocol": "cross_day",
+    "budget_primary": 0.01,
+    "window": 16,
+    "stride": 3,
+    "row_cap": 300000,
+    "seed": 0,
+    "data": {
+      "files": [
+        "Friday-WorkingHours-Afternoon-DDos.pcap_ISCX.csv",
+        "Friday-WorkingHours-Afternoon-PortScan.pcap_ISCX.csv",
+        "Friday-WorkingHours-Morning.pcap_ISCX.csv",
+        "Monday-WorkingHours.pcap_ISCX.csv",
+        "Thursday-WorkingHours-Afternoon-Infilteration.pcap_ISCX.csv",
+        "Thursday-WorkingHours-Morning-WebAttacks.pcap_ISCX.csv",
+        "Tuesday-WorkingHours.pcap_ISCX.csv",
+        "Wednesday-workingHours.pcap_ISCX.csv"
+      ],
+      "rows_raw": 276420,
+      "rows_after_dedup": 227586,
+      "duplicate_removed_frac": 0.1767,
+      "families": {
+        "Normal": 218948,
+        "Other:nan": 23580,
+        "DDoS": 21266,
+        "Probe": 20804,
+        "DoS": 13698,
+        "BruteForce": 1135,
+        "Botnet": 362,
+        "WebAttack": 205,
+        "Infiltration": 2
+      },
+      "missing_labels_removed": 23580
+    },
+    "leakage_check": {
+      "group_overlap": 3539,
+      "near_duplicate_overlap": 0,
+      "fit_rows": 67558,
+      "eval_rows": 160028
+    },
+    "mapping": {
+      "matched": 71,
+      "coverage": 1.0
+    },
+    "windows": {
+      "fit": 11872,
+      "eval": 28128,
+      "fit_pure": 10532,
+      "eval_pure": 24831,
+      "eval_attack_prior": 0.1853
+    },
+    "arms": {
+      "zeroshot_syn_scaler": {
+        "desc": "合成域 scaler + 主模型权重，零样本迁移到目标域",
+        "at_0.01": {
+          "threshold": 0.999991,
+          "recall": 0.0656,
+          "precision": 0.4786,
+          "f1": 0.1154,
+          "fpr": 0.0163,
+          "tp": 302,
+          "fp": 329,
+          "fn": 4299,
+          "tn": 19901
+        },
+        "at_0.001": {
+          "threshold": 0.999997,
+          "recall": 0.0141,
+          "precision": 0.3439,
+          "f1": 0.0271,
+          "fpr": 0.0061,
+          "tp": 65,
+          "fp": 124,
+          "fn": 4536,
+          "tn": 20106
+        },
+        "roc_auc": 0.332,
+        "tpr_at_fpr1pct": 0.0456,
+        "tpr_at_fpr0p1pct": 0.0013
+      },
+      "refit_scaler": {
+        "desc": "在目标域正常流量上重拟合 scaler，权重不变",
+        "at_0.01": {
+          "threshold": 0.999995,
+          "recall": 0.0,
+          "precision": 0.0,
+          "f1": 0.0,
+          "fpr": 0.0216,
+          "tp": 0,
+          "fp": 436,
+          "fn": 4601,
+          "tn": 19794
+        },
+        "at_0.001": {
+          "threshold": 0.999998,
+          "recall": 0.0,
+          "precision": 0.0,
+          "f1": 0.0,
+          "fpr": 0.0087,
+          "tp": 0,
+          "fp": 175,
+          "fn": 4601,
+          "tn": 20055
+        },
+        "roc_auc": 0.2142,
+        "tpr_at_fpr1pct": 0.0,
+        "tpr_at_fpr0p1pct": 0.0
+      },
+      "normal_maha": {
+        "desc": "只用拟合段正常窗口的稳健马氏距离（中位数+MAD，无监督、不需要任何标签）",
+        "at_0.01": {
+          "threshold": 1604133.92875,
+          "recall": 0.4571,
+          "precision": 0.6875,
+          "f1": 0.5491,
+          "fpr": 0.0473,
+          "tp": 2103,
+          "fp": 956,
+          "fn": 2498,
+          "tn": 19274
+        },
+        "at_0.001": {
+          "threshold": 2231525.4035,
+          "recall": 0.4006,
+          "precision": 0.7018,
+          "f1": 0.51,
+          "fpr": 0.0387,
+          "tp": 1843,
+          "fp": 783,
+          "fn": 2758,
+          "tn": 19447
+        },
+        "roc_auc": 0.8159,
+        "tpr_at_fpr1pct": 0.2489,
+        "tpr_at_fpr0p1pct": 0.1878
+      },
+      "normal_knn": {
+        "desc": "只用拟合段正常窗口的 kNN 距离（无监督）",
+        "at_0.01": {
+          "threshold": 46.788565,
+          "recall": 0.8118,
+          "precision": 0.7712,
+          "f1": 0.791,
+          "fpr": 0.0548,
+          "tp": 3735,
+          "fp": 1108,
+          "fn": 866,
+          "tn": 19122
+        },
+        "at_0.001": {
+          "threshold": 56.068051,
+          "recall": 0.7455,
+          "precision": 0.7827,
+          "f1": 0.7637,
+          "fpr": 0.0471,
+          "tp": 3430,
+          "fp": 952,
+          "fn": 1171,
+          "tn": 19278
+        },
+        "roc_auc": 0.8751,
+        "tpr_at_fpr1pct": 0.2745,
+        "tpr_at_fpr0p1pct": 0.093
+      },
+      "fusion_deep_maha": {
+        "desc": "深度迁移分数与目标域马氏分数各自秩归一化后等权平均（无监督、只看拟合段正常流量）",
+        "at_0.01": {
+          "threshold": 0.769784,
+          "recall": 0.0052,
+          "precision": 0.0692,
+          "f1": 0.0097,
+          "fpr": 0.016,
+          "tp": 24,
+          "fp": 323,
+          "fn": 4577,
+          "tn": 19907
+        },
+        "at_0.001": {
+          "threshold": 0.835046,
+          "recall": 0.0026,
+          "precision": 0.169,
+          "f1": 0.0051,
+          "fpr": 0.0029,
+          "tp": 12,
+          "fp": 59,
+          "fn": 4589,
+          "tn": 20171
+        },
+        "roc_auc": 0.6775,
+        "tpr_at_fpr1pct": 0.0033,
+        "tpr_at_fpr0p1pct": 0.002
+      }
+    },
+    "elapsed_sec": 39.2,
+    "generated_at": "2026-09-19 19:54:07"
+  },
+  "cic_ids2017_block": {
+    "tag": "cic_ids2017_block",
+    "dataset": "cic_ids2017",
+    "protocol": "block",
+    "budget_primary": 0.01,
+    "window": 16,
+    "stride": 3,
+    "row_cap": 300000,
+    "seed": 0,
+    "data": {
+      "files": [
+        "Friday-WorkingHours-Afternoon-DDos.pcap_ISCX.csv",
+        "Friday-WorkingHours-Afternoon-PortScan.pcap_ISCX.csv",
+        "Friday-WorkingHours-Morning.pcap_ISCX.csv",
+        "Monday-WorkingHours.pcap_ISCX.csv",
+        "Thursday-WorkingHours-Afternoon-Infilteration.pcap_ISCX.csv",
+        "Thursday-WorkingHours-Morning-WebAttacks.pcap_ISCX.csv",
+        "Tuesday-WorkingHours.pcap_ISCX.csv",
+        "Wednesday-workingHours.pcap_ISCX.csv"
+      ],
+      "rows_raw": 276420,
+      "rows_after_dedup": 191392,
+      "duplicate_removed_frac": 0.3076,
+      "families": {
+        "Normal": 218948,
+        "Other:nan": 23580,
+        "DDoS": 21266,
+        "Probe": 20804,
+        "DoS": 13698,
+        "BruteForce": 1135,
+        "Botnet": 362,
+        "WebAttack": 205,
+        "Infiltration": 2
+      },
+      "missing_labels_removed": 23580
+    },
+    "leakage_check": {
+      "group_overlap": 4843,
+      "near_duplicate_overlap": 0,
+      "fit_rows": 74720,
+      "eval_rows": 116672
+    },
+    "mapping": {
+      "matched": 71,
+      "coverage": 1.0
+    },
+    "windows": {
+      "fit": 15483,
+      "eval": 24517,
+      "fit_pure": 15483,
+      "eval_pure": 24517,
+      "eval_attack_prior": 0.1209
+    },
+    "arms": {
+      "zeroshot_syn_scaler": {
+        "desc": "合成域 scaler + 主模型权重，零样本迁移到目标域",
+        "at_0.01": {
+          "threshold": 0.999994,
+          "recall": 0.0283,
+          "precision": 0.3146,
+          "f1": 0.052,
+          "fpr": 0.0085,
+          "tp": 84,
+          "fp": 183,
+          "fn": 2880,
+          "tn": 21370
+        },
+        "at_0.001": {
+          "threshold": 0.999999,
+          "recall": 0.0003,
+          "precision": 0.05,
+          "f1": 0.0007,
+          "fpr": 0.0009,
+          "tp": 1,
+          "fp": 19,
+          "fn": 2963,
+          "tn": 21534
+        },
+        "roc_auc": 0.2699,
+        "tpr_at_fpr1pct": 0.0337,
+        "tpr_at_fpr0p1pct": 0.0003
+      },
+      "refit_scaler": {
+        "desc": "在目标域正常流量上重拟合 scaler，权重不变",
+        "at_0.01": {
+          "threshold": 0.999997,
+          "recall": 0.0,
+          "precision": 0.0,
+          "f1": 0.0,
+          "fpr": 0.009,
+          "tp": 0,
+          "fp": 193,
+          "fn": 2964,
+          "tn": 21360
+        },
+        "at_0.001": {
+          "threshold": 0.999999,
+          "recall": 0.0,
+          "precision": 0.0,
+          "f1": 0.0,
+          "fpr": 0.0008,
+          "tp": 0,
+          "fp": 18,
+          "fn": 2964,
+          "tn": 21535
+        },
+        "roc_auc": 0.1345,
+        "tpr_at_fpr1pct": 0.0,
+        "tpr_at_fpr0p1pct": 0.0
+      },
+      "normal_maha": {
+        "desc": "只用拟合段正常窗口的稳健马氏距离（中位数+MAD，无监督、不需要任何标签）",
+        "at_0.01": {
+          "threshold": 1738991.87,
+          "recall": 0.3944,
+          "precision": 0.6085,
+          "f1": 0.4786,
+          "fpr": 0.0349,
+          "tp": 1169,
+          "fp": 752,
+          "fn": 1795,
+          "tn": 20801
+        },
+        "at_0.001": {
+          "threshold": 3165360.722,
+          "recall": 0.1397,
+          "precision": 0.8231,
+          "f1": 0.2388,
+          "fpr": 0.0041,
+          "tp": 414,
+          "fp": 89,
+          "fn": 2550,
+          "tn": 21464
+        },
+        "roc_auc": 0.8498,
+        "tpr_at_fpr1pct": 0.1953,
+        "tpr_at_fpr0p1pct": 0.0887
+      },
+      "normal_knn": {
+        "desc": "只用拟合段正常窗口的 kNN 距离（无监督）",
+        "at_0.01": {
+          "threshold": 53.348076,
+          "recall": 0.7419,
+          "precision": 0.711,
+          "f1": 0.7261,
+          "fpr": 0.0415,
+          "tp": 2199,
+          "fp": 894,
+          "fn": 765,
+          "tn": 20659
+        },
+        "at_0.001": {
+          "threshold": 81.615647,
+          "recall": 0.28,
+          "precision": 0.9253,
+          "f1": 0.4299,
+          "fpr": 0.0031,
+          "tp": 830,
+          "fp": 67,
+          "fn": 2134,
+          "tn": 21486
+        },
+        "roc_auc": 0.9129,
+        "tpr_at_fpr1pct": 0.392,
+        "tpr_at_fpr0p1pct": 0.2227
+      },
+      "fusion_deep_maha": {
+        "desc": "深度迁移分数与目标域马氏分数各自秩归一化后等权平均（无监督、只看拟合段正常流量）",
+        "at_0.01": {
+          "threshold": 0.829657,
+          "recall": 0.0,
+          "precision": 0.0,
+          "f1": 0.0,
+          "fpr": 0.0107,
+          "tp": 0,
+          "fp": 230,
+          "fn": 2964,
+          "tn": 21323
+        },
+        "at_0.001": {
+          "threshold": 0.884413,
+          "recall": 0.0,
+          "precision": 0.0,
+          "f1": 0.0,
+          "fpr": 0.0014,
+          "tp": 0,
+          "fp": 31,
+          "fn": 2964,
+          "tn": 21522
+        },
+        "roc_auc": 0.6367,
+        "tpr_at_fpr1pct": 0.0,
+        "tpr_at_fpr0p1pct": 0.0
+      }
+    },
+    "elapsed_sec": 38.5,
+    "generated_at": "2026-09-19 19:54:46"
+  },
+  "cic_ids2018_cross_day": {
+    "tag": "cic_ids2018_cross_day",
+    "dataset": "cic_ids2018",
+    "protocol": "cross_day",
+    "budget_primary": 0.01,
+    "window": 16,
+    "stride": 3,
+    "row_cap": 300000,
+    "seed": 0,
+    "data": {
+      "files": [
+        "Friday-16-02-2018_TrafficForML_CICFlowMeter.csv",
+        "Thursday-15-02-2018_TrafficForML_CICFlowMeter.csv",
+        "Wednesday-14-02-2018_TrafficForML_CICFlowMeter.csv"
+      ],
+      "rows_raw": 300000,
+      "rows_after_dedup": 193354,
+      "duplicate_removed_frac": 0.3555,
+      "families": {
+        "Normal": 201298,
+        "DoS": 62371,
+        "Other:FTP-BruteForce": 18457,
+        "Other:SSH-Bruteforce": 17874
+      },
+      "missing_labels_removed": 0
+    },
+    "leakage_check": {
+      "group_overlap": 2104,
+      "near_duplicate_overlap": 0,
+      "fit_rows": 138378,
+      "eval_rows": 54976
+    },
+    "mapping": {
+      "matched": 71,
+      "coverage": 1.0
+    },
+    "windows": {
+      "fit": 28628,
+      "eval": 11372,
+      "fit_pure": 28057,
+      "eval_pure": 3015,
+      "eval_attack_prior": 0.1546
+    },
+    "arms": {
+      "zeroshot_syn_scaler": {
+        "desc": "合成域 scaler + 主模型权重，零样本迁移到目标域",
+        "at_0.01": {
+          "threshold": 0.999907,
+          "recall": 0.4163,
+          "precision": 0.9327,
+          "f1": 0.5757,
+          "fpr": 0.0055,
+          "tp": 194,
+          "fp": 14,
+          "fn": 272,
+          "tn": 2535
+        },
+        "at_0.001": {
+          "threshold": 0.999978,
+          "recall": 0.118,
+          "precision": 0.9821,
+          "f1": 0.2107,
+          "fpr": 0.0004,
+          "tp": 55,
+          "fp": 1,
+          "fn": 411,
+          "tn": 2548
+        },
+        "roc_auc": 0.7779,
+        "tpr_at_fpr1pct": 0.5107,
+        "tpr_at_fpr0p1pct": 0.2189
+      },
+      "refit_scaler": {
+        "desc": "在目标域正常流量上重拟合 scaler，权重不变",
+        "at_0.01": {
+          "threshold": 0.999975,
+          "recall": 0.2382,
+          "precision": 1.0,
+          "f1": 0.3847,
+          "fpr": 0.0,
+          "tp": 111,
+          "fp": 0,
+          "fn": 355,
+          "tn": 2549
+        },
+        "at_0.001": {
+          "threshold": 0.999995,
+          "recall": 0.088,
+          "precision": 1.0,
+          "f1": 0.1617,
+          "fpr": 0.0,
+          "tp": 41,
+          "fp": 0,
+          "fn": 425,
+          "tn": 2549
+        },
+        "roc_auc": 0.9998,
+        "tpr_at_fpr1pct": 1.0,
+        "tpr_at_fpr0p1pct": 0.9979
+      },
+      "normal_maha": {
+        "desc": "只用拟合段正常窗口的稳健马氏距离（中位数+MAD，无监督、不需要任何标签）",
+        "at_0.01": {
+          "threshold": 1337283.4375,
+          "recall": 0.0,
+          "precision": 0.0,
+          "f1": 0.0,
+          "fpr": 0.0071,
+          "tp": 0,
+          "fp": 18,
+          "fn": 466,
+          "tn": 2531
+        },
+        "at_0.001": {
+          "threshold": 1925325.714,
+          "recall": 0.0,
+          "precision": 0.0,
+          "f1": 0.0,
+          "fpr": 0.0,
+          "tp": 0,
+          "fp": 0,
+          "fn": 466,
+          "tn": 2549
+        },
+        "roc_auc": 0.0199,
+        "tpr_at_fpr1pct": 0.0,
+        "tpr_at_fpr0p1pct": 0.0
+      },
+      "normal_knn": {
+        "desc": "只用拟合段正常窗口的 kNN 距离（无监督）",
+        "at_0.01": {
+          "threshold": 48.177015,
+          "recall": 0.0,
+          "precision": 0.0,
+          "f1": 0.0,
+          "fpr": 0.0071,
+          "tp": 0,
+          "fp": 18,
+          "fn": 466,
+          "tn": 2531
+        },
+        "at_0.001": {
+          "threshold": 57.24576,
+          "recall": 0.0,
+          "precision": 0.0,
+          "f1": 0.0,
+          "fpr": 0.0,
+          "tp": 0,
+          "fp": 0,
+          "fn": 466,
+          "tn": 2549
+        },
+        "roc_auc": 0.0018,
+        "tpr_at_fpr1pct": 0.0,
+        "tpr_at_fpr0p1pct": 0.0
+      },
+      "fusion_deep_maha": {
+        "desc": "深度迁移分数与目标域马氏分数各自秩归一化后等权平均（无监督、只看拟合段正常流量）",
+        "at_0.01": {
+          "threshold": 0.820027,
+          "recall": 0.0,
+          "precision": 0.0,
+          "f1": 0.0,
+          "fpr": 0.0008,
+          "tp": 0,
+          "fp": 2,
+          "fn": 466,
+          "tn": 2547
+        },
+        "at_0.001": {
+          "threshold": 0.884188,
+          "recall": 0.0,
+          "precision": 0.0,
+          "f1": 0.0,
+          "fpr": 0.0,
+          "tp": 0,
+          "fp": 0,
+          "fn": 466,
+          "tn": 2549
+        },
+        "roc_auc": 0.5848,
+        "tpr_at_fpr1pct": 0.0021,
+        "tpr_at_fpr0p1pct": 0.0
+      }
+    },
+    "elapsed_sec": 51.0,
+    "generated_at": "2026-09-19 19:55:38"
+  }
+}
