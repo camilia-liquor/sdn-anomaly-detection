@@ -157,7 +157,8 @@ DAY_ORDER = ("monday", "tuesday", "wednesday", "thursday", "friday", "saturday",
 
 
 def day_rank(name: str) -> int:
-    """按星期几排序（文件名里含 Monday..Friday）；找不到的排到最后并保持稳定。"""
+    """按星期几排序（文件名里含 Monday..Friday）；找不到星期的（如 UNSW 的 train.csv/test.csv）
+    返回统一秩并**按文件名兜底排序**——否则 fit/eval 的归属会随文件枚举顺序漂移，不可复现。"""
     low = str(name).lower()
     for i, d in enumerate(DAY_ORDER):
         if d in low:
@@ -518,7 +519,7 @@ def main(argv=None) -> int:
     if args.protocol == "cross_day" and spec["day_from"]:
         # 按真实星期顺序排（文件名里含 Monday..Friday），不能按字母序——
         # 字母序会把 Friday 排到最前，得到「用周五训练、用周一~周四评测」这种没有依据的口径。
-        days = sorted(df2["__day__"].unique(), key=day_rank)
+        days = sorted(df2["__day__"].unique(), key=lambda n: (day_rank(n), str(n)))
         fit_days = set(days[:max(1, args.fit_days)])
         side = np.where(df2["__day__"].isin(fit_days), 0, 1).astype(np.int64)
         log(f"按天切分（时间顺序）：拟合段 {[d[:38] for d in days[:max(1, args.fit_days)]]}")
