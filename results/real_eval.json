@@ -561,10 +561,15 @@
             "segment_recall": 0.5897,
             "alarms": 478,
             "false_alarms": 254,
-            "false_alarms_per_hour": 0.172,
+            "false_alarms_per_hour": null,
+            "false_alarms_per_hour_active": null,
             "latency_s_mean": 0.0,
             "latency_s_median": 0.0,
-            "eval_hours": 1475.93
+            "eval_hours": 1475.93,
+            "window_gap_q75_s": 0.0,
+            "implied_hours": 0.0,
+            "time_span_reliable": false,
+            "ops": null
           },
           "2": {
             "confirm": 2,
@@ -575,10 +580,15 @@
             "segment_recall": 0.4615,
             "alarms": 185,
             "false_alarms": 56,
-            "false_alarms_per_hour": 0.038,
+            "false_alarms_per_hour": null,
+            "false_alarms_per_hour_active": null,
             "latency_s_mean": 0.0,
             "latency_s_median": 0.0,
-            "eval_hours": 1475.93
+            "eval_hours": 1475.93,
+            "window_gap_q75_s": 0.0,
+            "implied_hours": 0.0,
+            "time_span_reliable": false,
+            "ops": null
           },
           "3": {
             "confirm": 3,
@@ -589,24 +599,15 @@
             "segment_recall": 0.3846,
             "alarms": 81,
             "false_alarms": 13,
-            "false_alarms_per_hour": 0.009,
+            "false_alarms_per_hour": null,
+            "false_alarms_per_hour_active": null,
             "latency_s_mean": 0.0,
             "latency_s_median": 0.0,
-            "eval_hours": 1475.93
-          },
-          "5": {
-            "confirm": 5,
-            "threshold": 0.999991,
-            "windows": 18616,
-            "segments": 39,
-            "segments_hit": 3,
-            "segment_recall": 0.0769,
-            "alarms": 7,
-            "false_alarms": 0,
-            "false_alarms_per_hour": 0.0,
-            "latency_s_mean": 0.0,
-            "latency_s_median": 0.0,
-            "eval_hours": 1475.93
+            "eval_hours": 1475.93,
+            "window_gap_q75_s": 0.0,
+            "implied_hours": 0.0,
+            "time_span_reliable": false,
+            "ops": null
           }
         }
       },
@@ -654,10 +655,15 @@
             "segment_recall": 0.0,
             "alarms": 316,
             "false_alarms": 316,
-            "false_alarms_per_hour": 0.214,
+            "false_alarms_per_hour": null,
+            "false_alarms_per_hour_active": null,
             "latency_s_mean": null,
             "latency_s_median": null,
-            "eval_hours": 1475.93
+            "eval_hours": 1475.93,
+            "window_gap_q75_s": 0.0,
+            "implied_hours": 0.0,
+            "time_span_reliable": false,
+            "ops": null
           },
           "2": {
             "confirm": 2,
@@ -668,10 +674,15 @@
             "segment_recall": 0.0,
             "alarms": 90,
             "false_alarms": 90,
-            "false_alarms_per_hour": 0.061,
+            "false_alarms_per_hour": null,
+            "false_alarms_per_hour_active": null,
             "latency_s_mean": null,
             "latency_s_median": null,
-            "eval_hours": 1475.93
+            "eval_hours": 1475.93,
+            "window_gap_q75_s": 0.0,
+            "implied_hours": 0.0,
+            "time_span_reliable": false,
+            "ops": null
           },
           "3": {
             "confirm": 3,
@@ -682,24 +693,15 @@
             "segment_recall": 0.0,
             "alarms": 30,
             "false_alarms": 30,
-            "false_alarms_per_hour": 0.02,
+            "false_alarms_per_hour": null,
+            "false_alarms_per_hour_active": null,
             "latency_s_mean": null,
             "latency_s_median": null,
-            "eval_hours": 1475.93
-          },
-          "5": {
-            "confirm": 5,
-            "threshold": 0.999995,
-            "windows": 18616,
-            "segments": 39,
-            "segments_hit": 0,
-            "segment_recall": 0.0,
-            "alarms": 3,
-            "false_alarms": 3,
-            "false_alarms_per_hour": 0.002,
-            "latency_s_mean": null,
-            "latency_s_median": null,
-            "eval_hours": 1475.93
+            "eval_hours": 1475.93,
+            "window_gap_q75_s": 0.0,
+            "implied_hours": 0.0,
+            "time_span_reliable": false,
+            "ops": null
           }
         }
       },
@@ -747,10 +749,15 @@
             "segment_recall": 0.8718,
             "alarms": 2315,
             "false_alarms": 731,
-            "false_alarms_per_hour": 0.495,
+            "false_alarms_per_hour": null,
+            "false_alarms_per_hour_active": null,
             "latency_s_mean": 0.0,
             "latency_s_median": 0.0,
-            "eval_hours": 1475.93
+            "eval_hours": 1475.93,
+            "window_gap_q75_s": 0.0,
+            "implied_hours": 0.0,
+            "time_span_reliable": false,
+            "ops": null
           },
           "2": {
             "confirm": 2,
@@ -761,10 +768,15 @@
             "segment_recall": 0.8718,
             "alarms": 2117,
             "false_alarms": 629,
-            "false_alarms_per_hour": 0.426,
+            "false_alarms_per_hour": null,
+            "false_alarms_per_hour_active": null,
             "latency_s_mean": 0.0,
             "latency_s_median": 0.0,
-            "eval_hours": 1475.93
+            "eval_hours": 1475.93,
+            "window_gap_q75_s": 0.0,
+            "implied_hours": 0.0,
+            "time_span_reliable": false,
+            "ops": null
           },
           "3": {
             "confirm": 3,
@@ -775,24 +787,15 @@
             "segment_recall": 0.7949,
             "alarms": 1985,
             "false_alarms": 590,
-            "false_alarms_per_hour": 0.4,
+            "false_alarms_per_hour": null,
+            "false_alarms_per_hour_active": null,
             "latency_s_mean": 0.0,
             "latency_s_median": 0.0,
-            "eval_hours": 1475.93
-          },
-          "5": {
-            "confirm": 5,
-            "threshold": 1592438.33625,
-            "windows": 18616,
-            "segments": 39,
-            "segments_hit": 30,
-            "segment_recall": 0.7692,
-            "alarms": 1790,
-            "false_alarms": 546,
-            "false_alarms_per_hour": 0.37,
-            "latency_s_mean": 0.0,
-            "latency_s_median": 0.0,
-            "eval_hours": 1475.93
+            "eval_hours": 1475.93,
+            "window_gap_q75_s": 0.0,
+            "implied_hours": 0.0,
+            "time_span_reliable": false,
+            "ops": null
           }
         }
       },
@@ -840,10 +843,15 @@
             "segment_recall": 0.9231,
             "alarms": 3666,
             "false_alarms": 855,
-            "false_alarms_per_hour": 0.579,
+            "false_alarms_per_hour": null,
+            "false_alarms_per_hour_active": null,
             "latency_s_mean": 0.0,
             "latency_s_median": 0.0,
-            "eval_hours": 1475.93
+            "eval_hours": 1475.93,
+            "window_gap_q75_s": 0.0,
+            "implied_hours": 0.0,
+            "time_span_reliable": false,
+            "ops": null
           },
           "2": {
             "confirm": 2,
@@ -854,10 +862,15 @@
             "segment_recall": 0.9231,
             "alarms": 3393,
             "false_alarms": 736,
-            "false_alarms_per_hour": 0.499,
+            "false_alarms_per_hour": null,
+            "false_alarms_per_hour_active": null,
             "latency_s_mean": 0.0,
             "latency_s_median": 0.0,
-            "eval_hours": 1475.93
+            "eval_hours": 1475.93,
+            "window_gap_q75_s": 0.0,
+            "implied_hours": 0.0,
+            "time_span_reliable": false,
+            "ops": null
           },
           "3": {
             "confirm": 3,
@@ -868,24 +881,15 @@
             "segment_recall": 0.8974,
             "alarms": 3192,
             "false_alarms": 683,
-            "false_alarms_per_hour": 0.463,
+            "false_alarms_per_hour": null,
+            "false_alarms_per_hour_active": null,
             "latency_s_mean": 0.0,
             "latency_s_median": 0.0,
-            "eval_hours": 1475.93
-          },
-          "5": {
-            "confirm": 5,
-            "threshold": 46.279633,
-            "windows": 18616,
-            "segments": 39,
-            "segments_hit": 32,
-            "segment_recall": 0.8205,
-            "alarms": 2906,
-            "false_alarms": 631,
-            "false_alarms_per_hour": 0.428,
-            "latency_s_mean": 0.0,
-            "latency_s_median": 0.0,
-            "eval_hours": 1475.93
+            "eval_hours": 1475.93,
+            "window_gap_q75_s": 0.0,
+            "implied_hours": 0.0,
+            "time_span_reliable": false,
+            "ops": null
           }
         }
       },
@@ -933,10 +937,15 @@
             "segment_recall": 0.1026,
             "alarms": 293,
             "false_alarms": 278,
-            "false_alarms_per_hour": 0.188,
+            "false_alarms_per_hour": null,
+            "false_alarms_per_hour_active": null,
             "latency_s_mean": 0.0,
             "latency_s_median": 0.0,
-            "eval_hours": 1475.93
+            "eval_hours": 1475.93,
+            "window_gap_q75_s": 0.0,
+            "implied_hours": 0.0,
+            "time_span_reliable": false,
+            "ops": null
           },
           "2": {
             "confirm": 2,
@@ -947,10 +956,15 @@
             "segment_recall": 0.0256,
             "alarms": 59,
             "false_alarms": 50,
-            "false_alarms_per_hour": 0.034,
+            "false_alarms_per_hour": null,
+            "false_alarms_per_hour_active": null,
             "latency_s_mean": 0.0,
             "latency_s_median": 0.0,
-            "eval_hours": 1475.93
+            "eval_hours": 1475.93,
+            "window_gap_q75_s": 0.0,
+            "implied_hours": 0.0,
+            "time_span_reliable": false,
+            "ops": null
           },
           "3": {
             "confirm": 3,
@@ -961,30 +975,21 @@
             "segment_recall": 0.0256,
             "alarms": 14,
             "false_alarms": 7,
-            "false_alarms_per_hour": 0.005,
+            "false_alarms_per_hour": null,
+            "false_alarms_per_hour_active": null,
             "latency_s_mean": 0.0,
             "latency_s_median": 0.0,
-            "eval_hours": 1475.93
-          },
-          "5": {
-            "confirm": 5,
-            "threshold": 0.766167,
-            "windows": 18616,
-            "segments": 39,
-            "segments_hit": 1,
-            "segment_recall": 0.0256,
-            "alarms": 3,
-            "false_alarms": 0,
-            "false_alarms_per_hour": 0.0,
-            "latency_s_mean": 0.0,
-            "latency_s_median": 0.0,
-            "eval_hours": 1475.93
+            "eval_hours": 1475.93,
+            "window_gap_q75_s": 0.0,
+            "implied_hours": 0.0,
+            "time_span_reliable": false,
+            "ops": null
           }
         }
       }
     },
-    "elapsed_sec": 40.3,
-    "generated_at": "2026-10-08 20:26:38"
+    "elapsed_sec": 71.8,
+    "generated_at": "2026-10-08 20:48:53"
   },
   "cic_ids2017_block": {
     "tag": "cic_ids2017_block",
@@ -1317,9 +1322,18 @@
             "alarms": 368,
             "false_alarms": 202,
             "false_alarms_per_hour": 6.08,
+            "false_alarms_per_hour_active": 16.569,
             "latency_s_mean": 1.33,
             "latency_s_median": 0.0,
-            "eval_hours": 33.22
+            "eval_hours": 33.22,
+            "window_gap_q75_s": 3.0,
+            "implied_hours": 12.19,
+            "time_span_reliable": true,
+            "ops": {
+              "false_alarms_per_day": 145.9,
+              "analyst_hours_per_day": 14.59,
+              "basis": "6 分钟/告警、24 小时/天（与 tools/ops_impact.py 同口径）"
+            }
           },
           "2": {
             "confirm": 2,
@@ -1331,9 +1345,18 @@
             "alarms": 113,
             "false_alarms": 6,
             "false_alarms_per_hour": 0.181,
+            "false_alarms_per_hour_active": 0.492,
             "latency_s_mean": 0.0,
             "latency_s_median": 0.0,
-            "eval_hours": 33.22
+            "eval_hours": 33.22,
+            "window_gap_q75_s": 3.0,
+            "implied_hours": 12.19,
+            "time_span_reliable": true,
+            "ops": {
+              "false_alarms_per_day": 4.3,
+              "analyst_hours_per_day": 0.43,
+              "basis": "6 分钟/告警、24 小时/天（与 tools/ops_impact.py 同口径）"
+            }
           },
           "3": {
             "confirm": 3,
@@ -1345,9 +1368,18 @@
             "alarms": 70,
             "false_alarms": 1,
             "false_alarms_per_hour": 0.03,
+            "false_alarms_per_hour_active": 0.082,
             "latency_s_mean": 0.0,
             "latency_s_median": 0.0,
-            "eval_hours": 33.22
+            "eval_hours": 33.22,
+            "window_gap_q75_s": 3.0,
+            "implied_hours": 12.19,
+            "time_span_reliable": true,
+            "ops": {
+              "false_alarms_per_day": 0.7,
+              "analyst_hours_per_day": 0.07,
+              "basis": "6 分钟/告警、24 小时/天（与 tools/ops_impact.py 同口径）"
+            }
           }
         }
       },
@@ -1396,9 +1428,18 @@
             "alarms": 533,
             "false_alarms": 325,
             "false_alarms_per_hour": 9.783,
+            "false_alarms_per_hour_active": 26.658,
             "latency_s_mean": 0.54,
             "latency_s_median": 0.0,
-            "eval_hours": 33.22
+            "eval_hours": 33.22,
+            "window_gap_q75_s": 3.0,
+            "implied_hours": 12.19,
+            "time_span_reliable": true,
+            "ops": {
+              "false_alarms_per_day": 234.8,
+              "analyst_hours_per_day": 23.48,
+              "basis": "6 分钟/告警、24 小时/天（与 tools/ops_impact.py 同口径）"
+            }
           },
           "2": {
             "confirm": 2,
@@ -1410,9 +1451,18 @@
             "alarms": 146,
             "false_alarms": 5,
             "false_alarms_per_hour": 0.151,
+            "false_alarms_per_hour_active": 0.41,
             "latency_s_mean": 4.25,
             "latency_s_median": 0.0,
-            "eval_hours": 33.22
+            "eval_hours": 33.22,
+            "window_gap_q75_s": 3.0,
+            "implied_hours": 12.19,
+            "time_span_reliable": true,
+            "ops": {
+              "false_alarms_per_day": 3.6,
+              "analyst_hours_per_day": 0.36,
+              "basis": "6 分钟/告警、24 小时/天（与 tools/ops_impact.py 同口径）"
+            }
           },
           "3": {
             "confirm": 3,
@@ -1424,9 +1474,18 @@
             "alarms": 98,
             "false_alarms": 0,
             "false_alarms_per_hour": 0.0,
+            "false_alarms_per_hour_active": null,
             "latency_s_mean": 23.33,
             "latency_s_median": 0.0,
-            "eval_hours": 33.22
+            "eval_hours": 33.22,
+            "window_gap_q75_s": 3.0,
+            "implied_hours": 12.19,
+            "time_span_reliable": true,
+            "ops": {
+              "false_alarms_per_day": 0.0,
+              "analyst_hours_per_day": 0.0,
+              "basis": "6 分钟/告警、24 小时/天（与 tools/ops_impact.py 同口径）"
+            }
           }
         }
       },
@@ -1475,9 +1534,18 @@
             "alarms": 550,
             "false_alarms": 520,
             "false_alarms_per_hour": 15.653,
+            "false_alarms_per_hour_active": 42.652,
             "latency_s_mean": 0.59,
             "latency_s_median": 0.0,
-            "eval_hours": 33.22
+            "eval_hours": 33.22,
+            "window_gap_q75_s": 3.0,
+            "implied_hours": 12.19,
+            "time_span_reliable": true,
+            "ops": {
+              "false_alarms_per_day": 375.7,
+              "analyst_hours_per_day": 37.57,
+              "basis": "6 分钟/告警、24 小时/天（与 tools/ops_impact.py 同口径）"
+            }
           },
           "2": {
             "confirm": 2,
@@ -1489,9 +1557,18 @@
             "alarms": 43,
             "false_alarms": 37,
             "false_alarms_per_hour": 1.114,
+            "false_alarms_per_hour_active": 3.035,
             "latency_s_mean": 1.33,
             "latency_s_median": 0.0,
-            "eval_hours": 33.22
+            "eval_hours": 33.22,
+            "window_gap_q75_s": 3.0,
+            "implied_hours": 12.19,
+            "time_span_reliable": true,
+            "ops": {
+              "false_alarms_per_day": 26.7,
+              "analyst_hours_per_day": 2.67,
+              "basis": "6 分钟/告警、24 小时/天（与 tools/ops_impact.py 同口径）"
+            }
           },
           "3": {
             "confirm": 3,
@@ -1503,9 +1580,18 @@
             "alarms": 3,
             "false_alarms": 3,
             "false_alarms_per_hour": 0.09,
+            "false_alarms_per_hour_active": 0.246,
             "latency_s_mean": null,
             "latency_s_median": null,
-            "eval_hours": 33.22
+            "eval_hours": 33.22,
+            "window_gap_q75_s": 3.0,
+            "implied_hours": 12.19,
+            "time_span_reliable": true,
+            "ops": {
+              "false_alarms_per_day": 2.2,
+              "analyst_hours_per_day": 0.22,
+              "basis": "6 分钟/告警、24 小时/天（与 tools/ops_impact.py 同口径）"
+            }
           }
         }
       },
@@ -1554,9 +1640,18 @@
             "alarms": 371,
             "false_alarms": 339,
             "false_alarms_per_hour": 10.204,
+            "false_alarms_per_hour_active": 27.806,
             "latency_s_mean": 0.59,
             "latency_s_median": 0.0,
-            "eval_hours": 33.22
+            "eval_hours": 33.22,
+            "window_gap_q75_s": 3.0,
+            "implied_hours": 12.19,
+            "time_span_reliable": true,
+            "ops": {
+              "false_alarms_per_day": 244.9,
+              "analyst_hours_per_day": 24.49,
+              "basis": "6 分钟/告警、24 小时/天（与 tools/ops_impact.py 同口径）"
+            }
           },
           "2": {
             "confirm": 2,
@@ -1568,9 +1663,18 @@
             "alarms": 28,
             "false_alarms": 19,
             "false_alarms_per_hour": 0.572,
+            "false_alarms_per_hour_active": 1.558,
             "latency_s_mean": 1.12,
             "latency_s_median": 0.0,
-            "eval_hours": 33.22
+            "eval_hours": 33.22,
+            "window_gap_q75_s": 3.0,
+            "implied_hours": 12.19,
+            "time_span_reliable": true,
+            "ops": {
+              "false_alarms_per_day": 13.7,
+              "analyst_hours_per_day": 1.37,
+              "basis": "6 分钟/告警、24 小时/天（与 tools/ops_impact.py 同口径）"
+            }
           },
           "3": {
             "confirm": 3,
@@ -1582,9 +1686,18 @@
             "alarms": 3,
             "false_alarms": 2,
             "false_alarms_per_hour": 0.06,
+            "false_alarms_per_hour_active": 0.164,
             "latency_s_mean": 1.0,
             "latency_s_median": 1.0,
-            "eval_hours": 33.22
+            "eval_hours": 33.22,
+            "window_gap_q75_s": 3.0,
+            "implied_hours": 12.19,
+            "time_span_reliable": true,
+            "ops": {
+              "false_alarms_per_day": 1.4,
+              "analyst_hours_per_day": 0.14,
+              "basis": "6 分钟/告警、24 小时/天（与 tools/ops_impact.py 同口径）"
+            }
           }
         }
       },
@@ -1633,9 +1746,18 @@
             "alarms": 466,
             "false_alarms": 402,
             "false_alarms_per_hour": 12.101,
+            "false_alarms_per_hour_active": 32.973,
             "latency_s_mean": 0.37,
             "latency_s_median": 0.0,
-            "eval_hours": 33.22
+            "eval_hours": 33.22,
+            "window_gap_q75_s": 3.0,
+            "implied_hours": 12.19,
+            "time_span_reliable": true,
+            "ops": {
+              "false_alarms_per_day": 290.4,
+              "analyst_hours_per_day": 29.04,
+              "basis": "6 分钟/告警、24 小时/天（与 tools/ops_impact.py 同口径）"
+            }
           },
           "2": {
             "confirm": 2,
@@ -1647,9 +1769,18 @@
             "alarms": 25,
             "false_alarms": 8,
             "false_alarms_per_hour": 0.241,
+            "false_alarms_per_hour_active": 0.656,
             "latency_s_mean": 1.29,
             "latency_s_median": 0.5,
-            "eval_hours": 33.22
+            "eval_hours": 33.22,
+            "window_gap_q75_s": 3.0,
+            "implied_hours": 12.19,
+            "time_span_reliable": true,
+            "ops": {
+              "false_alarms_per_day": 5.8,
+              "analyst_hours_per_day": 0.58,
+              "basis": "6 分钟/告警、24 小时/天（与 tools/ops_impact.py 同口径）"
+            }
           },
           "3": {
             "confirm": 3,
@@ -1661,15 +1792,24 @@
             "alarms": 2,
             "false_alarms": 0,
             "false_alarms_per_hour": 0.0,
+            "false_alarms_per_hour_active": null,
             "latency_s_mean": 0.5,
             "latency_s_median": 0.5,
-            "eval_hours": 33.22
+            "eval_hours": 33.22,
+            "window_gap_q75_s": 3.0,
+            "implied_hours": 12.19,
+            "time_span_reliable": true,
+            "ops": {
+              "false_alarms_per_day": 0.0,
+              "analyst_hours_per_day": 0.0,
+              "basis": "6 分钟/告警、24 小时/天（与 tools/ops_impact.py 同口径）"
+            }
           }
         }
       }
     },
-    "elapsed_sec": 51.6,
-    "generated_at": "2026-10-08 20:28:24"
+    "elapsed_sec": 92.7,
+    "generated_at": "2026-10-08 20:47:39"
   },
   "unsw_nb15_block": {
     "tag": "unsw_nb15_block",
@@ -1987,5 +2127,315 @@
     },
     "elapsed_sec": 43.9,
     "generated_at": "2026-09-19 20:06:06"
+  },
+  "unsw_nb15_cross_day": {
+    "tag": "unsw_nb15_cross_day",
+    "dataset": "unsw_nb15",
+    "protocol": "cross_day",
+    "budget_primary": 0.01,
+    "window": 16,
+    "stride": 3,
+    "row_cap": 0,
+    "seed": 0,
+    "data": {
+      "files": [
+        "test.csv",
+        "train.csv"
+      ],
+      "rows_raw": 257673,
+      "rows_after_dedup": 195151,
+      "duplicate_removed_frac": 0.2426,
+      "families": {
+        "Normal": 93000,
+        "Generic": 58871,
+        "Exploits": 44525,
+        "Fuzzers": 24246,
+        "DoS": 16353,
+        "Reconnaissance": 13987,
+        "Analysis": 2677,
+        "Backdoor": 2329,
+        "Shellcode": 1511,
+        "Worms": 174
+      },
+      "missing_labels_removed": 0
+    },
+    "leakage_check": {
+      "group_overlap": 1,
+      "near_duplicate_overlap": 0,
+      "fit_rows": 130330,
+      "eval_rows": 64821
+    },
+    "files_per_side": {
+      "fit": [
+        "test.csv"
+      ],
+      "eval": [
+        "train.csv"
+      ],
+      "shared": []
+    },
+    "mapping": {
+      "matched": 0,
+      "coverage": 0.0
+    },
+    "windows": {
+      "fit": 20036,
+      "eval": 9964,
+      "fit_pure": 17995,
+      "eval_pure": 9953,
+      "eval_attack_prior": 0.4642
+    },
+    "arms": {
+      "native_lr": {
+        "desc": "用该数据集自己的 40 个数值列 + 逻辑回归自训（拟合段标签全用；特征映射 0/71 时这是唯一可行口径）",
+        "at_0.01": {
+          "threshold": 0.895494,
+          "recall": 0.7173,
+          "precision": 0.9682,
+          "f1": 0.8241,
+          "fpr": 0.0204,
+          "tp": 3314,
+          "fp": 109,
+          "fn": 1306,
+          "tn": 5224
+        },
+        "at_0.001": {
+          "threshold": 0.984344,
+          "recall": 0.4606,
+          "precision": 0.9879,
+          "f1": 0.6283,
+          "fpr": 0.0049,
+          "tp": 2128,
+          "fp": 26,
+          "fn": 2492,
+          "tn": 5307
+        },
+        "roc_auc": 0.9748,
+        "tpr_at_fpr1pct": 0.5591,
+        "tpr_at_fpr0p1pct": 0.2305,
+        "score_median": {
+          "fit_normal": 0.0,
+          "eval_normal": 0.0001,
+          "eval_attack": 0.9781,
+          "attack_minus_normal": 0.978,
+          "inverted": false
+        }
+      }
+    },
+    "elapsed_sec": 16.0,
+    "generated_at": "2026-10-08 20:35:54"
+  },
+  "cic_iot2023_family_holdout": {
+    "tag": "cic_iot2023_family_holdout",
+    "dataset": "cic_iot2023",
+    "protocol": "family_holdout",
+    "budget_primary": 0.01,
+    "window": 16,
+    "stride": 3,
+    "row_cap": 0,
+    "seed": 0,
+    "data": {
+      "files": [
+        "BenignTraffic.pcap.csv",
+        "BenignTraffic1.pcap.csv",
+        "DDoS-ICMP_Flood.pcap.csv",
+        "DDoS-ICMP_Fragmentation.pcap.csv",
+        "DDoS-PSHACK_Flood.pcap.csv",
+        "DDoS-SlowLoris.pcap.csv",
+        "DDoS-SYN_Flood.pcap.csv",
+        "DDoS-TCP_Flood.pcap.csv",
+        "DDoS-UDP_Flood.pcap.csv",
+        "DDoS-UDP_Fragmentation.pcap.csv"
+      ],
+      "rows_raw": 2058836,
+      "rows_after_dedup": 1093984,
+      "duplicate_removed_frac": 0.4686,
+      "families": {
+        "BenignTraffic": 657946,
+        "DDoS-ICMP_Flood": 268010,
+        "DDoS-PSHACK_Flood": 267811,
+        "DDoS-UDP_Flood": 266605,
+        "DDoS-SYN_Flood": 266024,
+        "DDoS-TCP_Flood": 265776,
+        "DDoS-SlowLoris": 23426,
+        "DDoS-UDP_Fragmentation": 22542,
+        "DDoS-ICMP_Fragmentation": 20696
+      },
+      "missing_labels_removed": 0
+    },
+    "leakage_check": {
+      "group_overlap": 1,
+      "near_duplicate_overlap": 0,
+      "fit_rows": 582503,
+      "eval_rows": 511481
+    },
+    "files_per_side": {
+      "fit": [
+        "BenignTraffic.pcap.csv",
+        "DDoS-ICMP_Flood.pcap.csv",
+        "DDoS-ICMP_Fragmentation.pcap.csv",
+        "DDoS-PSHACK_Flood.pcap.csv",
+        "DDoS-SlowLoris.pcap.csv",
+        "DDoS-TCP_Flood.pcap.csv",
+        "DDoS-UDP_Fragmentation.pcap.csv"
+      ],
+      "eval": [
+        "BenignTraffic.pcap.csv",
+        "BenignTraffic1.pcap.csv",
+        "DDoS-SYN_Flood.pcap.csv",
+        "DDoS-UDP_Flood.pcap.csv"
+      ],
+      "shared": [
+        "BenignTraffic.pcap.csv"
+      ]
+    },
+    "mapping": {
+      "matched": 0,
+      "coverage": 0.0
+    },
+    "windows": {
+      "fit": 15975,
+      "eval": 14025,
+      "fit_pure": 15975,
+      "eval_pure": 14025,
+      "eval_attack_prior": 0.3649
+    },
+    "arms": {
+      "native_lr": {
+        "desc": "用该数据集自己的 39 个数值列 + 逻辑回归自训（拟合段标签全用；特征映射 0/71 时这是唯一可行口径）",
+        "at_0.01": {
+          "threshold": 0.001119,
+          "recall": 1.0,
+          "precision": 0.978,
+          "f1": 0.9889,
+          "fpr": 0.0129,
+          "tp": 5118,
+          "fp": 115,
+          "fn": 0,
+          "tn": 8792
+        },
+        "at_0.001": {
+          "threshold": 0.003337,
+          "recall": 1.0,
+          "precision": 0.9961,
+          "f1": 0.998,
+          "fpr": 0.0022,
+          "tp": 5118,
+          "fp": 20,
+          "fn": 0,
+          "tn": 8887
+        },
+        "roc_auc": 1.0,
+        "tpr_at_fpr1pct": 1.0,
+        "tpr_at_fpr0p1pct": 1.0,
+        "score_median": {
+          "fit_normal": 0.0001,
+          "eval_normal": 0.0001,
+          "eval_attack": 1.0,
+          "attack_minus_normal": 0.9999,
+          "inverted": false
+        }
+      }
+    },
+    "elapsed_sec": 45.1,
+    "generated_at": "2026-10-08 20:40:10"
+  },
+  "ton_iot_chunked": {
+    "tag": "ton_iot_chunked",
+    "dataset": "ton_iot",
+    "protocol": "chunked",
+    "budget_primary": 0.01,
+    "window": 16,
+    "stride": 3,
+    "row_cap": 0,
+    "seed": 0,
+    "data": {
+      "files": [
+        "train_test_network.csv"
+      ],
+      "rows_raw": 211043,
+      "rows_after_dedup": 130816,
+      "duplicate_removed_frac": 0.3801,
+      "families": {
+        "Normal": 50000,
+        "backdoor": 20000,
+        "ddos": 20000,
+        "dos": 20000,
+        "injection": 20000,
+        "password": 20000,
+        "ransomware": 20000,
+        "scanning": 20000,
+        "xss": 20000,
+        "mitm": 1043
+      },
+      "missing_labels_removed": 0
+    },
+    "leakage_check": {
+      "group_overlap": 3125,
+      "near_duplicate_overlap": 0,
+      "fit_rows": 53632,
+      "eval_rows": 77184
+    },
+    "files_per_side": {
+      "fit": [
+        "train_test_network.csv"
+      ],
+      "eval": [
+        "train_test_network.csv"
+      ],
+      "shared": [
+        "train_test_network.csv"
+      ]
+    },
+    "mapping": {
+      "matched": 0,
+      "coverage": 0.0
+    },
+    "windows": {
+      "fit": 11947,
+      "eval": 18053,
+      "fit_pure": 88,
+      "eval_pure": 18053,
+      "eval_attack_prior": 0.958
+    },
+    "arms": {
+      "native_lr": {
+        "desc": "用该数据集自己的 16 个数值列 + 逻辑回归自训（拟合段标签全用；特征映射 0/71 时这是唯一可行口径）",
+        "at_0.01": {
+          "threshold": 0.850431,
+          "recall": 0.2669,
+          "precision": 0.9876,
+          "f1": 0.4202,
+          "fpr": 0.0764,
+          "tp": 4616,
+          "fp": 58,
+          "fn": 12678,
+          "tn": 701
+        },
+        "at_0.001": {
+          "threshold": 0.911845,
+          "recall": 0.1238,
+          "precision": 0.9826,
+          "f1": 0.2199,
+          "fpr": 0.0501,
+          "tp": 2141,
+          "fp": 38,
+          "fn": 15153,
+          "tn": 721
+        },
+        "roc_auc": 0.7555,
+        "tpr_at_fpr1pct": 0.0061,
+        "tpr_at_fpr0p1pct": 0.0,
+        "score_median": {
+          "fit_normal": 0.298,
+          "eval_normal": 0.3831,
+          "eval_attack": 0.7287,
+          "attack_minus_normal": 0.3456,
+          "inverted": false
+        }
+      }
+    },
+    "elapsed_sec": 12.6,
+    "generated_at": "2026-10-08 20:41:52"
   }
 }

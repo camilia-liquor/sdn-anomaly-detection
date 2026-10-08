@@ -46,6 +46,10 @@ from src.data_pipeline import clean_dataframe      # noqa: E402
 from src.model import load_model_bundle, predict_probs  # noqa: E402
 
 RESULT_DIR = ROOT / "results"
+# 在线口径：评估时长超过该值即认为数据集的时间戳不可信（不做"误报/小时"与运维换算）。
+# 依据：实测抓包通常几小时~几天；CIC-IDS2017 的时间戳跨度约 1,476 h、inSDN 约 6,733 h，
+# 均为数据集构造所致，其"误报/小时"分母虚大、时延无物理意义。
+SPAN_LIMIT_HOURS = 168.0
 META = json.loads((ROOT / "data" / "processed" / "meta.json").read_text(encoding="utf-8"))
 FEATURES: list[str] = list(META["feature_names"])
 SYN_SCALER = ROOT / "data" / "processed" / "scaler.joblib"
@@ -96,7 +100,7 @@ DATASETS: dict[str, dict] = {
         "label_multi": "attack_cat",  # 9 类攻击族
         "time": None,
         "group": None,               # 该版本无 IP/端口列，做不了身份级组切分
-        "day_from": None,
+        "day_from": True,            # train.csv / test.csv 即官方划分 → 用 cross_day 做文件级切分
         "family": {},
         "clean": "light",
         "notes": ["镜像的 train.csv = 82,332 行、test.csv = 175,341 行，与官方（175,341/82,332）相反，疑为文件名对调",
@@ -381,16 +385,39 @@ def online_metrics(times: np.ndarray, y_win: np.ndarray, scores: np.ndarray,
             alarm_in_seg[a + idx] = True
             lats.append(float(t[a + idx[0]] - t[a]))
     span_h = (t[-1] - t[0]) / 3600.0 if len(t) > 1 else float("nan")
+    # 时间跨度可信度自检：公开集的时间戳跨度常被数据集构造拉长（空档极多）。
+    # 用「相邻窗口时间差的中位数 × 窗口数」估一个"活跃时长"，若跨度远大于它，说明跨度不可信。
+    dt = np.diff(t)
+    # 用 75 分位间隔而不是中位数：公开集时间戳常为分钟粒度，大量相邻窗口间隔为 0，
+    # 中位数会被压成 0 而把可信数据误判为不可信（实测 CIC-IDS2018 就被误判过）。
+    gap = float(np.percentile(dt, 75)) if len(dt) else float("nan")
+    implied_h = (gap * len(t) / 3600.0) if gap == gap else float("nan")
+    # 可信度判据改为**显式的时长上限**：公开集的时间戳跨度常被数据集构造拉长
+    # （CIC-IDS2017 约 1,476 h、inSDN 约 6,733 h，而实测抓包只有几小时到几天）。
+    # 用"跨度 ≤ 7 天"作为可信门槛，简单、可解释、可复现；超过就不做运维换算。
+    reliable = bool(span_h == span_h and 0 < span_h <= SPAN_LIMIT_HOURS)
     fa = int((alarm & ~alarm_in_seg).sum())
+    fa_per_h = (fa / span_h) if (reliable and span_h > 0) else None
+    fa_per_h_active = (fa / implied_h) if (implied_h and implied_h > 0) else None
+    ops = None
+    if fa_per_h is not None:      # 仅在时间跨度可信时做运维换算
+        ops = {"false_alarms_per_day": round(fa_per_h * 24, 1),
+               "analyst_hours_per_day": round(fa_per_h * 24 * 6 / 60, 2),
+               "basis": "6 分钟/告警、24 小时/天（与 tools/ops_impact.py 同口径）"}
     return {
         "confirm": int(confirm), "threshold": round(float(thr), 6),
         "windows": int(len(s)), "segments": len(segs), "segments_hit": int(hits),
         "segment_recall": round(hits / len(segs), 4) if segs else None,
         "alarms": int(alarm.sum()), "false_alarms": fa,
-        "false_alarms_per_hour": round(fa / span_h, 3) if span_h == span_h and span_h > 0 else None,
+        "false_alarms_per_hour": round(fa_per_h, 3) if fa_per_h is not None else None,
+        "false_alarms_per_hour_active": round(fa_per_h_active, 3) if fa_per_h_active else None,
         "latency_s_mean": round(float(np.mean(lats)), 2) if lats else None,
         "latency_s_median": round(float(np.median(lats)), 2) if lats else None,
         "eval_hours": round(span_h, 2) if span_h == span_h else None,
+        "window_gap_q75_s": round(gap, 2) if gap == gap else None,
+        "implied_hours": round(implied_h, 2) if implied_h == implied_h else None,
+        "time_span_reliable": reliable,
+        "ops": ops,
     }
 
 
@@ -418,8 +445,15 @@ def roc_auc(y: np.ndarray, s: np.ndarray) -> float:
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description="真实数据无泄漏评测")
     ap.add_argument("--dataset", default="insdn", choices=sorted(DATASETS))
-    ap.add_argument("--protocol", default="block", choices=["block", "group", "cross_day"],
-                    help="block=连续段内前后切分（默认，保住连续性）；group=按流身份组切分；cross_day=按天切分")
+    ap.add_argument("--protocol", default="block", choices=["block", "group", "cross_day", "family_holdout", "stratified", "chunked"],
+                    help="切分协议：block=连续段前后切分（默认）；group=按流身份组；cross_day=按天；"
+                         "family_holdout=留出攻击族；stratified=按标签分层随机；"
+                         "chunked=按块切分（类别成块+无时间列的数据集用它，常与 --shuffle 配合）")
+    ap.add_argument("--holdout-families", nargs="*", default=None,
+                    help="family_holdout 协议要留出的攻击族名（缺省取前两个非 benign 家族）")
+    ap.add_argument("--shuffle", action="store_true",
+                    help="切分前按 seed 打乱行序（用于类别成块且无时间列的数据集，如 TON_IoT；"
+                         "行级随机切分与滑窗不兼容，必须先打乱再用 block 协议）")
     ap.add_argument("--budget", type=float, default=0.01, help="主指标误报预算（默认 1%%）")
     ap.add_argument("--fit-frac", type=float, default=0.4, help="group 协议下拟合段占比")
     ap.add_argument("--fit-days", type=int, default=2, help="cross_day 协议下用前几天做拟合段（默认 2）")
@@ -577,6 +611,15 @@ def main(argv=None) -> int:
     else:
         log("近似去重：已关闭（digits=0）")
 
+    # ---- 可选：打乱行序 ----
+    # 用途：类别成块且**无时间列**的数据集（如 TON_IoT），行序本身没有含义，
+    # 而"行级随机/分层切分"与滑窗**不兼容**（窗口需要 16 条连续同侧行——实测 43,618 个候选窗口
+    # 只剩 11 个）。先按固定种子打乱行序，再用 block 协议切分，等价于一次可复现的随机切分。
+    if args.shuffle:
+        df2 = df2.sample(frac=1.0, random_state=args.seed).reset_index(drop=True)
+        log(f"已按 seed={args.seed} 打乱行序（数据集无时间列，行序无含义；近重复已全局去重，"
+            "打乱不会引入行级泄漏，切分后仍会校验）")
+
     # ---- 切分 ----
     rng = np.random.default_rng(args.seed)
     gcol = [c for c in (spec.get("group") or []) if c in df2.columns]
@@ -615,14 +658,58 @@ def main(argv=None) -> int:
             used_runs += 1
         log(f"按连续段前后切分：{len(runs)} 段 → 采用 {used_runs} 段；"
             f"purge 间隔 {min(args.window, 4)} 行；未使用（purge/过短）行 {int((side < 0).sum()):,}")
+    elif args.protocol == "family_holdout":
+        # 留出攻击族：把指定的若干攻击族整体放到评估段，其余攻击族与一半正常流量留在拟合段。
+        # 适用：逐攻击族一个文件的数据集（如 CIC-IoT2023），能回答"没见过这类攻击能不能发现"。
+        fams = df2["__fam__"].astype(str)
+        is_norm = fams.str.lower().str.contains("benign|normal", regex=True).to_numpy()
+        held = list(args.holdout_families or [])
+        if not held:
+            pool = [f for f in fams.value_counts().index if not str(f).lower().startswith(("benign", "normal"))]
+            held = list(pool[:2])
+        held = [f for f in held if (fams == f).any()]
+        if not held:
+            raise SystemExit(f"family_holdout 没命中任何家族；可用家族：{sorted(fams.unique())[:10]}")
+        side = np.zeros(len(df2), dtype=np.int64)
+        idx_norm = np.flatnonzero(is_norm)
+        side[idx_norm[len(idx_norm) // 2:]] = 1          # 一半正常流量进评估段（否则评估段无正常窗口）
+        side[np.flatnonzero(fams.isin(held).to_numpy())] = 1
+        log(f"留出攻击族切分：评估段 = {held} + 后半正常流量；拟合段 = 其余攻击族 + 前半正常流量")
+        for nm, m in (("拟合段", side == 0), ("评估段", side == 1)):
+            vs = fams[m].value_counts()
+            log(f"  {nm}家族： " + "、".join(f"{k}={v}" for k, v in list(vs.items())[:8]))
+    elif args.protocol == "stratified":
+        # 按标签分层随机切分：适用于类别成块、无时间列的数据集（如 TON_IoT）。
+        rng2 = np.random.default_rng(args.seed)
+        y_all = df2["__y__"].to_numpy()
+        side = np.zeros(len(df2), dtype=np.int64)
+        for v in np.unique(y_all):
+            idx = np.flatnonzero(y_all == v)
+            perm = rng2.permutation(len(idx))
+            side[idx[perm[int(len(idx) * args.fit_frac):]]] = 1
+        log(f"按标签分层随机切分（seed={args.seed}，拟合 {args.fit_frac:.0%}）："
+            f"各类别内部按比例分配，避免类别成块导致两侧分布失衡")
+    elif args.protocol == "chunked":
+        # 按"块"切分：把（通常已打乱的）行序切成 ≥4×窗口 的连续块，整块随机分配给拟合/评估。
+        # 为什么需要它：窗口需要 ≥window 条**连续同侧**行，而类别成块的数据集若做行级随机切分，
+        # 同侧连续段会退化到几乎没有（实测 TON_IoT：43,618 个候选窗口只剩 11 个；
+        # 打乱后 block 协议更是只剩 17 行）。块切分同时满足"连续"与"类别均衡"。
+        csize = max(int(args.window * 4), int(args.window) + 1)
+        n_chunks = len(df2) // csize
+        if n_chunks < 10:
+            raise SystemExit(f"chunked 协议：数据只够切出 {n_chunks} 个块（块大小 {csize} 行），不足以评测")
+        rng3 = np.random.default_rng(args.seed)
+        assign = rng3.random(n_chunks) < args.fit_frac
+        side = np.full(len(df2), -1, dtype=np.int64)
+        for i in range(n_chunks):
+            side[i * csize:(i + 1) * csize] = 0 if assign[i] else 1
+        log(f"按块切分：块大小 {csize} 行 × {n_chunks} 块（seed={args.seed}，拟合 {int(assign.sum())} 块）"
+            f"；尾部 {len(df2) - n_chunks * csize} 行按 purge 丢弃")
     else:
-        if args.protocol == "cross_day":
-            log("  ! 该数据无按天信息，自动退回 group 协议")
         h = gkey.map(lambda s: int(hashlib.md5(s.encode("utf-8")).hexdigest()[:8], 16) % 1000)
         side = np.where(h < int(args.fit_frac * 1000), 0, 1).astype(np.int64)
         log(f"按流身份组切分：拟合段 {args.fit_frac:.0%} / 评估段 {1-args.fit_frac:.0%}（组数 {gkey.nunique():,}）")
         log("  ! 哈希组切分会打散连续行：同侧窗口会大幅减少，极端情况下拟合段可能没有正常窗口")
-
     df2 = df2[side >= 0].reset_index(drop=True)
     side = side[side >= 0]
     log(f"可用于开窗的行：{len(df2):,}（拟合 {int((side==0).sum()):,} / 评估 {int((side==1).sum()):,}）")
@@ -706,7 +793,17 @@ def main(argv=None) -> int:
             "此时阈值会退化成 1.0 并产出假的「召回 0」。请改用 --protocol block，"
             "或减小 --row-cap/换协议后重跑——绝不在此基础上出结论。")
     y_ev = yw[ev_pure]
-    log(f"评估用纯窗口 {int(ev_pure.sum()):,}（攻击占比 {y_ev.mean():.4f}）")
+    pure_short = int(ev_pure.sum()) < 500
+    if pure_short:
+        # 类别在行级交错的数据集（如打乱后的 TON_IoT）几乎产生不了纯窗口：
+        # P(全攻击)=0.73^16≈0.6%、P(全正常)=0.27^16≈1e-9。此时退化为**多数票口径**
+        # （用全部评估窗口，标签取窗口内多数类），与工程既有的"纯窗口/多数票"双口径一致。
+        log(f"  ! 评估段纯窗口仅 {int(ev_pure.sum())} 个（类别行级交错）→ 退化为**多数票口径**："
+            f"用全部 {int(ev_w.sum()):,} 个评估窗口，标签取窗口内多数类")
+        ev_pure = ev_w
+        y_ev = yw[ev_pure]
+    log(f"评估用窗口 {int(ev_pure.sum()):,}（攻击占比 {y_ev.mean():.4f}）"
+        + ("（多数票口径）" if pure_short else "（纯窗口口径）"))
 
     results: dict = {}
     store: dict[str, tuple[np.ndarray, np.ndarray]] = {}
