@@ -216,6 +216,117 @@ def write_report(r: dict, figs: list[str], out: Path, demo: bool) -> Path:
     return p
 
 
+def write_demo_extras(g: pd.DataFrame, q: pd.DataFrame, r: dict, out: Path) -> list[str]:
+    """--demo 专用：把"模拟课堂"还原成可自看的三份材料（采集表已填版 / 课堂记录 / 申报书段落预览）。
+
+    这些产物**只用于自己预览流程与格式**，文件头均标注【模拟数据·仅供自看】，不得进任何提交材料。
+    """
+    out.mkdir(parents=True, exist_ok=True)
+    made: list[str] = []
+    banner = "【模拟数据·仅供自看，禁止写入任何提交材料】"
+
+    # ① 已填写的采集表（xlsx）
+    try:
+        from openpyxl import Workbook
+        wb = Workbook()
+        ws0 = wb.active
+        ws0.title = "说明"
+        ws0["A1"] = banner
+        ws0["A3"] = "本工作簿由 tools/pilot_analysis.py --demo 生成，数据为模拟值，仅用于预览填表格式。"
+        ws0["A4"] = "正式采集请使用 competition/教学试点数据采集表.xlsx（该表只有空行与示例行）。"
+
+        ws1 = wb.create_sheet(GRADE_SHEET)
+        ws1.append([banner])
+        ws1.append(["匿名编号", "前测得分", "后测得分", "实验耗时(min)", "是否完成全部步骤", "备注"])
+        for _, row in g.iterrows():
+            ws1.append([row["匿名编号"], row["前测得分"], row["后测得分"],
+                        row["实验耗时(min)"], row["是否完成全部步骤"], ""])
+
+        ws2 = wb.create_sheet(QUEST_SHEET)
+        ws2.append([banner])
+        ws2.append(["匿名编号"] + QCOLS)
+        for _, row in q.iterrows():
+            ws2.append([row["匿名编号"]] + [int(row[c]) for c in QCOLS if c in q.columns])
+
+        ws3 = wb.create_sheet("汇总看板")
+        ws3.append([banner])
+        ws3.append(["指标", "数值"])
+        for k, v in [("有效样本数", r["n"]),
+                     ("前测均分", f'{r["pre"]["mean"]} ± {r["pre"]["std"]}'),
+                     ("后测均分", f'{r["post"]["mean"]} ± {r["post"]["std"]}'),
+                     ("提升幅度", f'{r["gain"]} 分'),
+                     ("配对 t 检验 p", f'{r["paired_t"]["p"]:.3g}'),
+                     ("效应量 Cohen's d", r["cohen_d"]),
+                     ("实验完成率", f'{r["completion_rate"]:.1%}'),
+                     ("平均实验耗时", f'{r["duration_min"]["mean"]} min' if r.get("duration_min") else "—"),
+                     ("问卷总均分", r["questionnaire"].get("__overall__", {}).get("mean")),
+                     ("继续使用意愿", r["questionnaire"].get("Q9继续使用", {}).get("mean"))]:
+            ws3.append([k, str(v)])
+        p = out / "教学试点数据采集表_模拟填写版.xlsx"
+        wb.save(p)
+        made.append(str(p.relative_to(ROOT)))
+    except Exception as e:  # noqa: BLE001
+        print(f"  (模拟采集表生成失败：{type(e).__name__}: {e})")
+
+    # ② 课堂还原记录
+    import numpy as np
+    dur = g["实验耗时(min)"].to_numpy(int)
+    done = g["是否完成全部步骤"].astype(str).str.startswith("是").to_numpy()
+    L = [banner, "", "# 模拟课堂还原记录（90 分钟）", "",
+         "> 本文是 `--demo` 生成的**模拟教学过程**，用于预览真实试点时应该记录哪些内容。", "",
+         "## 时间线", "",
+         "| 时段 | 环节 | 现场情况（模拟） |", "|---|---|---|",
+         f"| 0–10 min | 前测 | {r['n']} 人参加，有效卷 {r['n']} 份；均分 **{r['pre']['mean']}**（SD {r['pre']['std']}） |",
+         "| 10–25 min | 讲解与演示 | 讲解 SDN 三层架构与流表统计；演示一次完整检测 |",
+         "| 25–45 min | 实验一·观察正常流量 | 18 组中 17 组一次启动成功，1 组因端口占用重试一次（约 2 分钟） |",
+         "| 45–70 min | 实验二·发起攻击并观察闭环 | 各组发起 SYN Flood / UDP Flood；首个告警平均约 12 s 内出现；阻断后流量回落 |",
+         "| 70–80 min | 实验三·读报告、讲边界 | 有学生追问\"为什么同域 99% 到真实网络就不行\"，引出目标域标定 |",
+         f"| 80–90 min | 后测 + 问卷 | 后测均分 **{r['post']['mean']}**（提升 {r['gain']} 分）；问卷总均分 "
+         f"**{r['questionnaire'].get('__overall__', {}).get('mean')}** |",
+         "", "## 逐人记录（模拟）", "",
+         "| 匿名编号 | 前测 | 后测 | 提升 | 耗时(min) | 完成 |", "|---|---|---|---|---|---|"]
+    for _, row in g.iterrows():
+        L.append(f"| {row['匿名编号']} | {row['前测得分']} | {row['后测得分']} | "
+                 f"{int(row['后测得分']) - int(row['前测得分'])} | {row['实验耗时(min)']} | {row['是否完成全部步骤']} |")
+    L += ["", "## 现场观察（模拟）", "",
+          f"- 完成率 **{r['completion_rate']:.1%}**（{int(done.sum())}/{len(done)}）",
+          f"- 平均耗时 **{dur.mean():.1f} min**（最短 {dur.min()}，最长 {dur.max()}）",
+          "- 常见卡点：拓扑启动等待时间（约 1 分钟）；有 3 组第一次没找到告警面板位置",
+          "- 教学亮点：实验三的\"误报/漏报 + 跨环境为什么失效\"讨论最活跃，多名学生主动提问",
+          "", "## 反馈摘录（模拟）", "",
+          "1. \"以前只在课本上看过入侵检测，这次自己发攻击、看它被拦住，印象深多了。\"",
+          "2. \"原来准确率 99% 不代表能用——老师讲的标定那部分最颠覆我的认知。\"",
+          "3. \"在虚拟机里随便打，不用担心把网络搞坏，这点很关键。\"",
+          "4. （教师）\"平台把攻击到阻断的全过程可视化了，课堂上不用再靠讲。\"",
+          "5. \"建议增加一个可以自己改阈值、观察误报变化的功能。\"",
+          "", "> ⚠️ 以上全部为模拟内容，仅用于预览记录格式；真实试点须逐项据实填写。"]
+    p2 = out / "模拟课堂记录.md"
+    p2.write_text("\n".join(L) + "\n", encoding="utf-8")
+    made.append(str(p2.relative_to(ROOT)))
+
+    # ③ 申报书段落预览（若这些是真数据，会长什么样）
+    qs = r["questionnaire"]
+    L2 = [banner, "", "# 申报书「（七）应用效果」4/5 段落预览", "",
+          "> 下面是**假设以上数据为真实采集**时，可直接粘进申报书的写法。**仅为预览，禁止提交。**", "",
+          "**4. 教学试点数据**", "",
+          f"- 试点形式：小规模课堂试点（《网络攻防》实验课），有效样本 **{r['n']} 人**；",
+          f"- 知识点掌握：前测 **{r['pre']['mean']} ± {r['pre']['std']}** → 后测 "
+          f"**{r['post']['mean']} ± {r['post']['std']}**，平均提升 **{r['gain']} 分**；"
+          f"配对 t 检验 p = {r['paired_t']['p']:.2g}，Cohen's d = {r['cohen_d']}（大效应）；",
+          f"- 实验完成率 **{r['completion_rate']:.1%}**，平均完成时间 "
+          f"**{r['duration_min']['mean']} 分钟**；",
+          f"- 平台满意度总均分 **{qs.get('__overall__', {}).get('mean')}**（5 级），"
+          f"\"愿意继续使用\" **{qs.get('Q9继续使用', {}).get('mean')}**、"
+          f"\"愿意推荐\" **{qs.get('Q10推荐意愿', {}).get('mean')}**；",
+          "- 所有数据匿名化处理（仅保留匿名编号），自愿参与并可随时退出；", "",
+          "**5. 用户反馈摘录**", "", "（引用「反馈摘录（模拟）」中的 3~5 条）", "",
+          "> 真实提交时：把\"小规模课堂试点\"换成实际形式（课堂/远程体验）、人数、时间，并附现场照片与签到记录。"]
+    p3 = out / "申报书段落预览.md"
+    p3.write_text("\n".join(L2) + "\n", encoding="utf-8")
+    made.append(str(p3.relative_to(ROOT)))
+    return made
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description="教学试点数据分析")
     ap.add_argument("--xlsx", default=str(ROOT / "competition" / "教学试点数据采集表.xlsx"))
@@ -254,7 +365,12 @@ def main(argv=None) -> int:
     for f in figs:
         print(f"      {ROOT / f}")
     if args.demo:
-        print("\n⚠️  以上为模拟数据。请完成真实试点后重新运行（不带 --demo）后再写入申报书。")
+        extras = write_demo_extras(g, q, r, out)
+        print("\n模拟课堂附加产物（仅供自看）：")
+        for f in extras:
+            print(f"      {ROOT / f}")
+        print("\n⚠️  以上全部为模拟数据。产物只落在 results/pilot_demo/，禁止写入任何提交材料；")
+        print("    真实试点完成后，改用不带 --demo 的命令重新生成 results/pilot/。")
     return 0
 
 
