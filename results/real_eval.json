@@ -27,6 +27,17 @@
       "fit_rows": 39669,
       "eval_rows": 59522
     },
+    "files_per_side": {
+      "fit": [
+        "Dataset.csv"
+      ],
+      "eval": [
+        "Dataset.csv"
+      ],
+      "shared": [
+        "Dataset.csv"
+      ]
+    },
     "mapping": {
       "matched": 71,
       "coverage": 1.0
@@ -72,6 +83,50 @@
           "eval_attack": 0.7027,
           "attack_minus_normal": 0.6956,
           "inverted": false
+        },
+        "online": {
+          "1": {
+            "confirm": 1,
+            "threshold": 0.708938,
+            "windows": 18003,
+            "segments": 2,
+            "segments_hit": 2,
+            "segment_recall": 1.0,
+            "alarms": 5754,
+            "false_alarms": 142,
+            "false_alarms_per_hour": 0.021,
+            "latency_s_mean": 36281.5,
+            "latency_s_median": 36281.5,
+            "eval_hours": 6732.67
+          },
+          "2": {
+            "confirm": 2,
+            "threshold": 0.708938,
+            "windows": 18003,
+            "segments": 2,
+            "segments_hit": 2,
+            "segment_recall": 1.0,
+            "alarms": 5238,
+            "false_alarms": 13,
+            "false_alarms_per_hour": 0.002,
+            "latency_s_mean": 36281.5,
+            "latency_s_median": 36281.5,
+            "eval_hours": 6732.67
+          },
+          "3": {
+            "confirm": 3,
+            "threshold": 0.708938,
+            "windows": 18003,
+            "segments": 2,
+            "segments_hit": 2,
+            "segment_recall": 1.0,
+            "alarms": 4953,
+            "false_alarms": 1,
+            "false_alarms_per_hour": 0.0,
+            "latency_s_mean": 36281.5,
+            "latency_s_median": 36281.5,
+            "eval_hours": 6732.67
+          }
         }
       },
       "refit_scaler": {
@@ -107,6 +162,50 @@
           "eval_attack": 0.9998,
           "attack_minus_normal": 0.0013,
           "inverted": false
+        },
+        "online": {
+          "1": {
+            "confirm": 1,
+            "threshold": 0.999998,
+            "windows": 18003,
+            "segments": 2,
+            "segments_hit": 0,
+            "segment_recall": 0.0,
+            "alarms": 0,
+            "false_alarms": 0,
+            "false_alarms_per_hour": 0.0,
+            "latency_s_mean": null,
+            "latency_s_median": null,
+            "eval_hours": 6732.67
+          },
+          "2": {
+            "confirm": 2,
+            "threshold": 0.999998,
+            "windows": 18003,
+            "segments": 2,
+            "segments_hit": 0,
+            "segment_recall": 0.0,
+            "alarms": 0,
+            "false_alarms": 0,
+            "false_alarms_per_hour": 0.0,
+            "latency_s_mean": null,
+            "latency_s_median": null,
+            "eval_hours": 6732.67
+          },
+          "3": {
+            "confirm": 3,
+            "threshold": 0.999998,
+            "windows": 18003,
+            "segments": 2,
+            "segments_hit": 0,
+            "segment_recall": 0.0,
+            "alarms": 0,
+            "false_alarms": 0,
+            "false_alarms_per_hour": 0.0,
+            "latency_s_mean": null,
+            "latency_s_median": null,
+            "eval_hours": 6732.67
+          }
         }
       },
       "normal_maha": {
@@ -142,6 +241,50 @@
           "eval_attack": 704735.875,
           "attack_minus_normal": 484408.375,
           "inverted": false
+        },
+        "online": {
+          "1": {
+            "confirm": 1,
+            "threshold": 1434470.255,
+            "windows": 18003,
+            "segments": 2,
+            "segments_hit": 2,
+            "segment_recall": 1.0,
+            "alarms": 4465,
+            "false_alarms": 8,
+            "false_alarms_per_hour": 0.001,
+            "latency_s_mean": 36427.0,
+            "latency_s_median": 36427.0,
+            "eval_hours": 6732.67
+          },
+          "2": {
+            "confirm": 2,
+            "threshold": 1434470.255,
+            "windows": 18003,
+            "segments": 2,
+            "segments_hit": 2,
+            "segment_recall": 1.0,
+            "alarms": 4395,
+            "false_alarms": 0,
+            "false_alarms_per_hour": 0.0,
+            "latency_s_mean": 36427.0,
+            "latency_s_median": 36427.0,
+            "eval_hours": 6732.67
+          },
+          "3": {
+            "confirm": 3,
+            "threshold": 1434470.255,
+            "windows": 18003,
+            "segments": 2,
+            "segments_hit": 1,
+            "segment_recall": 0.5,
+            "alarms": 4349,
+            "false_alarms": 0,
+            "false_alarms_per_hour": 0.0,
+            "latency_s_mean": 0.0,
+            "latency_s_median": 0.0,
+            "eval_hours": 6732.67
+          }
         }
       },
       "normal_knn": {
@@ -177,6 +320,50 @@
           "eval_attack": 30.1093,
           "attack_minus_normal": 11.6245,
           "inverted": false
+        },
+        "online": {
+          "1": {
+            "confirm": 1,
+            "threshold": 45.335962,
+            "windows": 18003,
+            "segments": 2,
+            "segments_hit": 1,
+            "segment_recall": 0.5,
+            "alarms": 3425,
+            "false_alarms": 24,
+            "false_alarms_per_hour": 0.004,
+            "latency_s_mean": 0.0,
+            "latency_s_median": 0.0,
+            "eval_hours": 6732.67
+          },
+          "2": {
+            "confirm": 2,
+            "threshold": 45.335962,
+            "windows": 18003,
+            "segments": 2,
+            "segments_hit": 1,
+            "segment_recall": 0.5,
+            "alarms": 3276,
+            "false_alarms": 9,
+            "false_alarms_per_hour": 0.001,
+            "latency_s_mean": 0.0,
+            "latency_s_median": 0.0,
+            "eval_hours": 6732.67
+          },
+          "3": {
+            "confirm": 3,
+            "threshold": 45.335962,
+            "windows": 18003,
+            "segments": 2,
+            "segments_hit": 1,
+            "segment_recall": 0.5,
+            "alarms": 3173,
+            "false_alarms": 3,
+            "false_alarms_per_hour": 0.0,
+            "latency_s_mean": 0.0,
+            "latency_s_median": 0.0,
+            "eval_hours": 6732.67
+          }
         }
       },
       "fusion_deep_maha": {
@@ -212,11 +399,55 @@
           "eval_attack": 0.842,
           "attack_minus_normal": 0.3831,
           "inverted": false
+        },
+        "online": {
+          "1": {
+            "confirm": 1,
+            "threshold": 0.829828,
+            "windows": 18003,
+            "segments": 2,
+            "segments_hit": 2,
+            "segment_recall": 1.0,
+            "alarms": 6116,
+            "false_alarms": 7,
+            "false_alarms_per_hour": 0.001,
+            "latency_s_mean": 36281.5,
+            "latency_s_median": 36281.5,
+            "eval_hours": 6732.67
+          },
+          "2": {
+            "confirm": 2,
+            "threshold": 0.829828,
+            "windows": 18003,
+            "segments": 2,
+            "segments_hit": 2,
+            "segment_recall": 1.0,
+            "alarms": 5503,
+            "false_alarms": 1,
+            "false_alarms_per_hour": 0.0,
+            "latency_s_mean": 36281.5,
+            "latency_s_median": 36281.5,
+            "eval_hours": 6732.67
+          },
+          "3": {
+            "confirm": 3,
+            "threshold": 0.829828,
+            "windows": 18003,
+            "segments": 2,
+            "segments_hit": 2,
+            "segment_recall": 1.0,
+            "alarms": 5085,
+            "false_alarms": 0,
+            "false_alarms_per_hour": 0.0,
+            "latency_s_mean": 36281.5,
+            "latency_s_median": 36281.5,
+            "eval_hours": 6732.67
+          }
         }
       }
     },
-    "elapsed_sec": 14.3,
-    "generated_at": "2026-09-19 19:59:08"
+    "elapsed_sec": 14.9,
+    "generated_at": "2026-10-08 20:27:31"
   },
   "cic_ids2017_cross_day": {
     "tag": "cic_ids2017_cross_day",
@@ -258,6 +489,21 @@
       "near_duplicate_overlap": 0,
       "fit_rows": 67558,
       "eval_rows": 160028
+    },
+    "files_per_side": {
+      "fit": [
+        "Monday-WorkingHours.pcap_ISCX.csv",
+        "Tuesday-WorkingHours.pcap_ISCX.csv"
+      ],
+      "eval": [
+        "Friday-WorkingHours-Afternoon-DDos.pcap_ISCX.csv",
+        "Friday-WorkingHours-Afternoon-PortScan.pcap_ISCX.csv",
+        "Friday-WorkingHours-Morning.pcap_ISCX.csv",
+        "Thursday-WorkingHours-Afternoon-Infilteration.pcap_ISCX.csv",
+        "Thursday-WorkingHours-Morning-WebAttacks.pcap_ISCX.csv",
+        "Wednesday-workingHours.pcap_ISCX.csv"
+      ],
+      "shared": []
     },
     "mapping": {
       "matched": 71,
@@ -304,6 +550,64 @@
           "eval_attack": 0.7528,
           "attack_minus_normal": -0.2159,
           "inverted": true
+        },
+        "online": {
+          "1": {
+            "confirm": 1,
+            "threshold": 0.999991,
+            "windows": 18616,
+            "segments": 39,
+            "segments_hit": 23,
+            "segment_recall": 0.5897,
+            "alarms": 478,
+            "false_alarms": 254,
+            "false_alarms_per_hour": 0.172,
+            "latency_s_mean": 0.0,
+            "latency_s_median": 0.0,
+            "eval_hours": 1475.93
+          },
+          "2": {
+            "confirm": 2,
+            "threshold": 0.999991,
+            "windows": 18616,
+            "segments": 39,
+            "segments_hit": 18,
+            "segment_recall": 0.4615,
+            "alarms": 185,
+            "false_alarms": 56,
+            "false_alarms_per_hour": 0.038,
+            "latency_s_mean": 0.0,
+            "latency_s_median": 0.0,
+            "eval_hours": 1475.93
+          },
+          "3": {
+            "confirm": 3,
+            "threshold": 0.999991,
+            "windows": 18616,
+            "segments": 39,
+            "segments_hit": 15,
+            "segment_recall": 0.3846,
+            "alarms": 81,
+            "false_alarms": 13,
+            "false_alarms_per_hour": 0.009,
+            "latency_s_mean": 0.0,
+            "latency_s_median": 0.0,
+            "eval_hours": 1475.93
+          },
+          "5": {
+            "confirm": 5,
+            "threshold": 0.999991,
+            "windows": 18616,
+            "segments": 39,
+            "segments_hit": 3,
+            "segment_recall": 0.0769,
+            "alarms": 7,
+            "false_alarms": 0,
+            "false_alarms_per_hour": 0.0,
+            "latency_s_mean": 0.0,
+            "latency_s_median": 0.0,
+            "eval_hours": 1475.93
+          }
         }
       },
       "refit_scaler": {
@@ -339,6 +643,64 @@
           "eval_attack": 0.1216,
           "attack_minus_normal": -0.8486,
           "inverted": true
+        },
+        "online": {
+          "1": {
+            "confirm": 1,
+            "threshold": 0.999995,
+            "windows": 18616,
+            "segments": 39,
+            "segments_hit": 0,
+            "segment_recall": 0.0,
+            "alarms": 316,
+            "false_alarms": 316,
+            "false_alarms_per_hour": 0.214,
+            "latency_s_mean": null,
+            "latency_s_median": null,
+            "eval_hours": 1475.93
+          },
+          "2": {
+            "confirm": 2,
+            "threshold": 0.999995,
+            "windows": 18616,
+            "segments": 39,
+            "segments_hit": 0,
+            "segment_recall": 0.0,
+            "alarms": 90,
+            "false_alarms": 90,
+            "false_alarms_per_hour": 0.061,
+            "latency_s_mean": null,
+            "latency_s_median": null,
+            "eval_hours": 1475.93
+          },
+          "3": {
+            "confirm": 3,
+            "threshold": 0.999995,
+            "windows": 18616,
+            "segments": 39,
+            "segments_hit": 0,
+            "segment_recall": 0.0,
+            "alarms": 30,
+            "false_alarms": 30,
+            "false_alarms_per_hour": 0.02,
+            "latency_s_mean": null,
+            "latency_s_median": null,
+            "eval_hours": 1475.93
+          },
+          "5": {
+            "confirm": 5,
+            "threshold": 0.999995,
+            "windows": 18616,
+            "segments": 39,
+            "segments_hit": 0,
+            "segment_recall": 0.0,
+            "alarms": 3,
+            "false_alarms": 3,
+            "false_alarms_per_hour": 0.002,
+            "latency_s_mean": null,
+            "latency_s_median": null,
+            "eval_hours": 1475.93
+          }
         }
       },
       "normal_maha": {
@@ -374,6 +736,64 @@
           "eval_attack": 1299398.25,
           "attack_minus_normal": 944598.9062,
           "inverted": false
+        },
+        "online": {
+          "1": {
+            "confirm": 1,
+            "threshold": 1592438.33625,
+            "windows": 18616,
+            "segments": 39,
+            "segments_hit": 34,
+            "segment_recall": 0.8718,
+            "alarms": 2315,
+            "false_alarms": 731,
+            "false_alarms_per_hour": 0.495,
+            "latency_s_mean": 0.0,
+            "latency_s_median": 0.0,
+            "eval_hours": 1475.93
+          },
+          "2": {
+            "confirm": 2,
+            "threshold": 1592438.33625,
+            "windows": 18616,
+            "segments": 39,
+            "segments_hit": 34,
+            "segment_recall": 0.8718,
+            "alarms": 2117,
+            "false_alarms": 629,
+            "false_alarms_per_hour": 0.426,
+            "latency_s_mean": 0.0,
+            "latency_s_median": 0.0,
+            "eval_hours": 1475.93
+          },
+          "3": {
+            "confirm": 3,
+            "threshold": 1592438.33625,
+            "windows": 18616,
+            "segments": 39,
+            "segments_hit": 31,
+            "segment_recall": 0.7949,
+            "alarms": 1985,
+            "false_alarms": 590,
+            "false_alarms_per_hour": 0.4,
+            "latency_s_mean": 0.0,
+            "latency_s_median": 0.0,
+            "eval_hours": 1475.93
+          },
+          "5": {
+            "confirm": 5,
+            "threshold": 1592438.33625,
+            "windows": 18616,
+            "segments": 39,
+            "segments_hit": 30,
+            "segment_recall": 0.7692,
+            "alarms": 1790,
+            "false_alarms": 546,
+            "false_alarms_per_hour": 0.37,
+            "latency_s_mean": 0.0,
+            "latency_s_median": 0.0,
+            "eval_hours": 1475.93
+          }
         }
       },
       "normal_knn": {
@@ -409,6 +829,64 @@
           "eval_attack": 80.2455,
           "attack_minus_normal": 55.2083,
           "inverted": false
+        },
+        "online": {
+          "1": {
+            "confirm": 1,
+            "threshold": 46.279633,
+            "windows": 18616,
+            "segments": 39,
+            "segments_hit": 36,
+            "segment_recall": 0.9231,
+            "alarms": 3666,
+            "false_alarms": 855,
+            "false_alarms_per_hour": 0.579,
+            "latency_s_mean": 0.0,
+            "latency_s_median": 0.0,
+            "eval_hours": 1475.93
+          },
+          "2": {
+            "confirm": 2,
+            "threshold": 46.279633,
+            "windows": 18616,
+            "segments": 39,
+            "segments_hit": 36,
+            "segment_recall": 0.9231,
+            "alarms": 3393,
+            "false_alarms": 736,
+            "false_alarms_per_hour": 0.499,
+            "latency_s_mean": 0.0,
+            "latency_s_median": 0.0,
+            "eval_hours": 1475.93
+          },
+          "3": {
+            "confirm": 3,
+            "threshold": 46.279633,
+            "windows": 18616,
+            "segments": 39,
+            "segments_hit": 35,
+            "segment_recall": 0.8974,
+            "alarms": 3192,
+            "false_alarms": 683,
+            "false_alarms_per_hour": 0.463,
+            "latency_s_mean": 0.0,
+            "latency_s_median": 0.0,
+            "eval_hours": 1475.93
+          },
+          "5": {
+            "confirm": 5,
+            "threshold": 46.279633,
+            "windows": 18616,
+            "segments": 39,
+            "segments_hit": 32,
+            "segment_recall": 0.8205,
+            "alarms": 2906,
+            "false_alarms": 631,
+            "false_alarms_per_hour": 0.428,
+            "latency_s_mean": 0.0,
+            "latency_s_median": 0.0,
+            "eval_hours": 1475.93
+          }
         }
       },
       "fusion_deep_maha": {
@@ -444,11 +922,69 @@
           "eval_attack": 0.6319,
           "attack_minus_normal": 0.1293,
           "inverted": false
+        },
+        "online": {
+          "1": {
+            "confirm": 1,
+            "threshold": 0.766167,
+            "windows": 18616,
+            "segments": 39,
+            "segments_hit": 4,
+            "segment_recall": 0.1026,
+            "alarms": 293,
+            "false_alarms": 278,
+            "false_alarms_per_hour": 0.188,
+            "latency_s_mean": 0.0,
+            "latency_s_median": 0.0,
+            "eval_hours": 1475.93
+          },
+          "2": {
+            "confirm": 2,
+            "threshold": 0.766167,
+            "windows": 18616,
+            "segments": 39,
+            "segments_hit": 1,
+            "segment_recall": 0.0256,
+            "alarms": 59,
+            "false_alarms": 50,
+            "false_alarms_per_hour": 0.034,
+            "latency_s_mean": 0.0,
+            "latency_s_median": 0.0,
+            "eval_hours": 1475.93
+          },
+          "3": {
+            "confirm": 3,
+            "threshold": 0.766167,
+            "windows": 18616,
+            "segments": 39,
+            "segments_hit": 1,
+            "segment_recall": 0.0256,
+            "alarms": 14,
+            "false_alarms": 7,
+            "false_alarms_per_hour": 0.005,
+            "latency_s_mean": 0.0,
+            "latency_s_median": 0.0,
+            "eval_hours": 1475.93
+          },
+          "5": {
+            "confirm": 5,
+            "threshold": 0.766167,
+            "windows": 18616,
+            "segments": 39,
+            "segments_hit": 1,
+            "segment_recall": 0.0256,
+            "alarms": 3,
+            "false_alarms": 0,
+            "false_alarms_per_hour": 0.0,
+            "latency_s_mean": 0.0,
+            "latency_s_median": 0.0,
+            "eval_hours": 1475.93
+          }
         }
       }
     },
-    "elapsed_sec": 37.1,
-    "generated_at": "2026-09-19 19:59:46"
+    "elapsed_sec": 40.3,
+    "generated_at": "2026-10-08 20:26:38"
   },
   "cic_ids2017_block": {
     "tag": "cic_ids2017_block",
@@ -714,6 +1250,16 @@
       "fit_rows": 57342,
       "eval_rows": 136012
     },
+    "files_per_side": {
+      "fit": [
+        "Wednesday-14-02-2018_TrafficForML_CICFlowMeter.csv"
+      ],
+      "eval": [
+        "Friday-16-02-2018_TrafficForML_CICFlowMeter.csv",
+        "Thursday-15-02-2018_TrafficForML_CICFlowMeter.csv"
+      ],
+      "shared": []
+    },
     "mapping": {
       "matched": 71,
       "coverage": 1.0
@@ -759,6 +1305,50 @@
           "eval_attack": 0.9993,
           "attack_minus_normal": 0.0233,
           "inverted": false
+        },
+        "online": {
+          "1": {
+            "confirm": 1,
+            "threshold": 0.999881,
+            "windows": 14630,
+            "segments": 94,
+            "segments_hit": 9,
+            "segment_recall": 0.0957,
+            "alarms": 368,
+            "false_alarms": 202,
+            "false_alarms_per_hour": 6.08,
+            "latency_s_mean": 1.33,
+            "latency_s_median": 0.0,
+            "eval_hours": 33.22
+          },
+          "2": {
+            "confirm": 2,
+            "threshold": 0.999881,
+            "windows": 14630,
+            "segments": 94,
+            "segments_hit": 2,
+            "segment_recall": 0.0213,
+            "alarms": 113,
+            "false_alarms": 6,
+            "false_alarms_per_hour": 0.181,
+            "latency_s_mean": 0.0,
+            "latency_s_median": 0.0,
+            "eval_hours": 33.22
+          },
+          "3": {
+            "confirm": 3,
+            "threshold": 0.999881,
+            "windows": 14630,
+            "segments": 94,
+            "segments_hit": 2,
+            "segment_recall": 0.0213,
+            "alarms": 70,
+            "false_alarms": 1,
+            "false_alarms_per_hour": 0.03,
+            "latency_s_mean": 0.0,
+            "latency_s_median": 0.0,
+            "eval_hours": 33.22
+          }
         }
       },
       "refit_scaler": {
@@ -794,6 +1384,50 @@
           "eval_attack": 0.9998,
           "attack_minus_normal": 0.0098,
           "inverted": false
+        },
+        "online": {
+          "1": {
+            "confirm": 1,
+            "threshold": 0.999968,
+            "windows": 14630,
+            "segments": 94,
+            "segments_hit": 13,
+            "segment_recall": 0.1383,
+            "alarms": 533,
+            "false_alarms": 325,
+            "false_alarms_per_hour": 9.783,
+            "latency_s_mean": 0.54,
+            "latency_s_median": 0.0,
+            "eval_hours": 33.22
+          },
+          "2": {
+            "confirm": 2,
+            "threshold": 0.999968,
+            "windows": 14630,
+            "segments": 94,
+            "segments_hit": 4,
+            "segment_recall": 0.0426,
+            "alarms": 146,
+            "false_alarms": 5,
+            "false_alarms_per_hour": 0.151,
+            "latency_s_mean": 4.25,
+            "latency_s_median": 0.0,
+            "eval_hours": 33.22
+          },
+          "3": {
+            "confirm": 3,
+            "threshold": 0.999968,
+            "windows": 14630,
+            "segments": 94,
+            "segments_hit": 3,
+            "segment_recall": 0.0319,
+            "alarms": 98,
+            "false_alarms": 0,
+            "false_alarms_per_hour": 0.0,
+            "latency_s_mean": 23.33,
+            "latency_s_median": 0.0,
+            "eval_hours": 33.22
+          }
         }
       },
       "normal_maha": {
@@ -829,6 +1463,50 @@
           "eval_attack": 207179.5312,
           "attack_minus_normal": -189825.9688,
           "inverted": true
+        },
+        "online": {
+          "1": {
+            "confirm": 1,
+            "threshold": 1143843.035,
+            "windows": 14630,
+            "segments": 94,
+            "segments_hit": 22,
+            "segment_recall": 0.234,
+            "alarms": 550,
+            "false_alarms": 520,
+            "false_alarms_per_hour": 15.653,
+            "latency_s_mean": 0.59,
+            "latency_s_median": 0.0,
+            "eval_hours": 33.22
+          },
+          "2": {
+            "confirm": 2,
+            "threshold": 1143843.035,
+            "windows": 14630,
+            "segments": 94,
+            "segments_hit": 6,
+            "segment_recall": 0.0638,
+            "alarms": 43,
+            "false_alarms": 37,
+            "false_alarms_per_hour": 1.114,
+            "latency_s_mean": 1.33,
+            "latency_s_median": 0.0,
+            "eval_hours": 33.22
+          },
+          "3": {
+            "confirm": 3,
+            "threshold": 1143843.035,
+            "windows": 14630,
+            "segments": 94,
+            "segments_hit": 0,
+            "segment_recall": 0.0,
+            "alarms": 3,
+            "false_alarms": 3,
+            "false_alarms_per_hour": 0.09,
+            "latency_s_mean": null,
+            "latency_s_median": null,
+            "eval_hours": 33.22
+          }
         }
       },
       "normal_knn": {
@@ -864,6 +1542,50 @@
           "eval_attack": 21.1675,
           "attack_minus_normal": -4.5715,
           "inverted": true
+        },
+        "online": {
+          "1": {
+            "confirm": 1,
+            "threshold": 46.707211,
+            "windows": 14630,
+            "segments": 94,
+            "segments_hit": 22,
+            "segment_recall": 0.234,
+            "alarms": 371,
+            "false_alarms": 339,
+            "false_alarms_per_hour": 10.204,
+            "latency_s_mean": 0.59,
+            "latency_s_median": 0.0,
+            "eval_hours": 33.22
+          },
+          "2": {
+            "confirm": 2,
+            "threshold": 46.707211,
+            "windows": 14630,
+            "segments": 94,
+            "segments_hit": 8,
+            "segment_recall": 0.0851,
+            "alarms": 28,
+            "false_alarms": 19,
+            "false_alarms_per_hour": 0.572,
+            "latency_s_mean": 1.12,
+            "latency_s_median": 0.0,
+            "eval_hours": 33.22
+          },
+          "3": {
+            "confirm": 3,
+            "threshold": 46.707211,
+            "windows": 14630,
+            "segments": 94,
+            "segments_hit": 1,
+            "segment_recall": 0.0106,
+            "alarms": 3,
+            "false_alarms": 2,
+            "false_alarms_per_hour": 0.06,
+            "latency_s_mean": 1.0,
+            "latency_s_median": 1.0,
+            "eval_hours": 33.22
+          }
         }
       },
       "fusion_deep_maha": {
@@ -899,11 +1621,55 @@
           "eval_attack": 0.5332,
           "attack_minus_normal": -0.0427,
           "inverted": true
+        },
+        "online": {
+          "1": {
+            "confirm": 1,
+            "threshold": 0.838383,
+            "windows": 14630,
+            "segments": 94,
+            "segments_hit": 43,
+            "segment_recall": 0.4574,
+            "alarms": 466,
+            "false_alarms": 402,
+            "false_alarms_per_hour": 12.101,
+            "latency_s_mean": 0.37,
+            "latency_s_median": 0.0,
+            "eval_hours": 33.22
+          },
+          "2": {
+            "confirm": 2,
+            "threshold": 0.838383,
+            "windows": 14630,
+            "segments": 94,
+            "segments_hit": 14,
+            "segment_recall": 0.1489,
+            "alarms": 25,
+            "false_alarms": 8,
+            "false_alarms_per_hour": 0.241,
+            "latency_s_mean": 1.29,
+            "latency_s_median": 0.5,
+            "eval_hours": 33.22
+          },
+          "3": {
+            "confirm": 3,
+            "threshold": 0.838383,
+            "windows": 14630,
+            "segments": 94,
+            "segments_hit": 2,
+            "segment_recall": 0.0213,
+            "alarms": 2,
+            "false_alarms": 0,
+            "false_alarms_per_hour": 0.0,
+            "latency_s_mean": 0.5,
+            "latency_s_median": 0.5,
+            "eval_hours": 33.22
+          }
         }
       }
     },
-    "elapsed_sec": 49.2,
-    "generated_at": "2026-09-19 20:02:05"
+    "elapsed_sec": 51.6,
+    "generated_at": "2026-10-08 20:28:24"
   },
   "unsw_nb15_block": {
     "tag": "unsw_nb15_block",

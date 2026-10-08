@@ -58,11 +58,12 @@ DATASETS: dict[str, dict] = {
         "title": "inSDN（真实公开集，仅 0/1 标签）",
         "files": ["data/real/insdn/Dataset.csv"],
         "label": "target",
-        "time": None,
+        "time": "Timestamp",
         "group": ["Src IP", "Dst IP", "Dst Port", "Protocol"],
         "day_from": None,
         "family": {"0": "Normal", "1": "Attack"},
-        "notes": ["行序为「正常块 + 攻击块」拼接，非时间序；因此只能用 group 协议，不能做跨天时序评测"],
+        "notes": ["行序为「正常块 + 攻击块」拼接，非时间序；因此只能用 group/block 协议，不能做跨天时序评测",
+                  "时间戳仅 1,392 个分钟值却跨 8 个月：可用于排序，但**不能**当作真实经过时长折算误报率"],
     },
     "cic_ids2017": {
         "title": "CIC-IDS2017（GeneratedLabelledFlows：含 Timestamp 与流标识）",
@@ -236,16 +237,16 @@ def row_hashes(mat: np.ndarray) -> set[str]:
 
 
 def build_windows(X: np.ndarray, y: np.ndarray, side: np.ndarray,
-                  window: int, stride: int, log) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+                  window: int, stride: int, log) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """只在**同一侧**的连续行上开窗（避免窗口跨切分边界造成泄漏）。
 
-    返回 (Xw, yw, pure, w_side)：w_side 由本函数直接给出，绝不在外部重算——
-    外部重算一旦条件不一致会静默把窗口错配到另一侧。
+    返回 (Xw, yw, pure, w_side, starts)：w_side 由本函数直接给出，绝不在外部重算——
+    外部重算一旦条件不一致会静默把窗口错配到另一侧。starts = 各窗口起始行号（在线口径需要时间轴）。
     """
     n = len(X)
-    starts = np.arange(0, n - window + 1, stride)
+    starts_all = np.arange(0, n - window + 1, stride)
     keep, pure = [], []
-    for s in starts:
+    for s in starts_all:
         sl = side[s:s + window]
         if sl[0] < 0 or sl.min() != sl.max():   # side<0 = 被 purge 掉的行，不参与
             continue
@@ -257,9 +258,9 @@ def build_windows(X: np.ndarray, y: np.ndarray, side: np.ndarray,
     Xw = np.stack([X[s:s + window] for s in keep]) if len(keep) else np.zeros((0, window, X.shape[1]), np.float32)
     yw = np.array([int(y[s:s + window].mean() > 0.5) for s in keep], dtype=np.int64)
     pw = np.asarray(pure, dtype=bool)
-    assert len(Xw) == len(yw) == len(pw) == len(w_side), "开窗输出长度不一致"
-    log(f"  候选窗口 {len(starts):,} → 同侧窗口 {len(keep):,}（其中纯窗口 {int(pw.sum()):,}）")
-    return Xw, yw, pw, w_side
+    assert len(Xw) == len(yw) == len(pw) == len(w_side) == len(keep), "开窗输出长度不一致"
+    log(f"  候选窗口 {len(starts_all):,} → 同侧窗口 {len(keep):,}（其中纯窗口 {int(pw.sum()):,}）")
+    return Xw, yw, pw, w_side, keep
 
 
 def scale_safe(scaler, X: np.ndarray, clip: float = 10.0) -> tuple[np.ndarray, float]:
@@ -330,6 +331,69 @@ def tpr_at_fpr(y: np.ndarray, s: np.ndarray, target: float) -> float:
     return float(best)
 
 
+def online_metrics(times: np.ndarray, y_win: np.ndarray, scores: np.ndarray,
+                   thr: float, confirm: int) -> dict:
+    """在线告警口径（**真实数据版**）：片段召回 / 误报每小时 / 检测时延。
+
+    这是把工程原本只在合成数据上算的招牌指标，搬到真实数据 + 无泄漏切分上。
+
+    * 按时间排序窗口；告警 = **连续 confirm 个窗口**都 ≥ 阈值（对应工程里的"连续确认"机制）；
+    * 攻击片段 = 时间序上连续的攻击窗口，长度 ≥ 2 个窗口才计入分母（与工程 online 口径一致：
+      过短片段不计入，避免"单窗抖动"把召回算虚高）；
+    * 片段召回 = 至少产生过一次告警的片段占比；
+    * 检测时延 = 片段首窗时间 → 该片段内首个告警窗时间；
+    * 误报 = 不落在任何攻击片段内的告警数 ÷ 评估段总时长（小时）。
+    """
+    order = np.argsort(times, kind="stable")
+    t = np.asarray(times, dtype=float)[order]
+    y = np.asarray(y_win)[order]
+    s = np.asarray(scores, dtype=float)[order]
+    above = s >= thr
+    alarm = np.zeros(len(s), dtype=bool)
+    if confirm <= 1:
+        alarm = above.copy()
+    else:
+        run = 0
+        for i in range(len(s)):
+            run = run + 1 if above[i] else 0
+            if run >= confirm:
+                alarm[i] = True
+
+    segs: list[tuple[int, int]] = []
+    i = 0
+    while i < len(y):
+        if y[i] == 1:
+            j = i
+            while j + 1 < len(y) and y[j + 1] == 1:
+                j += 1
+            if (j - i + 1) >= 2:
+                segs.append((i, j))
+            i = j + 1
+        else:
+            i += 1
+
+    hits, lats = 0, []
+    alarm_in_seg = np.zeros(len(s), dtype=bool)
+    for a, b in segs:
+        idx = np.flatnonzero(alarm[a:b + 1])
+        if len(idx):
+            hits += 1
+            alarm_in_seg[a + idx] = True
+            lats.append(float(t[a + idx[0]] - t[a]))
+    span_h = (t[-1] - t[0]) / 3600.0 if len(t) > 1 else float("nan")
+    fa = int((alarm & ~alarm_in_seg).sum())
+    return {
+        "confirm": int(confirm), "threshold": round(float(thr), 6),
+        "windows": int(len(s)), "segments": len(segs), "segments_hit": int(hits),
+        "segment_recall": round(hits / len(segs), 4) if segs else None,
+        "alarms": int(alarm.sum()), "false_alarms": fa,
+        "false_alarms_per_hour": round(fa / span_h, 3) if span_h == span_h and span_h > 0 else None,
+        "latency_s_mean": round(float(np.mean(lats)), 2) if lats else None,
+        "latency_s_median": round(float(np.median(lats)), 2) if lats else None,
+        "eval_hours": round(span_h, 2) if span_h == span_h else None,
+    }
+
+
 def roc_auc(y: np.ndarray, s: np.ndarray) -> float:
     if len(np.unique(y)) < 2:
         return float("nan")
@@ -361,6 +425,10 @@ def main(argv=None) -> int:
     ap.add_argument("--fit-days", type=int, default=2, help="cross_day 协议下用前几天做拟合段（默认 2）")
     ap.add_argument("--native", action="store_true",
                     help="额外跑「原生特征自训」臂：用该数据自己的数值列 + 逻辑回归（特征映射 0/71 时必须用这个）")
+    ap.add_argument("--online", action="store_true",
+                    help="额外算**在线告警口径**（片段召回 / 误报每小时 / 检测时延），需该数据集有时间列")
+    ap.add_argument("--confirms", type=int, nargs="+", default=[1, 2, 3, 5],
+                    help="在线口径的连续确认窗口数 N（默认 1 2 3 5；N 越大误报越少、时延越大）")
     ap.add_argument("--window", type=int, default=16)
     ap.add_argument("--stride", type=int, default=3)
     ap.add_argument("--row-cap", type=int, default=250000, help="总行数上限（0=不限；按文件等间隔抽样）")
@@ -585,8 +653,8 @@ def main(argv=None) -> int:
     for j, f in enumerate(FEATURES):
         if f in mapping:
             X_raw[:, j] = pd.to_numeric(df2[mapping[f]], errors="coerce").to_numpy(np.float32)
-    Xw, yw, pure, win_side = build_windows(X_raw, df2["__y__"].to_numpy(), side,
-                                           args.window, args.stride, log)
+    Xw, yw, pure, win_side, win_starts = build_windows(X_raw, df2["__y__"].to_numpy(), side,
+                                                       args.window, args.stride, log)
 
     def cap(arr_list):
         n = len(arr_list[0])
@@ -596,11 +664,29 @@ def main(argv=None) -> int:
         log(f"  窗口 {n:,} → 等间隔抽 {args.max_windows:,}（控制内存）")
         return [a[idx] for a in arr_list]
 
-    Xw, yw, pure, win_side = cap([Xw, yw, pure, win_side])
+    Xw, yw, pure, win_side, win_starts = cap([Xw, yw, pure, win_side, win_starts])
     fit_w = win_side == 0
     ev_w = win_side == 1
     log(f"窗口：拟合段 {int(fit_w.sum()):,}（纯窗口 {int((pure & fit_w).sum()):,}）"
         f"｜评估段 {int(ev_w.sum()):,}（纯窗口 {int((pure & ev_w).sum()):,}）")
+
+    # ---- 在线口径的时间轴（仅当该数据集有时间列时可用）----
+    win_times = None
+    if args.online:
+        tcol = spec.get("time")
+        if not tcol or tcol not in df2.columns:
+            log("  ! --online 需要时间列，本数据集没有 → 跳过在线口径（窗口级指标不受影响）")
+        else:
+            ts = pd.to_datetime(df2[tcol], errors="coerce", format="mixed")
+            secs = ts.astype("int64").to_numpy() / 1e9
+            secs = np.where(np.isfinite(secs), secs, np.nan)
+            win_times = secs[win_starts]
+            bad = int(np.isnan(win_times).sum())
+            if bad > len(win_times) * 0.02:
+                log(f"  ! 时间解析失败窗口 {bad:,} 个（>2%）→ 关闭在线口径")
+                win_times = None
+            else:
+                log(f"  在线口径时间轴就绪：窗口时间来自 `{tcol}`（不可解析 {bad} 个已剔除）")
 
     # ---- 各评测臂 ----
     import joblib
@@ -644,6 +730,22 @@ def main(argv=None) -> int:
                                  "eval_attack": round(m_ev_a, 4),
                                  "attack_minus_normal": round(m_ev_a - m_ev_n, 4),
                                  "inverted": bool(m_ev_a < m_ev_n)}
+        # 在线告警口径（片段召回/误报每小时/检测时延）——真实数据版
+        # 阈值仍只来自拟合段正常分数；确认窗口数 N 只改变"连续多少次才算告警"，不引入评估段信息。
+        if win_times is not None:
+            ev_idx = np.flatnonzero(ev_pure)
+            t_ev = win_times[ev_idx]
+            keep_ok = ~np.isnan(t_ev)
+            if keep_ok.sum() >= 10:
+                entry["online"] = {}
+                for c in args.confirms:
+                    entry["online"][str(c)] = online_metrics(
+                        t_ev[keep_ok], y_ev[keep_ok], np.asarray(ev_scores)[keep_ok],
+                        quantile_threshold(fit_scores, args.budget), c)
+                best = entry["online"][str(args.confirms[0])]
+                log(f"      在线口径(N={best['confirm']}): 片段召回 {best['segment_recall']}"
+                    f"｜误报 {best['false_alarms_per_hour']}/h｜时延中位 {best['latency_s_median']}s"
+                    f"｜片段 {best['segments_hit']}/{best['segments']}｜{best['eval_hours']}h")
         results[name] = entry
         store[name] = (np.asarray(fit_scores, dtype=np.float64), np.asarray(ev_scores, dtype=np.float64))
         main = entry[f"at_{args.budget:g}"]
@@ -722,9 +824,9 @@ def main(argv=None) -> int:
             log("  ! 原生臂跳过：可用数值列不足 3 个")
         else:
             Xn_raw = df2[native_cols].apply(pd.to_numeric, errors="coerce").to_numpy(np.float64)
-            Xnw, yw_n, pure_n, side_n = build_windows(Xn_raw, df2["__y__"].to_numpy(), side,
-                                                      args.window, args.stride, log)
-            Xnw, yw_n, pure_n, side_n = cap([Xnw, yw_n, pure_n, side_n])
+            Xnw, yw_n, pure_n, side_n, _n_starts = build_windows(Xn_raw, df2["__y__"].to_numpy(), side,
+                                                                 args.window, args.stride, log)
+            Xnw, yw_n, pure_n, side_n, _n_starts = cap([Xnw, yw_n, pure_n, side_n, _n_starts])
             if not (np.array_equal(yw_n, yw) and np.array_equal(side_n, win_side)):
                 raise SystemExit("原生臂的窗口与主臂不一致：拒绝出结论（切分实现有问题）")
             flat_n = np.nan_to_num(Xnw.reshape(-1, len(native_cols)), nan=0.0, posinf=0.0, neginf=0.0)
@@ -822,6 +924,27 @@ def render_md(report: dict, budget: float) -> str:
         L.append("|---|---|")
         for name, a in e["arms"].items():
             L.append(f"| `{name}` | {a['desc']} |")
+        onl = {n: a["online"] for n, a in e["arms"].items() if a.get("online")}
+        if onl:
+            L.append("")
+            L.append("**在线告警口径（真实数据；阈值同上面工作点，N = 连续确认窗口数）**")
+            L.append("")
+            L.append("| 评测臂 | N | 片段召回 | 检出/片段 | 误报次数 | 误报/小时 | 时延中位(s) | 评估时长(h) |")
+            L.append("|---|---|---|---|---|---|---|---|")
+            for name, d in onl.items():
+                for c in sorted(d, key=int):
+                    v = d[c]
+                    L.append(f"| `{name}` | {c} | {v['segment_recall']} | {v['segments_hit']}/{v['segments']} | "
+                             f"{v['false_alarms']} | {v['false_alarms_per_hour']} | {v['latency_s_median']} | "
+                             f"{v['eval_hours']} |")
+            L.append("")
+            L.append("> 在线口径说明：告警 = 连续 N 个窗口分数越过阈值；攻击片段 = 时间序上连续的攻击窗口"
+                     "（长度 < 2 个窗口不计入分母）；时延 = 片段首窗 → 该片段首个告警窗。")
+            L.append(">")
+            L.append("> ⚠️ **评估时长的坑**：公开集的时间戳跨度常远大于真实抓包时长"
+                     "（如 CIC-IDS2017 / inSDN 的时间戳跨数月，系数据集构造所致），"
+                     "因此这里的「误报/小时」分母偏大、数值偏乐观。**只可用于同一数据集内的横向比较，"
+                     "不可与工程在合成测试流上按真实回放时长折算的误报率直接对比。**")
         L.append(f"\n*生成时间：{e.get('generated_at')}｜耗时 {e.get('elapsed_sec')}s*")
     return "\n".join(L) + "\n"
 
