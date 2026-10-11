@@ -31,11 +31,15 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from src.config import Config  # noqa: E402
+from src.data_pipeline import NORMAL_CANDIDATES  # noqa: E402
 from src.utils import (ARTIFACT_DIR, PROCESSED_DIR, RESULT_DIR, get_logger, human_bytes,  # noqa: E402
                        load_json, resolve_dir, save_json, save_text)
 
 LOGGER = get_logger("cida.retrain")
-NORMAL_ALIASES = ("Normal", "normal", "Benign", "BENIGN", "BenignTraffic")
+# 正常类别的别名以 `src/data_pipeline.NORMAL_CANDIDATES` 为**单一事实来源**。
+# 本工程已有过两次"同一规则在多处各判一次、后来只改了一处"的事故，所以这里不再自己抄一份。
+# 额外补上 CIC-IoT2023 的 "BenignTraffic"（该数据集标签即如此，pipeline 的候选表未含）。
+NORMAL_ALIASES = tuple(NORMAL_CANDIDATES) + ("BenignTraffic",)
 
 
 # --------------------------------------------------------------------------- 读取
