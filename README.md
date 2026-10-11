@@ -117,7 +117,7 @@ python tools/make_report.py
 python tests/test_core.py                 # 单元测试（10 项，不依赖 TensorFlow）
 python tests/test_ryu_guard.py            # Ryu 适配层行为测试（28 项，不需要安装 Ryu）
 python tests/test_pcap_tools.py           # pcap 往返一致性测试（58 项，不需要真实抓包）
-python tools/acceptance_check.py          # 130 项全过 = 可以直接提交
+python tools/acceptance_check.py          # 130 项全过 = 可以直接提交（须先激活 .venv；缺 flask 会以退出码 2 拒跑）
 
 # 7) 启动演示大屏
 python app/app.py            # 浏览器打开 http://127.0.0.1:5000

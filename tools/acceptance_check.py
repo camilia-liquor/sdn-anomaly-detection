@@ -1084,7 +1084,34 @@ def check_published_benchmarks(r: Report) -> None:
             r.warn(False, "PDF 版权自查（可选）", f"git 不可用：{exc}")
 
 
+RUNTIME_DEPS = ("flask",)
+
+
+def missing_runtime_deps() -> list[str]:
+    """返回缺失的可选运行时依赖。
+
+    为什么要单独拦一道：缺少 `flask` 时，依赖在线服务的整批检查会**静默跳过**
+    （实测 147 个检查点只跑 73 个），但脚本仍会打印「通过 70 项 | 警告 0 项」
+    这种看起来正常的结论，甚至让第 12 节的「对外材料数字一致性」误报成
+    「图上写 130 项 / 实际 71 项」，把使用者引向错误的排查方向。
+    因此缺依赖时**直接拒跑**（退出码 2，区别于退出码 1 的真实失败），
+    并提示改用虚拟环境解释器。
+    """
+    return [m for m in RUNTIME_DEPS if importlib.util.find_spec(m) is None]
+
+
 def main() -> int:
+    missing = missing_runtime_deps()
+    if missing:
+        print("=" * 74)
+        print("  ✗ 运行环境不完整：缺少 " + "、".join(missing))
+        print("=" * 74)
+        print("  这些依赖不在时，依赖在线服务的检查会被**静默跳过**，")
+        print("  结果会退化成一个看起来正常、实则不完整的「通过 N 项」。")
+        print("  请先装依赖，或改用虚拟环境解释器重跑：")
+        print(r"      .\.venv\Scripts\python.exe tools\acceptance_check.py")
+        print("=" * 74)
+        return 2
     print("=" * 74)
     print("交付验收自检 · CNN + BiLSTM SDN 异常检测工程")
     print("=" * 74)
