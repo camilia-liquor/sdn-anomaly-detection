@@ -1106,6 +1106,46 @@ def api_alerts():
     return jsonify(json_safe([a.to_dict() for a in det.alerts[-limit:]][::-1]))
 
 
+@app.route("/api/observations")
+def api_observations():
+    """观察池：差一点到阈值 / 形态新颖但未确认的窗口留痕（漏报复盘的证据来源）。"""
+    det = get_detector()
+    limit = request.args.get("limit", default=50, type=int)
+    return jsonify(json_safe(det.list_observations(limit)))
+
+
+@app.route("/api/review", methods=["GET", "POST"])
+def api_review():
+    """待研判队列：GET 列出，POST 给人工结论并回流（「未知 → 已知」闭环的入口）。"""
+    det = get_detector()
+    if request.method == "GET":
+        limit = request.args.get("limit", default=50, type=int)
+        status = request.args.get("status") or None
+        return jsonify(json_safe(det.list_review(limit=limit, status=status)))
+    body = request.get_json(silent=True) or {}
+    if "review_id" not in body:
+        return jsonify({"ok": False, "error": "缺少 review_id"}), 400
+    try:
+        rid = int(body["review_id"])
+    except (TypeError, ValueError):
+        return jsonify({"ok": False, "error": "review_id 必须是整数"}), 400
+    res = det.label_review(rid, str(body.get("verdict", "")), str(body.get("note", "")))
+    return jsonify(json_safe(res)), (200 if res.get("ok") else 400)
+
+
+@app.route("/api/review/promote", methods=["POST"])
+def api_review_promote():
+    """把观察池里的一条提升进待研判队列（值班员做漏报复盘时的动作）。"""
+    det = get_detector()
+    body = request.get_json(silent=True) or {}
+    try:
+        idx = int(body.get("index", -1))
+    except (TypeError, ValueError):
+        return jsonify({"ok": False, "error": "index 必须是整数"}), 400
+    res = det.promote_observation(index=idx, why=str(body.get("why", "manual")))
+    return jsonify(json_safe(res)), (200 if res.get("ok") else 400)
+
+
 @app.route("/api/policy", methods=["GET", "POST"])
 def api_policy():
     """查询/热更新检测策略（阈值、确认窗口数、处置动作、白名单、演练模式）。"""

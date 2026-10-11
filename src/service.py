@@ -55,6 +55,17 @@ class DetectorConfig:
     # 0（默认）= 关闭。阈值由 `tools/openset_calibrate.py` 在**正常窗口**上按误报预算标定，
     # 语义边界见该工具与 results/openset_report.md（它标记的是"新颖性"，不是已验证的未知攻击检测器）。
     unknown_threshold: float = 0.0
+    # ---------------- 未知形态与漏报的兜底（观察池 / 回看缓冲 / 待研判队列） ----------------
+    # 未知形态**永不直接封禁**：改用保守动作（throttle=限速），把最终判断权交给人。
+    # 理由见 competition/06_检测与处置体系.md §2.2：未知 ≠ 恶意，误封一条正常业务链路的代价，
+    # 可能高于放行一次可疑流量；限速既压住可能的滥用，又不切断业务，给研判留出时间窗。
+    unknown_action: str = "throttle"
+    # 观察池下界 = observe_margin × threshold。落在 [下界, threshold) 且**未被确认**的窗口进池留痕，
+    # 事后发现漏报时能回答"当时它打了几分、离阈值差多远"——过去这些窗口是不留任何痕迹的。
+    observe_margin: float = 0.5
+    observe_pool_size: int = 500      # 观察池容量（有界，防止长期运行吃内存）
+    review_queue_size: int = 200      # 待研判队列容量
+    recent_windows: int = 1000        # 回看环形缓冲容量（回答"这段为什么没报警"）
 
     @classmethod
     def from_env(cls, cfg: Config | None = None, **overrides) -> "DetectorConfig":
@@ -79,9 +90,15 @@ class DetectorConfig:
             "dry_run": dry_raw not in ("0", "false", "no", "off"),
             "whitelist": tuple(str(os.environ.get("CIDA_WHITELIST", "")).split()),
             "unknown_threshold": float(os.environ.get("CIDA_UNKNOWN_THRESHOLD", 0.0) or 0.0),
+            "unknown_action": str(os.environ.get("CIDA_UNKNOWN_ACTION", "throttle")).strip().lower(),
+            "observe_margin": float(os.environ.get("CIDA_OBSERVE_MARGIN", 0.5) or 0.0),
         }
         params.update({k: v for k, v in overrides.items() if v is not None})
         conf = cls(**params)
+        if conf.unknown_action not in ACTIONS:
+            LOGGER.warning("CIDA_UNKNOWN_ACTION=%r 不是合法动作 %s，未知形态回退为 observe",
+                           conf.unknown_action, ACTIONS)
+            conf.unknown_action = "observe"
         if conf.whitelist:
             LOGGER.info("已加载白名单 %d 个源 IP（这些地址永不被处置）", len(conf.whitelist))
         else:
@@ -125,6 +142,42 @@ class Alert:
         }
 
 
+@dataclass
+class Observation:
+    """观察池条目：模型**没有确认告警**、但值得留痕的窗口。
+
+    为什么必须有：窗口被判为正常时，系统过去**不留任何痕迹**。一旦事后发现那次真发生了攻击
+    （漏报），运维无法回答"当时它打了多少分、离阈值差多远"——漏报因此不可复盘。
+    观察池把这段证据留下来，并支持随时提升进待研判队列。
+    """
+
+    time: float
+    window_index: int
+    p_attack: float
+    pred_class: str
+    novelty: float = 0.0
+    unknown: bool = False
+    src_ip: str | None = None
+    dst_ip: str | None = None
+    rows_covered: tuple = ()
+    # near_threshold：差一点到阈值；unknown_observed：形态新颖但未达确认条件
+    why: str = "near_threshold"
+
+    def to_dict(self) -> dict:
+        return {
+            "time": round(self.time, 3),
+            "window_index": self.window_index,
+            "p_attack": round(float(self.p_attack), 4),
+            "pred_class": self.pred_class,
+            "novelty": round(float(self.novelty), 4),
+            "unknown": bool(self.unknown),
+            "src_ip": self.src_ip,
+            "dst_ip": self.dst_ip,
+            "rows_covered": list(self.rows_covered),
+            "why": self.why,
+        }
+
+
 class DetectionService:
     """在线检测服务：喂流记录 → 得到判定、告警与处置建议。"""
 
@@ -140,10 +193,22 @@ class DetectionService:
         self.buffer: deque = deque(maxlen=int(self.cfg.window_size))
         self.alerts: list[Alert] = []
         self.audit_path = RESULT_DIR / "audit_alerts.jsonl"
+        # 漏报兜底三件套（都有界，长期运行不会吃内存）：
+        #   observations 观察池：差一点到阈值 / 形态新颖但未确认的窗口留痕
+        #   review_queue 待研判队列：系统承认"不认识"的告警，等人给结论
+        #   recent       回看环形缓冲：**每个**窗口的分数都留一份，回答"这段为什么没报警"
+        self.observations: deque = deque(maxlen=max(1, int(self.policy.observe_pool_size)))
+        self.review_queue: deque = deque(maxlen=max(1, int(self.policy.review_queue_size)))
+        self.recent: deque = deque(maxlen=max(1, int(self.policy.recent_windows)))
+        self.review_seq = 0
+        # 人工研判结论的回流落点：下一次重训直接读它，而不是靠人回忆（"未知 → 已知"闭环的落地）
+        self.feedback_path = RESULT_DIR / "review_feedback.jsonl"
         self.stats: dict[str, Any] = {
             "rows": 0, "windows": 0, "alarms": 0, "alarms_confirmed": 0,
             "alarm_run": 0, "latency_ms": deque(maxlen=2000),
             "by_class": {}, "started_at": time.time(),
+            "observations": 0, "review_enqueued": 0, "review_labeled": 0,
+            "review_confirmed_attack": 0,
         }
         self.model = None
         self.feature_names: list[str] = []
@@ -305,11 +370,22 @@ class DetectionService:
         vals = [float(row[f]) if row[f] not in (None, "") else 0.0 for f in self.feature_names]
         return np.asarray(vals, dtype=np.float64).reshape(1, -1)
 
-    def _decide_action(self, src_ip: str | None) -> str:
+    def _decide_action(self, src_ip: str | None, unknown: bool = False) -> str:
+        """决定这条告警建议什么动作。未知形态走**保守分支**。
+
+        未知形态即便在全局策略为 block 时也最多限速：未知 ≠ 恶意，
+        一次误配就把未知流量全量封禁的风险，远大于"先限速再看一眼"的代价。
+        """
         if self.policy.action == "observe":
             return "observe"
         if src_ip and src_ip in tuple(self.policy.whitelist):
             return "observe"
+        if unknown:
+            aft = str(getattr(self.policy, "unknown_action", "throttle") or "throttle")
+            if aft not in ACTIONS:
+                aft = "observe"
+            # 硬护栏：未知分支**不允许**升级为 block，配置成 block 也降级为 throttle。
+            return "throttle" if aft == "block" else aft
         return self.policy.action
 
     def reset_stream(self, reason: str = "") -> dict:
@@ -390,6 +466,37 @@ class DetectionService:
                         self.stats["alarms"] += 1
                     if unknown:
                         self.stats["unknown_windows"] = int(self.stats.get("unknown_windows", 0)) + 1
+                    # 回看环形缓冲：**每一个**窗口都留一份分数（不论报没报），
+                    # 这样事后追问"这段为什么没报警"时能直接调出当时的证据，而不是无从查证。
+                    self.recent.append({
+                        "window_index": int(self.stats["windows"]),
+                        "time": round(time.time(), 3),
+                        "p_attack": round(p_attack, 4),
+                        "pred_class": pred_class,
+                        "novelty": round(float(novelty), 4),
+                        "unknown": bool(unknown),
+                        "alarm": bool(alarm),
+                        "confirmed": bool(confirmed),
+                    })
+                    # 观察池：未确认、但"差一点到阈值"或"形态新颖"的窗口留痕。
+                    # 漏报之所以难查，正是因为判为正常的窗口过去不留任何痕迹。
+                    if not confirmed:
+                        ob_margin = max(0.0, float(getattr(self.policy, "observe_margin", 0.5) or 0.0))
+                        near = p_attack >= ob_margin * float(self.policy.threshold)
+                        if near or unknown:
+                            ob_src = row.get("Src IP") or row.get("Source IP") or meta.get("src_ip")
+                            ob_dst = row.get("Dst IP") or row.get("Destination IP") or meta.get("dst_ip")
+                            self.observations.append(Observation(
+                                time=time.time(), window_index=int(self.stats["windows"]),
+                                p_attack=float(p_attack), pred_class=pred_class,
+                                novelty=float(novelty), unknown=bool(unknown),
+                                src_ip=str(ob_src) if ob_src else None,
+                                dst_ip=str(ob_dst) if ob_dst else None,
+                                rows_covered=(self.stats["rows"] - self.cfg.window_size + 1,
+                                              self.stats["rows"]),
+                                why="unknown_observed" if unknown else "near_threshold",
+                            ))
+                            self.stats["observations"] = int(self.stats.get("observations", 0)) + 1
                     if confirmed:
                         src_ip = row.get("Src IP") or row.get("Source IP") or meta.get("src_ip")
                         dst_ip = row.get("Dst IP") or row.get("Destination IP") or meta.get("dst_ip")
@@ -401,7 +508,8 @@ class DetectionService:
                         alert = Alert(
                             time=time.time(), window_index=self.stats["windows"], p_attack=p_attack,
                             pred_class=pred_class, true_class=row.get("Label") or row.get("target"),
-                            action=self._decide_action(str(src_ip) if src_ip else None),
+                            action=self._decide_action(str(src_ip) if src_ip else None,
+                                                       unknown=bool(unknown)),
                             src_ip=str(src_ip) if src_ip else None,
                             dst_ip=str(dst_ip) if dst_ip else None,
                             dst_port=dst_port,
@@ -413,6 +521,10 @@ class DetectionService:
                         self.stats["alarms_confirmed"] += 1
                         self.stats["by_class"][pred_class] = self.stats["by_class"].get(pred_class, 0) + 1
                         d = alert.to_dict()
+                        if unknown:
+                            # 未知形态告警**必须进待研判队列**：系统已经承认自己不认识它，
+                            # 那唯一正确的出口就是让人看一眼，并把结论回流成训练样本。
+                            d = {**d, "review_id": self._enqueue_review(d)}
                         new_alerts.append(d)
                         self._append_audit(d)
                         LOGGER.warning("告警 #%d：%s p=%.3f 处置=%s%s 源=%s",
@@ -442,7 +554,9 @@ class DetectionService:
                 "action": self.policy.action,
                 "dry_run": self.policy.dry_run,
                 "whitelist": list(self.policy.whitelist),
-                "unknown_threshold": float(getattr(self.policy, "unknown_threshold", 0.0) or 0.0)}
+                "unknown_threshold": float(getattr(self.policy, "unknown_threshold", 0.0) or 0.0),
+                "unknown_action": str(getattr(self.policy, "unknown_action", "throttle")),
+                "observe_margin": float(getattr(self.policy, "observe_margin", 0.5) or 0.0)}
 
     def _append_audit(self, record: dict) -> None:
         """写审计台账（JSONL，追加）：出事可追溯，这是"可用系统"的基本要求。"""
@@ -454,6 +568,106 @@ class DetectionService:
             LOGGER.warning("审计日志写入失败：%s", exc)
 
     # ------------------------------------------------------------------ 观测
+    # ------------------------------------------------------ 待研判队列与人工回流
+    def _enqueue_review(self, alert: dict) -> int:
+        """把一条告警放进待研判队列，返回 review_id。"""
+        self.review_seq += 1
+        self.review_queue.append({
+            "review_id": self.review_seq,
+            "kind": "alert",
+            "status": "pending",
+            "enqueued_at": round(time.time(), 3),
+            "window_index": alert.get("window_index"),
+            "p_attack": alert.get("p_attack"),
+            "pred_class": alert.get("pred_class"),
+            "novelty": alert.get("novelty"),
+            "action": alert.get("action"),
+            "src_ip": alert.get("src_ip"),
+            "dst_ip": alert.get("dst_ip"),
+            "why": "unknown_shape",       # 未知形态告警：模型不知道它是什么
+            "verdict": None,
+            "note": "",
+        })
+        self.stats["review_enqueued"] = int(self.stats.get("review_enqueued", 0)) + 1
+        return self.review_seq
+
+    def promote_observation(self, index: int = -1, why: str = "manual") -> dict:
+        """把观察池里的一条（默认最新一条）提升进待研判队列。
+
+        用途：值班员做漏报复盘时，或某个源 IP 反复出现在观察池里时，
+        把它拉进队列做一次正式研判，而不是让它一直躺在池子里。
+        """
+        with self.lock:
+            pool = list(self.observations)
+            if not pool:
+                return {"ok": False, "error": "观察池为空"}
+            try:
+                ob = pool[index]
+            except IndexError:
+                return {"ok": False, "error": f"观察池下标越界：{index}（当前 {len(pool)} 条）"}
+            self.review_seq += 1
+            item = {**ob.to_dict(), "review_id": self.review_seq, "kind": "observation",
+                    "status": "pending", "enqueued_at": round(time.time(), 3),
+                    "why": str(why or "manual"), "verdict": None, "note": ""}
+            self.review_queue.append(item)
+            self.stats["review_enqueued"] = int(self.stats.get("review_enqueued", 0)) + 1
+            return {"ok": True, "item": item}
+
+    def list_review(self, limit: int = 50, status: str | None = None) -> list[dict]:
+        """列出待研判队列（默认全部状态，按入队顺序取最后 limit 条）。"""
+        items = list(self.review_queue)
+        if status:
+            items = [x for x in items if x.get("status") == status]
+        return items[-max(1, int(limit)):]
+
+    def list_observations(self, limit: int = 50) -> list[dict]:
+        """列出观察池（差一点到阈值 / 形态新颖但未确认的窗口）。"""
+        return [o.to_dict() for o in list(self.observations)[-max(1, int(limit)):]]
+
+    def label_review(self, review_id: int, verdict: str, note: str = "") -> dict:
+        """对一条待研判项给出人工结论，并**回流**落盘。这是"未知 → 已知"闭环的落地点。
+
+        verdict 取值：`attack:<类别名>`（确认是攻击并给出类别）或 `normal`（确认为误报/正常）。
+        结论以 JSONL 追加写入 `results/review_feedback.jsonl`，下一次重训直接读它，
+        而不是靠人回忆当时判断了什么。
+        """
+        v = str(verdict or "").strip()
+        if v != "normal" and not v.startswith("attack:"):
+            return {"ok": False, "error": "verdict 必须是 'normal' 或 'attack:<类别名>'"}
+        with self.lock:
+            target = None
+            for it in self.review_queue:
+                if int(it.get("review_id", -1)) == int(review_id):
+                    target = it
+                    break
+            if target is None:
+                return {"ok": False, "error": f"待研判队列里没有 review_id={review_id}"}
+            target["status"] = "labeled"
+            target["verdict"] = v
+            target["note"] = str(note or "")
+            target["labeled_at"] = round(time.time(), 3)
+            rec = {
+                "review_id": int(review_id), "verdict": v, "note": str(note or ""),
+                "kind": target.get("kind"), "why": target.get("why"),
+                "p_attack": target.get("p_attack"), "pred_class": target.get("pred_class"),
+                "novelty": target.get("novelty"), "src_ip": target.get("src_ip"),
+                "window_index": target.get("window_index"), "labeled_at": target["labeled_at"],
+            }
+            try:
+                self.feedback_path.parent.mkdir(parents=True, exist_ok=True)
+                with self.feedback_path.open("a", encoding="utf-8") as fh:
+                    fh.write(json.dumps(rec, ensure_ascii=False) + "\n")
+            except OSError as exc:
+                # 落盘失败**不能吞掉**：否则"回流"会无声失灵，而这正是本机制的全部意义。
+                LOGGER.error("标注回流写入失败：%s", exc)
+                return {"ok": False, "error": f"结论已记入队列，但回流文件写入失败：{exc}",
+                        "item": target}
+            self.stats["review_labeled"] = int(self.stats.get("review_labeled", 0)) + 1
+            if v.startswith("attack:"):
+                self.stats["review_confirmed_attack"] = int(
+                    self.stats.get("review_confirmed_attack", 0)) + 1
+            return {"ok": True, "item": target, "feedback_path": str(self.feedback_path)}
+
     def snapshot(self) -> dict:
         lat = np.asarray(list(self.stats["latency_ms"]), dtype=float) if self.stats["latency_ms"] else np.zeros(1)
         return {
@@ -464,6 +678,12 @@ class DetectionService:
             "alarms_confirmed": int(self.stats["alarms_confirmed"]),
             "by_class": dict(self.stats["by_class"]),
             "unknown_windows": int(self.stats.get("unknown_windows", 0)),
+            "observations": len(self.observations),
+            "observations_total": int(self.stats.get("observations", 0)),
+            "review_pending": sum(1 for x in self.review_queue if x.get("status") == "pending"),
+            "review_total": len(self.review_queue),
+            "review_labeled": int(self.stats.get("review_labeled", 0)),
+            "review_confirmed_attack": int(self.stats.get("review_confirmed_attack", 0)),
             "stream_resets": int(self.stats.get("stream_resets", 0)),
             "uptime_sec": round(time.time() - self.stats["started_at"], 1),
             "batches": int(self.stats.get("batches", 0)),
@@ -511,6 +731,17 @@ class DetectionService:
             "# HELP sdn_ids_stream_resets_total 滑窗缓冲被重置的次数（上游数据中断）",
             "# TYPE sdn_ids_stream_resets_total counter",
             f"sdn_ids_stream_resets_total {s['stream_resets']}",
+            # 观察池与待研判队列：**待研判积压量是一条运维健康指标**——
+            # 它持续大于 0 说明有人在等结论，团队没有消化系统发现的新东西。
+            "# HELP sdn_ids_observations 观察池当前条数（差一点到阈值 / 形态新颖但未确认的窗口）",
+            "# TYPE sdn_ids_observations gauge",
+            f"sdn_ids_observations {s['observations']}",
+            "# HELP sdn_ids_review_pending 待研判队列里未处理项数（>0 表示有人在等结论）",
+            "# TYPE sdn_ids_review_pending gauge",
+            f"sdn_ids_review_pending {s['review_pending']}",
+            "# HELP sdn_ids_review_confirmed_attack_total 人工研判确认为攻击并已回流的条数",
+            "# TYPE sdn_ids_review_confirmed_attack_total counter",
+            f"sdn_ids_review_confirmed_attack_total {s['review_confirmed_attack']}",
         ]
         for cls, n in s["by_class"].items():
             lines.append(f'sdn_ids_alarms_by_class_total{{class="{cls}"}} {n}')
@@ -522,18 +753,23 @@ class DetectionService:
                 continue
             if k == "whitelist" and isinstance(v, (list, tuple)):
                 setattr(self.policy, k, tuple(str(x) for x in v))
-            elif k in ("threshold", "confirm_windows", "unknown_threshold"):
+            elif k in ("threshold", "confirm_windows", "unknown_threshold", "observe_margin"):
                 cur = getattr(self.policy, k)
                 newv = type(cur)(v)
                 if k == "unknown_threshold":
                     # 负值无意义；0 = 关闭。顺手夹到合法区间，避免误配把每个窗口都标成未知。
                     newv = max(0.0, float(newv))
+                if k == "observe_margin":
+                    # 观察池下界比例，夹到 [0,1]：>1 会让观察池永远为空（静默失效）。
+                    newv = min(1.0, max(0.0, float(newv)))
                 setattr(self.policy, k, newv)
-            elif k in ("action", "dry_run"):
-                if k == "action" and str(v) not in ACTIONS:
+            elif k in ("action", "dry_run", "unknown_action"):
+                if k in ("action", "unknown_action") and str(v) not in ACTIONS:
                     continue
                 setattr(self.policy, k, bool(v) if k == "dry_run" else str(v))
-        LOGGER.info("策略已更新：threshold=%.2f confirm=%d action=%s dry_run=%s unknown_threshold=%.4f",
+        LOGGER.info("策略已更新：threshold=%.2f confirm=%d action=%s dry_run=%s "
+                    "unknown_threshold=%.4f unknown_action=%s",
                     self.policy.threshold, self.policy.confirm_windows, self.policy.action,
-                    self.policy.dry_run, float(getattr(self.policy, "unknown_threshold", 0.0) or 0.0))
+                    self.policy.dry_run, float(getattr(self.policy, "unknown_threshold", 0.0) or 0.0),
+                    str(getattr(self.policy, "unknown_action", "throttle")))
         return self.snapshot()["policy"]

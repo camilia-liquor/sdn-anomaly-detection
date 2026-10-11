@@ -191,6 +191,138 @@ def test_class_weight_inverse_frequency():
     assert w[2] > w[1] > w[0]
 
 
+# ---------------------------------------------------------------------------
+# 漏报兜底与「未知 → 已知」复核闭环（观察池 / 回看缓冲 / 待研判队列 / 人工回流）
+# ---------------------------------------------------------------------------
+def _review_service(tmpdir):
+    """构造可确定复现的检测服务，并把落盘重定向到临时目录。
+
+    为什么必须重定向 `audit_path` / `feedback_path`：这两个文件在正式运行时写进 `results/`，
+    测试若照写会把测试数据混进真实审计台账与回流文件里。
+    """
+    from src.service import DetectionService
+
+    svc = DetectionService()
+    if not svc.ready:
+        raise AssertionError(f"检测服务未就绪，无法验证复核闭环：{svc.reason}")
+    svc.audit_path = tmpdir / "audit_test.jsonl"
+    svc.feedback_path = tmpdir / "review_feedback.jsonl"
+    return svc
+
+
+def _patch_infer(svc, p_attack: float, uniform: bool) -> None:
+    """替换推理输出：uniform=True → 均匀分布（高熵 → 判未知形态）；False → 低熵（不判未知）。"""
+    n_cls = max(len(svc.class_names), 2)
+
+    def _fake(raw):
+        n = raw.shape[0]
+        if uniform:
+            p_mc = np.full((n, n_cls), 1.0 / n_cls)
+        else:
+            p_mc = np.full((n, n_cls), 0.01)
+            p_mc[:, 0] = 1.0 - 0.01 * (n_cls - 1)
+        return p_mc, np.full(n, float(p_attack))
+
+    svc._infer = _fake
+
+
+def _push_until_windows(svc, target: int, src_ip: str = "10.0.0.9") -> list:
+    """推流直到产生 target 个窗口，返回这批告警。
+
+    窗口由 `online_stride` 决定，不能"推一次就假设出了窗口"——那会让测试在不同配置下静默失效。
+    """
+    row = {f: 0.0 for f in svc.feature_names}
+    row["Src IP"] = src_ip
+    alerts: list = []
+    for _ in range(20):
+        if svc.stats["windows"] >= target:
+            break
+        res = svc.push([dict(row) for _ in range(int(svc.cfg.window_size))], {"src_ip": src_ip})
+        assert res.get("ok"), res
+        alerts.extend(res.get("alerts", []))
+    assert svc.stats["windows"] >= target, f"未能产生 {target} 个窗口"
+    return alerts
+
+
+def test_unknown_action_guardrail_never_blocks():
+    """未知形态的动作护栏：即便全局策略是 block，也绝不直接封禁未知流量。"""
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as td:
+        svc = _review_service(Path(td))
+        svc.reload_policy(action="block", unknown_action="block")
+        assert svc._decide_action("10.0.0.1", unknown=True) == "throttle", "未知分支不得升级为 block"
+        assert svc._decide_action("10.0.0.1", unknown=False) == "block", "已知攻击仍按全局策略封禁"
+        svc.reload_policy(action="observe")
+        assert svc._decide_action("10.0.0.1", unknown=True) == "observe"
+        svc.reload_policy(action="block", unknown_action="throttle", whitelist=["10.0.0.7"])
+        assert svc._decide_action("10.0.0.7", unknown=True) == "observe", "白名单永远优先"
+        # 非法动作必须被拒绝（否则策略快照里会出现 ryu_guard 不认识的动作）
+        svc.reload_policy(unknown_action="drop-everything")
+        assert svc.policy.unknown_action == "throttle"
+
+
+def test_observation_pool_and_replay_buffer():
+    """未被确认的窗口必须留痕：观察池记证据，回看缓冲记全过程。"""
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as td:
+        svc = _review_service(Path(td))
+        # 确认窗口数放到很大 → 任何窗口都不会被确认，从而与 online_stride 无关地确定复现
+        svc.reload_policy(threshold=0.5, confirm_windows=99, unknown_threshold=0.0, action="observe")
+        _patch_infer(svc, p_attack=0.9, uniform=False)
+        _push_until_windows(svc, 2)
+        n_win = int(svc.stats["windows"])
+        assert n_win >= 2
+        assert svc.stats["alarms_confirmed"] == 0, "确认窗口数不足，不应产生已确认告警"
+        assert len(svc.observations) == n_win, "每个未确认窗口都应进观察池留痕"
+        ob = svc.list_observations(1)[0]
+        assert ob["why"] == "near_threshold", ob
+        assert ob["p_attack"] >= 0.5 * 0.5, "观察池下界应为 observe_margin × threshold"
+        # 回看缓冲：每个窗口都留痕，才能回答"这段为什么没报警"
+        assert len(svc.recent) == n_win
+        last = list(svc.recent)[-1]
+        assert last["alarm"] is True and last["confirmed"] is False, last
+        # 容量必须有界，长期运行不能吃内存
+        assert svc.observations.maxlen == int(svc.policy.observe_pool_size)
+        # 观察池条目可被提升进待研判队列
+        promoted = svc.promote_observation()
+        assert promoted["ok"], promoted
+        assert svc.list_review(status="pending")[-1]["kind"] == "observation"
+        assert not svc.promote_observation(index=99999)["ok"], "越界下标必须报错而不是静默成功"
+
+
+def test_unknown_alert_enters_review_and_label_flows_back():
+    """未知形态：进待研判队列 → 人工给结论 → 结论回流落盘（「未知 → 已知」闭环的落地点）。"""
+    import json
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as td:
+        svc = _review_service(Path(td))
+        svc.reload_policy(threshold=0.5, confirm_windows=1, unknown_threshold=1.0,
+                          action="block", dry_run=True)
+        _patch_infer(svc, p_attack=0.9, uniform=True)
+        alerts = _push_until_windows(svc, 1)
+        assert alerts, "应产生一条告警"
+        a = alerts[0]
+        assert a["unknown"] is True and str(a["pred_class"]).startswith("Unknown"), a
+        assert a["action"] == "throttle", f"未知形态最多限速，实际 {a['action']}"
+        assert isinstance(a.get("review_id"), int), "未知告警必须进待研判队列"
+        assert any(x["review_id"] == a["review_id"] and x["why"] == "unknown_shape"
+                   for x in svc.list_review(status="pending"))
+        # 人工研判 → 回流落盘
+        res = svc.label_review(a["review_id"], "attack:Botnet", note="C2 心跳特征")
+        assert res["ok"], res
+        assert svc.feedback_path.exists(), "标注结论必须回流落盘"
+        rec = json.loads(svc.feedback_path.read_text(encoding="utf-8").strip().splitlines()[-1])
+        assert rec["verdict"] == "attack:Botnet" and rec["review_id"] == a["review_id"], rec
+        assert svc.stats["review_confirmed_attack"] == 1
+        assert svc.list_review(status="labeled"), "已研判项状态应变为 labeled"
+        # 非法输入必须被拒绝，而不是静默写入脏数据
+        assert not svc.label_review(a["review_id"], "maybe")["ok"]
+        assert not svc.label_review(999999, "normal")["ok"]
+
+
 def _run_all() -> int:
     fns = [v for k, v in sorted(globals().items()) if k.startswith("test_") and callable(v)]
     failed = 0
