@@ -19,7 +19,7 @@ python tools/check_env.py
 
 ```bash
 python tests/test_core.py          # 18 项单元测试（生成器/管线/滑窗/评估口径）
-python tests/test_ryu_guard.py     # 33 项 Ryu 适配层行为测试（桩件替代 Ryu，无需安装 Ryu）
+python tests/test_ryu_guard.py     # 34 项 Ryu 适配层行为测试（桩件替代 Ryu，无需安装 Ryu）
 python run_all.py --smoke          # 25 秒跑通全流程（使用独立目录，不污染正式结果）
 python tools/acceptance_check.py   # 130 项交付验收自检（含上面两组测试；须先激活 .venv）
 ```

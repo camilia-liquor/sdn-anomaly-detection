@@ -443,6 +443,20 @@ def test_observe_action_is_inert(mod, tmpdir: Path) -> None:
     check(dp.sent == [], "observe 动作不会下发任何规则（只记录）",
           f"实际下发 {len(dp.sent)} 条")
 
+    # 动作强度排序在两处各写了一遍：服务端 `src/service.py::ACTIONS` 的顺序 +
+    # 适配层的 `_ACTION_RANK`。若有人给服务端加了新动作却忘了同步适配层，
+    # `_ACTION_RANK.get(action, 0)` 会**静默**按最低级处理（升级对该动作失效）——
+    # 正是本工程已两次踩中的"同一语义多处各判一次、只改一处"。
+    try:
+        from src.service import ACTIONS
+    except Exception as exc:  # noqa: BLE001 - 缺少依赖时不让本用例失败
+        check(True, f"跳过动作表一致性检查（无法导入 src.service：{type(exc).__name__}）")
+    else:
+        ranks = [mod._ACTION_RANK.get(a) for a in ACTIONS]
+        check(set(mod._ACTION_RANK) == set(ACTIONS) and ranks == list(range(len(ACTIONS))),
+              "适配层动作强度表与服务端 ACTIONS 完全一致且严格单调（新增动作必须两处同步）",
+              f"guard={sorted(mod._ACTION_RANK)} service={list(ACTIONS)} ranks={ranks}")
+
 
 def _run_all() -> int:
     print("=" * 74)
