@@ -77,6 +77,11 @@ class DetectorConfig:
     # 建议动作上抬一级（observe→throttle→block）。未知形态受硬护栏约束，最高只到 throttle。
     escalate_after: int = 3
     escalate_window_sec: int = 300
+    # 是否把进入研判队列的**窗口特征向量**落盘（`results/review_evidence.jsonl`）。
+    # 为什么必须存：`review_feedback.jsonl` 只有结论与分数，**没有特征**——那样人工标了结论
+    # 也无法用于重训，数据在源头就丢了，"回流"就成了名不副实的空闭环。
+    # 证据与结论分开存（按 review_id 关联）：结论可以改判而不必重复存特征。
+    review_evidence: bool = True
 
     @classmethod
     def from_env(cls, cfg: Config | None = None, **overrides) -> "DetectorConfig":
@@ -105,6 +110,8 @@ class DetectorConfig:
             "observe_margin": float(os.environ.get("CIDA_OBSERVE_MARGIN", 0.5) or 0.0),
             "audit_max_bytes": int(os.environ.get("CIDA_AUDIT_MAX_BYTES", 20_000_000) or 0),
             "audit_backups": int(os.environ.get("CIDA_AUDIT_BACKUPS", 3) or 3),
+            "review_evidence": str(os.environ.get("CIDA_REVIEW_EVIDENCE", "1")).strip().lower()
+            not in ("0", "false", "no", "off"),
         }
         params.update({k: v for k, v in overrides.items() if v is not None})
         conf = cls(**params)
@@ -178,6 +185,9 @@ class Observation:
     # 窗口内的流记录（只保留定位字段：五元组/协议/标签），让复核能追到具体流而不是只有一个分数。
     # 存定位字段而不是全部 71 维特征，是容量与可用性的折中：500 条观察项 × 16 行仍只有 MB 级。
     evidence: list = field(default_factory=list)
+    # 该窗口的模型输入向量（T×F，float32）。不序列化进 to_dict（太大且是二进制语义），
+    # 只在需要落盘/重训时使用；由 deque 上界保证内存恒定。
+    vector: Any = None
     # near_threshold：差一点到阈值；unknown_observed：形态新颖但未达确认条件
     why: str = "near_threshold"
 
@@ -229,12 +239,15 @@ class DetectionService:
         self.review_seq = 0
         # 人工研判结论的回流落点：下一次重训直接读它，而不是靠人回忆（"未知 → 已知"闭环的落地）
         self.feedback_path = RESULT_DIR / "review_feedback.jsonl"
+        # 研判证据（窗口特征向量）单独落盘：只有结论没有特征，人工标注就无法用于重训。
+        self.review_evidence_path = RESULT_DIR / "review_evidence.jsonl"
         self.stats: dict[str, Any] = {
             "rows": 0, "windows": 0, "alarms": 0, "alarms_confirmed": 0,
             "alarm_run": 0, "latency_ms": deque(maxlen=2000),
             "by_class": {}, "started_at": time.time(),
             "observations": 0, "review_enqueued": 0, "review_labeled": 0,
             "review_confirmed_attack": 0, "alerts_total": 0, "escalations": 0,
+            "review_evidence": 0,
         }
         self.model = None
         self.feature_names: list[str] = []
@@ -524,6 +537,8 @@ class DetectionService:
                                 dst_ip=str(ob_dst) if ob_dst else None,
                                 rows_covered=(self.stats["rows"] - self.cfg.window_size + 1,
                                               self.stats["rows"]),
+                                # 必须 copy：raw 是整批窗口的大数组，存切片会让整批常驻内存
+                                vector=np.array(raw[k], dtype=np.float32),
                                 evidence=list(self.buffer_rows)[
                                     -max(0, int(getattr(self.policy, "observe_evidence_rows", 16))):]
                                 or [],
@@ -564,7 +579,8 @@ class DetectionService:
                         if unknown:
                             # 未知形态告警**必须进待研判队列**：系统已经承认自己不认识它，
                             # 那唯一正确的出口就是让人看一眼，并把结论回流成训练样本。
-                            d = {**d, "review_id": self._enqueue_review(d)}
+                            d = {**d, "review_id": self._enqueue_review(
+                                d, vector=np.array(raw[k], dtype=np.float32))}
                         new_alerts.append(d)
                         self._append_audit(d)
                         LOGGER.warning("告警 #%d：%s p=%.3f 处置=%s%s%s 源=%s",
@@ -651,7 +667,36 @@ class DetectionService:
         return esc, esc != base_action
 
     # ------------------------------------------------------ 待研判队列与人工回流
-    def _enqueue_review(self, alert: dict) -> int:
+    def _write_evidence(self, review_id: int, kind: str, window_index: int,
+                        vector, extra: dict | None = None) -> None:
+        """把进入研判队列的窗口特征向量落盘，使人工结论**真的可以用于重训**。
+
+        为什么必须单独存：`review_feedback.jsonl` 只有结论与分数、**没有特征**，
+        那样标注完也训不了模型，"未知 → 已知"就只是话术。
+        证据与结论分开存并以 `review_id` 关联——结论可以改判，特征不必重复写。
+        落盘失败只告警、不抛异常：证据缺失不该让检测主链路中断。
+        """
+        if not bool(getattr(self.policy, "review_evidence", True)) or vector is None:
+            return
+        try:
+            arr = np.asarray(vector, dtype=np.float32).ravel()
+            append_jsonl(self.review_evidence_path, {
+                "review_id": int(review_id), "kind": str(kind),
+                "window_index": int(window_index),
+                "window_size": int(self.cfg.window_size),
+                "n_features": int(len(self.feature_names)),
+                # 自带特征名，使该文件**自描述**——否则日后重训无法确定列序
+                "feature_names": list(self.feature_names),
+                "X": [round(float(v), 6) for v in arr],
+                "time": round(time.time(), 3),
+                **(extra or {}),
+            }, max_bytes=int(getattr(self.policy, "audit_max_bytes", 0) or 0),
+                backups=int(getattr(self.policy, "audit_backups", 3) or 3))
+            self.stats["review_evidence"] = int(self.stats.get("review_evidence", 0)) + 1
+        except Exception as exc:  # noqa: BLE001
+            LOGGER.warning("研判证据落盘失败（不影响检测主链路）：%s", exc)
+
+    def _enqueue_review(self, alert: dict, vector=None) -> int:
         """把一条告警放进待研判队列，返回 review_id。"""
         self.review_seq += 1
         self.review_queue.append({
@@ -671,6 +716,10 @@ class DetectionService:
             "note": "",
         })
         self.stats["review_enqueued"] = int(self.stats.get("review_enqueued", 0)) + 1
+        self._write_evidence(self.review_seq, "alert", int(alert.get("window_index") or 0), vector,
+                             {"pred_class": alert.get("pred_class"),
+                              "novelty": alert.get("novelty"),
+                              "p_attack": alert.get("p_attack")})
         return self.review_seq
 
     def promote_observation(self, index: int = -1, why: str = "manual") -> dict:
@@ -693,6 +742,9 @@ class DetectionService:
                     "why": str(why or "manual"), "verdict": None, "note": ""}
             self.review_queue.append(item)
             self.stats["review_enqueued"] = int(self.stats.get("review_enqueued", 0)) + 1
+            self._write_evidence(self.review_seq, "observation", int(ob.window_index), ob.vector,
+                                 {"why": str(why or "manual"), "pred_class": ob.pred_class,
+                                  "p_attack": round(float(ob.p_attack), 4)})
             return {"ok": True, "item": item}
 
     def list_review(self, limit: int = 50, status: str | None = None) -> list[dict]:
@@ -769,6 +821,7 @@ class DetectionService:
             "review_total": len(self.review_queue),
             "review_labeled": int(self.stats.get("review_labeled", 0)),
             "review_confirmed_attack": int(self.stats.get("review_confirmed_attack", 0)),
+            "review_evidence_total": int(self.stats.get("review_evidence", 0)),
             "stream_resets": int(self.stats.get("stream_resets", 0)),
             "uptime_sec": round(time.time() - self.stats["started_at"], 1),
             "batches": int(self.stats.get("batches", 0)),

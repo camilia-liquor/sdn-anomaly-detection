@@ -207,6 +207,7 @@ def _review_service(tmpdir):
         raise AssertionError(f"检测服务未就绪，无法验证复核闭环：{svc.reason}")
     svc.audit_path = tmpdir / "audit_test.jsonl"
     svc.feedback_path = tmpdir / "review_feedback.jsonl"
+    svc.review_evidence_path = tmpdir / "review_evidence.jsonl"
     return svc
 
 
@@ -326,6 +327,22 @@ def test_unknown_alert_enters_review_and_label_flows_back():
         # 非法输入必须被拒绝，而不是静默写入脏数据
         assert not svc.label_review(a["review_id"], "maybe")["ok"]
         assert not svc.label_review(999999, "normal")["ok"]
+
+        # ---- 关键：结论必须能用于重训（否则"回流"只是话术）----
+        # 光有结论没有特征，人工标完也训不了模型。证据与结论按 review_id 关联。
+        assert svc.review_evidence_path.exists(), "必须落盘窗口特征证据"
+        ev = [json.loads(x) for x in
+              svc.review_evidence_path.read_text(encoding="utf-8").strip().splitlines()]
+        mine = [e for e in ev if e["review_id"] == a["review_id"]]
+        assert mine, "该告警应有对应的证据记录"
+        e0 = mine[-1]
+        assert e0["feature_names"] == svc.feature_names, "证据文件必须自描述（带特征名与列序）"
+        assert e0["n_features"] == len(svc.feature_names)
+        assert len(e0["X"]) == int(svc.cfg.window_size) * len(svc.feature_names), "向量长度应为 T×F"
+        # 证据 + 结论可以拼成一条带标签的训练样本（这就是重训的输入）
+        fb = json.loads(svc.feedback_path.read_text(encoding="utf-8").strip().splitlines()[-1])
+        joined = {**e0, "verdict": fb["verdict"]}
+        assert joined["verdict"] == "attack:Botnet" and len(joined["X"]) > 0
 
 
 def test_bounded_alerts_and_jsonl_rotation():

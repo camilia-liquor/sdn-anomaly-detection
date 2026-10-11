@@ -119,6 +119,7 @@ python app/app.py --host 0.0.0.0 --port 5000
 | `CIDA_API_TOKEN` | — | 空（放行） | 设置后写接口（改策略/写研判结论）必须带令牌；读接口保持开放 |
 | `CIDA_AUDIT_MAX_BYTES` | — | `20000000` | 审计台账/回流文件单文件上限，超过即轮转 |
 | `CIDA_AUDIT_BACKUPS` | — | `3` | 轮转保留的历史文件数 |
+| `CIDA_REVIEW_EVIDENCE` | — | `1`（开） | 是否把研判队列的窗口特征落盘（`review_evidence.jsonl`）。关掉则人工标注无法用于重训 |
 
 环境变量只决定**启动时的初始策略**，运行时仍可用 `POST /api/policy` 热更新。
 
@@ -375,7 +376,9 @@ python tools/controller_simulator.py --rows 3000 --batch 50 --policy block --no-
 - [ ] **写接口鉴权（纵深防御）**：设置 `CIDA_API_TOKEN`。nginx Basic 认证是第一层，应用级令牌是第二层——
       只靠反代时，一旦反代配置失误或内网可达，任何人都能关掉演练模式、把建议动作改成真实封禁。
       只读接口不校验，故大屏前端无需持令牌。
-- [ ] **审计可追溯**：`results/audit_alerts.jsonl`（含轮转出的 `.1/.2/.3`）与 `results/review_feedback.jsonl` 已纳入日志留存策略。
+- [ ] **审计可追溯**：`results/audit_alerts.jsonl`（含轮转出的 `.1/.2/.3`）、`results/review_feedback.jsonl`
+      与 `results/review_evidence.jsonl` 已纳入日志留存策略。
+- [ ] **回流数据可重训**：确认 `CIDA_REVIEW_EVIDENCE=1`——只存结论不存特征，人工标注完也训不了模型。
 - [ ] **磁盘不会写满**：确认 `CIDA_AUDIT_MAX_BYTES` / `CIDA_AUDIT_BACKUPS` 与本单位日志留存要求一致
       （台账与回流文件只追加不删除，**不轮转会把磁盘写满**）。
 - [ ] **内存不会只涨不降**：确认长期运行下 RSS 稳定（告警/观察池/回看缓冲/研判队列均为有界容器，
