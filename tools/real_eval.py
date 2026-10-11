@@ -488,7 +488,8 @@ def main(argv=None) -> int:
                     help="清洗方式；缺省按数据集登记表（cic_ids2018 为 light）")
     ap.add_argument("--dedup-digits", type=int, default=3,
                     help="近似去重的有效数字位数（与项目主实验同一开关口径；0=只做精确去重）")
-    ap.add_argument("--max-windows", type=int, default=60000, help="每侧窗口上限（等间隔抽取）")
+    ap.add_argument("--max-windows", type=int, default=60000,
+                    help="候选窗口**总数**上限（对整体候选窗口等间隔抽样；此前误写为「每侧」）")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--tag", default="")
     ap.add_argument("--force", action="store_true",
