@@ -20,6 +20,7 @@
 """
 from __future__ import annotations
 
+import json
 import os
 import threading
 import time
@@ -409,15 +410,27 @@ class DetectionService:
         vals = [float(row[f]) if row[f] not in (None, "") else 0.0 for f in self.feature_names]
         return np.asarray(vals, dtype=np.float64).reshape(1, -1)
 
+    def _protection_reason(self, src_ip: str | None) -> str:
+        """返回「这条告警被安全设置保护、不允许处置」的原因；无保护则返回空串。
+
+        为什么要抽成单独一个函数：`_decide_action`（初始动作）与 `_escalate`（自动升级）
+        必须用**同一套**安全判定。此前 `_escalate` 自己不知道白名单与全局 observe，
+        于是白名单源反复告警会被一路升级成 throttle/block——把"永不处置"的承诺悄悄推翻。
+        这类"两个地方各判一次、后来只改了一处"的分叉，是安全设置最典型的失效方式。
+        """
+        if self.policy.action == "observe":
+            return "全局策略为 observe（只观察，不处置）"
+        if src_ip and src_ip in tuple(self.policy.whitelist):
+            return "源 IP 在白名单内（永不被处置）"
+        return ""
+
     def _decide_action(self, src_ip: str | None, unknown: bool = False) -> str:
         """决定这条告警建议什么动作。未知形态走**保守分支**。
 
         未知形态即便在全局策略为 block 时也最多限速：未知 ≠ 恶意，
         一次误配就把未知流量全量封禁的风险，远大于"先限速再看一眼"的代价。
         """
-        if self.policy.action == "observe":
-            return "observe"
-        if src_ip and src_ip in tuple(self.policy.whitelist):
+        if self._protection_reason(src_ip):
             return "observe"
         if unknown:
             aft = str(getattr(self.policy, "unknown_action", "throttle") or "throttle")
@@ -568,7 +581,10 @@ class DetectionService:
                             dst_ip=str(dst_ip) if dst_ip else None,
                             dst_port=dst_port,
                             rows_covered=(self.stats["rows"] - self.cfg.window_size + 1, self.stats["rows"]),
-                            executed=not self.policy.dry_run,
+                            # executed 的语义是"**真的下发了规则**"，不是"策略不是演练模式"。
+                            # observe 没有任何规则可下发，记成「已执行」会让审计台账说谎——
+                            # 这跟 ryu_guard.py 早期那个"只记 True 却从未下发"的反模式是同一类错误。
+                            executed=(not self.policy.dry_run) and action != "observe",
                             unknown=bool(unknown), novelty=float(novelty),
                         )
                         self.alerts.append(alert)
@@ -659,6 +675,10 @@ class DetectionService:
         """
         if not src_ip or base_action not in ACTIONS:
             return base_action, False
+        # 安全设置优先于自动升级：受保护的源/策略**永久不升级**。
+        # 否则白名单里的控制器管理口、网关会因为"反复告警"被升级成限速甚至阻断。
+        if self._protection_reason(src_ip):
+            return base_action, False
         now = time.time()
         win = max(1, int(getattr(self.policy, "escalate_window_sec", 300) or 300))
         need = max(2, int(getattr(self.policy, "escalate_after", 3) or 3))
@@ -678,6 +698,52 @@ class DetectionService:
         return esc, esc != base_action
 
     # ------------------------------------------------------ 待研判队列与人工回流
+    def _recover_review_seq(self) -> int:
+        """从已落盘的研判记录（含轮转备份）里恢复 `review_id` 计数器。
+
+        为什么必须恢复：`review_id` 是 `review_feedback.jsonl`（人工结论）与
+        `review_evidence.jsonl`（窗口特征）之间**唯一的关联键**。
+        若每次进程启动都从 1 重来，重启后产生的新记录就会复用旧 id——
+        下游按 id 关联时会张冠李戴，拼出"同一个窗口既有 attack 又有 normal"这种
+        自相矛盾的训练样本，而且**不会有任何报错**。
+        这类"跨重启的唯一性"问题，靠单进程测试是发现不了的。
+        """
+        best = 0
+        candidates: list[Path] = []
+        for base in (self.feedback_path, self.review_evidence_path):
+            candidates.append(base)
+            try:
+                candidates.extend(sorted(base.parent.glob(base.name + ".*")))
+            except OSError:
+                pass
+        for p in candidates:
+            if not p.exists():
+                continue
+            try:
+                with p.open("r", encoding="utf-8", errors="replace") as fh:
+                    for line in fh:
+                        line = line.strip()
+                        if not line:
+                            continue
+                        try:
+                            rid = int(json.loads(line).get("review_id") or 0)
+                        except (ValueError, TypeError, json.JSONDecodeError):
+                            continue
+                        if rid > best:
+                            best = rid
+            except OSError as exc:
+                LOGGER.warning("读取 %s 恢复 review_id 失败：%s", p.name, exc)
+        if best:
+            LOGGER.info("已从历史研判记录恢复 review_id 计数：从 %d 继续", best)
+        return best
+
+    def _next_review_id(self) -> int:
+        """取下一个 review_id；首次使用时先从历史文件恢复计数（见 `_recover_review_seq`）。"""
+        if self.review_seq <= 0:
+            self.review_seq = self._recover_review_seq()
+        self.review_seq += 1
+        return self.review_seq
+
     def _write_evidence(self, review_id: int, kind: str, window_index: int,
                         vector, extra: dict | None = None,
                         flow_evidence: list | None = None) -> None:
@@ -715,9 +781,9 @@ class DetectionService:
 
     def _enqueue_review(self, alert: dict, vector=None) -> int:
         """把一条告警放进待研判队列，返回 review_id。"""
-        self.review_seq += 1
+        rid = self._next_review_id()          # 跨重启唯一（见 _recover_review_seq）
         self.review_queue.append({
-            "review_id": self.review_seq,
+            "review_id": rid,
             "kind": "alert",
             "status": "pending",
             "enqueued_at": round(time.time(), 3),
@@ -736,12 +802,12 @@ class DetectionService:
             "note": "",
         })
         self.stats["review_enqueued"] = int(self.stats.get("review_enqueued", 0)) + 1
-        self._write_evidence(self.review_seq, "alert", int(alert.get("window_index") or 0), vector,
+        self._write_evidence(rid, "alert", int(alert.get("window_index") or 0), vector,
                              {"pred_class": alert.get("pred_class"),
                               "novelty": alert.get("novelty"),
                               "p_attack": alert.get("p_attack")},
                              flow_evidence=list(self.review_queue)[-1].get("evidence"))
-        return self.review_seq
+        return rid
 
     def promote_observation(self, index: int = -1, why: str = "manual") -> dict:
         """把观察池里的一条（默认最新一条）提升进待研判队列。
@@ -757,13 +823,13 @@ class DetectionService:
                 ob = pool[index]
             except IndexError:
                 return {"ok": False, "error": f"观察池下标越界：{index}（当前 {len(pool)} 条）"}
-            self.review_seq += 1
-            item = {**ob.to_dict(), "review_id": self.review_seq, "kind": "observation",
+            rid = self._next_review_id()      # 跨重启唯一（见 _recover_review_seq）
+            item = {**ob.to_dict(), "review_id": rid, "kind": "observation",
                     "status": "pending", "enqueued_at": round(time.time(), 3),
                     "why": str(why or "manual"), "verdict": None, "note": ""}
             self.review_queue.append(item)
             self.stats["review_enqueued"] = int(self.stats.get("review_enqueued", 0)) + 1
-            self._write_evidence(self.review_seq, "observation", int(ob.window_index), ob.vector,
+            self._write_evidence(rid, "observation", int(ob.window_index), ob.vector,
                                  {"why": str(why or "manual"), "pred_class": ob.pred_class,
                                   "p_attack": round(float(ob.p_attack), 4)},
                                  flow_evidence=item.get("evidence"))

@@ -845,6 +845,9 @@ function ingestAlerts(list) {
 function pushLocalLedger(row) {
   const ip = CLASS_TO_IP[row.win.pred] || DEFAULT_ATTACK_IP;
   const p = SOC.policy;
+  // 与在线服务同一套安全语义：白名单源永不被处置；observe 也没有规则可下发。
+  // 兜底路径过去直接照抄策略动作，会把白名单源显示成 block / 已执行，与真实系统矛盾。
+  const protectedSrc = (SOC.whitelist || []).indexOf(ip) >= 0 || p.action === "observe";
   SOC.local.unshift({
     time: Date.now() / 1000,
     window_index: row.win.idx,
@@ -853,8 +856,8 @@ function pushLocalLedger(row) {
     src_ip: ip,
     dst_ip: "10.0.0.1",
     dst_port: 80,
-    action: p.action,
-    executed: !p.dry_run,
+    action: protectedSrc ? "observe" : p.action,
+    executed: !p.dry_run && !protectedSrc,
     rows_covered: [Math.max(0, row.i - ((S.overview && S.overview.window_size) || 16) + 1), row.i],
     ground_truth: row.win.true || row.true || null,
     _src: "replay",

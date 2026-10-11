@@ -328,6 +328,21 @@ def test_unknown_alert_enters_review_and_label_flows_back():
         assert not svc.label_review(a["review_id"], "maybe")["ok"]
         assert not svc.label_review(999999, "normal")["ok"]
 
+        # review_id 必须在**服务重启后仍然唯一**：它是 feedback 与 evidence 之间唯一的关联键。
+        # 若每次启动都从 1 重来，旧结论会与新的窗口特征按同一个 id 配对，
+        # 拼出张冠李戴甚至自相矛盾的训练样本（同一窗口既有 attack 又有 normal）。
+        svc2 = _review_service(Path(td))            # 复用同一份落盘文件 = 模拟重启
+        recovered = int(svc2._recover_review_seq())  # 恢复是惰性的，直接验证恢复结果
+        assert recovered >= int(a["review_id"]), \
+            f"重启后必须能从历史记录恢复 review_id（恢复得到 {recovered}，历史最大 {a['review_id']}）"
+        # 重启后的实例是默认策略（unknown_threshold=0=关闭），要显式开启才会产生待研判项
+        svc2.reload_policy(threshold=0.5, confirm_windows=1, unknown_threshold=1.0,
+                           action="observe", dry_run=True)
+        _patch_infer(svc2, p_attack=0.9, uniform=True)
+        fresh = _push_until_windows(svc2, 1, src_ip="10.0.0.11")
+        assert fresh and fresh[0]["review_id"] > int(a["review_id"]), \
+            f"新告警必须拿到更大的 review_id：{fresh[0].get('review_id') if fresh else None}"
+
         # ---- 关键：结论必须能用于重训（否则"回流"只是话术）----
         # 光有结论没有特征，人工标完也训不了模型。证据与结论按 review_id 关联。
         assert svc.review_evidence_path.exists(), "必须落盘窗口特征证据"
@@ -386,19 +401,23 @@ def test_bounded_alerts_and_jsonl_rotation():
 
 
 def test_alarm_escalation_state_machine():
-    """同源反复告警自动升级动作；未知形态受硬护栏约束，最高只到 throttle。"""
+    """同源反复告警自动升级；但安全设置（白名单 / 全局 observe）永远压过自动升级。
+
+    注意基线必须是 throttle 而不是 observe：observe 是运维明确的"只观察、不处置"，
+    自动升级**不允许**把它变成限速或阻断（这正是本测试第 3 节在守的东西）。
+    """
     import tempfile
 
     with tempfile.TemporaryDirectory() as td:
         svc = _review_service(Path(td))
         svc.reload_policy(threshold=0.5, confirm_windows=1, unknown_threshold=0.0,
-                          action="observe", escalate_after=3, escalate_window_sec=300)
+                          action="throttle", escalate_after=3, escalate_window_sec=300)
         _patch_infer(svc, p_attack=0.9, uniform=False)
         alerts = _push_until_windows(svc, 3)
         acts = [a["action"] for a in alerts]
         assert len(acts) >= 3, acts
-        assert acts[0] == "observe" and acts[1] == "observe", f"前两次不应升级：{acts}"
-        assert acts[2] == "throttle", f"第 3 次应升级为限速：{acts}"
+        assert acts[0] == "throttle" and acts[1] == "throttle", f"前两次不应升级：{acts}"
+        assert acts[2] == "block", f"第 3 次应升级为阻断：{acts}"
         assert alerts[2]["escalated"] is True
         assert int(svc.stats["escalations"]) >= 1
 
@@ -412,6 +431,42 @@ def test_alarm_escalation_state_machine():
         u = _push_until_windows(svc, 3, src_ip="10.0.0.77")
         assert u, "应产生未知告警"
         assert all(a["action"] == "throttle" for a in u), [a["action"] for a in u]
+
+        # 安全设置必须压过自动升级：白名单源与「全局只观察」都不允许被升级成实际处置。
+        # 这两条是文档里明确承诺的"永不处置"，自动升级不能悄悄推翻它们。
+        svc.reload_policy(threshold=0.5, confirm_windows=1, unknown_threshold=0.0,
+                          action="block", escalate_after=2, escalate_window_sec=300,
+                          whitelist=["10.0.0.7"])
+        svc.reset_stream("换源测白名单")
+        _patch_infer(svc, p_attack=0.9, uniform=False)
+        w = _push_until_windows(svc, 4, src_ip="10.0.0.7")
+        assert w, "应产生告警"
+        assert all(a["action"] == "observe" for a in w), \
+            f"白名单源永不被处置，自动升级也不得越过：{[a['action'] for a in w]}"
+
+        svc.reload_policy(action="observe", whitelist=[],
+                          escalate_after=2, escalate_window_sec=300)
+        svc.reset_stream("换全局 observe")
+        o = _push_until_windows(svc, 4, src_ip="10.0.0.8")
+        assert o, "应产生告警"
+        assert all(a["action"] == "observe" for a in o), \
+            f"全局 observe 表示只观察，升级不得把它变成限速/阻断：{[a['action'] for a in o]}"
+
+        # executed 表示"真的下发了规则"，不是"策略不是演练模式"：
+        # observe 没有规则可下发，必须记 False，否则审计台账在说谎。
+        svc.reload_policy(action="observe", dry_run=False, whitelist=[],
+                          escalate_after=99, escalate_window_sec=300)
+        svc.reset_stream("测 executed 语义")
+        e = _push_until_windows(svc, 1, src_ip="10.0.0.9")
+        assert e, "应产生告警"
+        assert all(a["executed"] is False for a in e), \
+            f"observe 无规则可下发，executed 必须为 False：{[a['executed'] for a in e]}"
+        svc.reload_policy(action="throttle", dry_run=False)
+        svc.reset_stream("测 throttle executed")
+        t2 = _push_until_windows(svc, 1, src_ip="10.0.0.10")
+        assert t2, "应产生告警"
+        assert all(a["executed"] is True for a in t2), \
+            f"throttle + 非演练模式应记为已执行：{[a['executed'] for a in t2]}"
 
 
 def test_observation_pool_carries_evidence():
