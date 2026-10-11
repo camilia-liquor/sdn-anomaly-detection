@@ -50,6 +50,10 @@ RESULT_DIR = ROOT / "results"
 # 依据：实测抓包通常几小时~几天；CIC-IDS2017 的时间戳跨度约 1,476 h、inSDN 约 6,733 h，
 # 均为数据集构造所致，其"误报/小时"分母虚大、时延无物理意义。
 SPAN_LIMIT_HOURS = 168.0
+# 攻击片段计入分母的**窗口数**下限。真实数据侧只有窗口级标签，无法像合成域那样按行数判定
+# （合成域用 max(window_size, online_min_segment_rows) 行），故此处按窗口计。
+# 作用相同：把"单窗抖动"排除在召回分母之外。
+MIN_SEG_WINDOWS = 2
 META = json.loads((ROOT / "data" / "processed" / "meta.json").read_text(encoding="utf-8"))
 FEATURES: list[str] = list(META["feature_names"])
 SYN_SCALER = ROOT / "data" / "processed" / "scaler.joblib"
@@ -342,8 +346,11 @@ def online_metrics(times: np.ndarray, y_win: np.ndarray, scores: np.ndarray,
     这是把工程原本只在合成数据上算的招牌指标，搬到真实数据 + 无泄漏切分上。
 
     * 按时间排序窗口；告警 = **连续 confirm 个窗口**都 ≥ 阈值（对应工程里的"连续确认"机制）；
-    * 攻击片段 = 时间序上连续的攻击窗口，长度 ≥ 2 个窗口才计入分母（与工程 online 口径一致：
-      过短片段不计入，避免"单窗抖动"把召回算虚高）；
+    * 攻击片段 = 时间序上连续的攻击窗口，长度 ≥ MIN_SEG_WINDOWS（默认 2）个窗口才计入分母。
+      ⚠️ 这里与合成域**只是同一种做法，不是同一个阈值**：合成域按**行数**判定
+      （`max(window_size, online_min_segment_rows)` 行），本工具按**窗口数**判定，
+      因为真实数据侧只有窗口级标签、拿不到行级标签。两者都丢弃过短片段，
+      但分母口径不同，跨数据集的片段召回**不能直接对比**（误报口径已对齐，见函数末尾说明）；
     * 片段召回 = 至少产生过一次告警的片段占比；
     * 检测时延 = 片段首窗时间 → 该片段内首个告警窗时间；
     * 误报 = 不落在任何攻击片段内的告警数 ÷ 评估段总时长（小时）。
@@ -364,13 +371,15 @@ def online_metrics(times: np.ndarray, y_win: np.ndarray, scores: np.ndarray,
                 alarm[i] = True
 
     segs: list[tuple[int, int]] = []
+    raw_segs: list[tuple[int, int]] = []
     i = 0
     while i < len(y):
         if y[i] == 1:
             j = i
             while j + 1 < len(y) and y[j + 1] == 1:
                 j += 1
-            if (j - i + 1) >= 2:
+            raw_segs.append((i, j))
+            if (j - i + 1) >= MIN_SEG_WINDOWS:
                 segs.append((i, j))
             i = j + 1
         else:
@@ -396,7 +405,12 @@ def online_metrics(times: np.ndarray, y_win: np.ndarray, scores: np.ndarray,
     # （CIC-IDS2017 约 1,476 h、inSDN 约 6,733 h，而实测抓包只有几小时到几天）。
     # 用"跨度 ≤ 7 天"作为可信门槛，简单、可解释、可复现；超过就不做运维换算。
     reliable = bool(span_h == span_h and 0 < span_h <= SPAN_LIMIT_HOURS)
-    fa = int((alarm & ~alarm_in_seg).sum())
+    # ⚠️ 误报口径必须与合成域**完全一致**。合成域（src/evaluate.py::online_alarm_evaluation）
+    # 的误报定义是「该告警窗内不含任何攻击行」——只看**窗口自身**的标签。
+    # 而「告警不落在保留片段内」会把落在**被丢弃的过短片段**上的告警也算成误报：
+    # 同一物理情形在两边得到相反判定，导致真实侧误报被系统性抬高、两组数字不可比。
+    fa = int((alarm & (y == 0)).sum())
+    fa_legacy = int((alarm & ~alarm_in_seg).sum())   # 旧口径，仅保留用于量化差异
     fa_per_h = (fa / span_h) if (reliable and span_h > 0) else None
     fa_per_h_active = (fa / implied_h) if (implied_h and implied_h > 0) else None
     ops = None
@@ -409,6 +423,10 @@ def online_metrics(times: np.ndarray, y_win: np.ndarray, scores: np.ndarray,
         "windows": int(len(s)), "segments": len(segs), "segments_hit": int(hits),
         "segment_recall": round(hits / len(segs), 4) if segs else None,
         "alarms": int(alarm.sum()), "false_alarms": fa,
+        "false_alarms_legacy": fa_legacy,
+        "n_raw_attack_segments": len(raw_segs),
+        "n_ignored_short_segments": len(raw_segs) - len(segs),
+        "min_segment_windows": int(MIN_SEG_WINDOWS),
         "false_alarms_per_hour": round(fa_per_h, 3) if fa_per_h is not None else None,
         "false_alarms_per_hour_active": round(fa_per_h_active, 3) if fa_per_h_active else None,
         "latency_s_mean": round(float(np.mean(lats)), 2) if lats else None,
@@ -473,6 +491,8 @@ def main(argv=None) -> int:
     ap.add_argument("--max-windows", type=int, default=60000, help="每侧窗口上限（等间隔抽取）")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--tag", default="")
+    ap.add_argument("--force", action="store_true",
+                    help="允许用不同参数覆盖同 tag 的既有记录（默认拒绝，防止静默丢结果）")
     ap.add_argument("--list", action="store_true")
     args = ap.parse_args(argv)
 
@@ -967,6 +987,21 @@ def main(argv=None) -> int:
     }
     jp = RESULT_DIR / "real_eval.json"
     old = json.loads(jp.read_text(encoding="utf-8")) if jp.exists() else {}
+    # ⚠️ tag 只由「数据集_协议」构成，**不含参数指纹**（行数上限/步长/种子/…）。
+    # 于是"用不同参数重跑同一个 tag"会**静默覆盖**已有结果，报告里的数字就和磁盘产物对不上了。
+    # 本轮实测踩过一次：用默认 row-cap 覆盖了原次的 300000，段数/召回全变但没有任何提示。
+    # 现在关键参数不一致时默认拒绝写入，必须显式 --force。
+    prev = old.get(tag)
+    mism = [f"{k}: {prev[k]} → {out.get(k)}"
+            for k in ("dataset", "protocol", "row_cap", "stride", "window", "seed")
+            if prev and k in prev and k in out and prev[k] != out[k]]
+    if mism and not getattr(args, "force", False):
+        log(f"✗ 拒绝覆盖 tag={tag!r}：已有记录的关键参数与本次不同——")
+        for m in mism:
+            log(f"    {m}")
+        log("  tag 不含参数指纹，直接覆盖会让报告数字与产物对不上。")
+        log("  确认要用新参数替换旧记录，请加 --force 重跑。")
+        return 2
     old[tag] = out
     jp.write_text(json.dumps(old, ensure_ascii=False, indent=2), encoding="utf-8")
 
