@@ -985,7 +985,7 @@ def api_judge():
                    "攻击轮实收按源 IP 匹配的 DROP 规则、正常轮 0 条（results/ryu_live_check.md）。"
                    "未覆盖：物理交换机、真实攻击流量、厂商私有扩展" if ry else
                    "真机验证脚本已就绪（tools/ryu_live_check.py，含离线自检）；"
-                   "适配层逻辑由 28 项桩件测试覆盖"),
+                   "适配层逻辑由 33 项桩件测试覆盖"),
         "ok": False,
     })
     cd = _rj("cross_dataset_report.json")

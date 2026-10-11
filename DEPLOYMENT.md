@@ -79,7 +79,7 @@ python tools/check_env.py
 ```bash
 python tools/smoke_test.py        # 冒烟：小样本全链路跑通（约 1 分钟，产物写在 _smoke 隔离目录）
 python tests/test_core.py         # 单元测试：17 个用例，覆盖数据切分/窗口/泄漏防护/复核闭环
-python tests/test_ryu_guard.py    # Ryu 适配层行为测试：28 个用例，无需安装 Ryu（见 3.5）
+python tests/test_ryu_guard.py    # Ryu 适配层行为测试：33 个用例，无需安装 Ryu（见 3.5）
 python tests/test_pcap_tools.py   # pcap 解析往返一致性：58 个用例，无需真实抓包
 python tools/acceptance_check.py  # 交付验收：文件齐全性 + 指标复算 + 在线接口真实调用（130 项）
 ```
@@ -319,7 +319,7 @@ ryu-manager integrations/ryu_guard.py --execute --whitelist 10.0.0.1 10.0.0.254 
   **p50 29.8 ms / p95 44.7 ms / p99 45.7 ms**（剔除首批 TensorFlow 计算图构建的约 0.5 s 一次性开销）、
   端到端处置动作全部正确执行，报告见 `results/e2e_controller_report.md`。
 * 另外，「没装 Ryu 就跑不了」**不等于「没法验证」**：`tests/test_ryu_guard.py` 用桩件替代 `ryu` 模块，
-  **真的调用适配层的核心逻辑**，把 28 项接口契约与安全默认值锁死（见下表）。
+  **真的调用适配层的核心逻辑**，把 33 项接口契约与安全默认值锁死（见下表）。
   这个测试在编写过程中就抓出了两处**「账实不符」**的真缺陷并已修复——
   它们恰好是最危险的一类问题：台账显示"已处置"，交换机上其实什么都没发生。
 

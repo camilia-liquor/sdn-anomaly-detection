@@ -226,6 +226,7 @@ def _make_guard(mod, tmpdir: Path, *, execute: bool, whitelist=()):
     app.whitelist = set(whitelist)
     app.audit_path = str(tmpdir / "audit_ryu.jsonl")
     app.blocked = {}
+    app.blocked_action = {}       # 与 __init__ 保持一致：幂等要能区分"重复"与"升级"
     app.logger = _StubLogger()
     return app
 
@@ -382,6 +383,56 @@ def test_repeated_alerts_are_idempotent(mod, tmpdir: Path) -> None:
     guard._handle_alert(dict(alert), dp)
     check(len(dp.flowmods()) == 2, "封禁窗口过期后同源 IP 的新告警会重新下发规则",
           f"实际下发 {len(dp.flowmods())} 条")
+
+    # ---- 幂等只能抑制"同级或更弱"，更强动作必须放行 ----
+    # 否则服务端「同源反复告警自动升级」（throttle→block）会被幂等吃掉：
+    # 交换机上永远只挂着第一条弱规则，升级能力形同虚设，而账面上一切正常。
+    g2 = _make_guard(mod, tmpdir, execute=True)
+    dp2 = _FakeDatapath()
+    g2._handle_alert({"src_ip": "10.0.0.50", "pred_class": "Probe", "p_attack": 0.9,
+                      "action": "throttle"}, dp2)
+    n1 = len(dp2.sent)
+    g2._handle_alert({"src_ip": "10.0.0.50", "pred_class": "Probe", "p_attack": 0.95,
+                      "action": "throttle"}, dp2)
+    check(len(dp2.sent) == n1, "同级动作在封禁窗口内仍被幂等抑制",
+          f"sent {n1} → {len(dp2.sent)}")
+    g2._handle_alert({"src_ip": "10.0.0.50", "pred_class": "Probe", "p_attack": 0.99,
+                      "action": "block"}, dp2)
+    check(len(dp2.flowmods()) >= 2, "升级为更强动作（throttle→block）必须真的下发，不被幂等吃掉",
+          f"flowmods={len(dp2.flowmods())}")
+
+    # ---- 异常隔离：一条坏告警不能拖垮同批其它告警 ----
+    g3 = _make_guard(mod, tmpdir, execute=True)
+    dp3 = _FakeDatapath()
+    g3._handle_alert({"src_ip": "10.0.0.60", "pred_class": "DDoS", "p_attack": 0.99,
+                      "action": "block"}, None)          # datapath=None 必然抛错
+    g3._handle_alert({"src_ip": "10.0.0.61", "pred_class": "DDoS", "p_attack": 0.99,
+                      "action": "block"}, dp3)           # 后续告警仍应被正常处置
+    check(len(dp3.flowmods()) == 1, "一条坏告警抛错后，同批后续告警仍被正常处置",
+          f"实际下发 {len(dp3.flowmods())} 条")
+
+    # ---- self.blocked 必须有界（伪造源 IP 洪泛不能把它撑爆）----
+    g4 = _make_guard(mod, tmpdir, execute=True)
+    dp4 = _FakeDatapath()
+    g4.blocked = {f"10.8.0.{i}": 0.0 for i in range(600)}          # 全部已过期
+    g4.blocked_action = {f"10.8.0.{i}": "block" for i in range(600)}
+    g4._handle_alert({"src_ip": "10.8.9.9", "pred_class": "DDoS", "p_attack": 0.99,
+                      "action": "block"}, dp4)
+    check(len(g4.blocked) < 100, "已过期的封禁记录会被清理（不再只写不清理）",
+          f"blocked={len(g4.blocked)}")
+
+    old_thr, old_cap = mod._BLOCKED_PRUNE_THRESHOLD, mod._BLOCKED_HARD_CAP
+    mod._BLOCKED_PRUNE_THRESHOLD, mod._BLOCKED_HARD_CAP = 5, 10
+    try:
+        g5 = _make_guard(mod, tmpdir, execute=True)
+        dp5 = _FakeDatapath()
+        for i in range(40):
+            g5._handle_alert({"src_ip": f"10.7.{i // 250}.{i % 250}", "pred_class": "DDoS",
+                              "p_attack": 0.99, "action": "block"}, dp5)
+        check(len(g5.blocked) <= 10, "大量**未过期**的源 IP 也不会让 blocked 无界增长（硬上限）",
+              f"blocked={len(g5.blocked)}")
+    finally:
+        mod._BLOCKED_PRUNE_THRESHOLD, mod._BLOCKED_HARD_CAP = old_thr, old_cap
 
 
 def test_observe_action_is_inert(mod, tmpdir: Path) -> None:

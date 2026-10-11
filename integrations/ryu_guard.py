@@ -74,6 +74,13 @@ SDN_FEATURES = [
 ]
 
 
+# 动作强度排序：幂等抑制只在"同级或更弱"时生效，更强动作必须放行（否则升级形同虚设）
+_ACTION_RANK = {"observe": 0, "throttle": 1, "block": 2}
+# self.blocked 的清理阈值与硬上限（防止大量伪造源 IP 把它撑爆）
+_BLOCKED_PRUNE_THRESHOLD = 512
+_BLOCKED_HARD_CAP = 4096
+
+
 class GuardSwitch(simple_switch_13.SimpleSwitch13):
     """带异常检测与自动处置的 SDN 控制器应用。"""
 
@@ -98,6 +105,8 @@ class GuardSwitch(simple_switch_13.SimpleSwitch13):
         self.whitelist = set(wl or [])
         self.audit_path = pick("audit", os.path.join("results", "audit_alerts_ryu.jsonl"))
         self.blocked: dict[str, float] = {}
+        # 每个源当前生效的动作级别：幂等要能区分"重复的同级告警"与"升级为更强动作"
+        self.blocked_action: dict[str, str] = {}
         os.makedirs(os.path.dirname(self.audit_path) or ".", exist_ok=True)
         self.logger.info("[guard] 检测服务=%s 真实处置=%s 白名单=%s",
                          self.detect_url, self.execute, sorted(self.whitelist) or "（空，建议至少加入控制器与管理网段）")
@@ -185,7 +194,37 @@ class GuardSwitch(simple_switch_13.SimpleSwitch13):
             self.logger.error("[guard] 检测服务不可达（%s）：%s", self.detect_url, exc)
             return None
 
+    def _prune_blocked(self, now: float) -> None:
+        """清理已过期的封禁记录，保证 `self.blocked` 有界。
+
+        为什么必须有：`self.blocked` 过去**只写、只读、从不清理**。攻击者用大量伪造源 IP
+        就足以让它无限增长——和检测服务里那个"无上界 list"是同一类隐患，
+        只是这里更容易被触发（伪造源 IP 本来就不花钱）。
+        """
+        if len(self.blocked) <= _BLOCKED_PRUNE_THRESHOLD:
+            return
+        for k in [k for k, exp in list(self.blocked.items()) if exp <= now]:
+            self.blocked.pop(k, None)
+            self.blocked_action.pop(k, None)
+        # 仍有大量未到期记录时，按到期时间丢掉最旧的一半，确保不无界增长
+        if len(self.blocked) > _BLOCKED_HARD_CAP:
+            for k in sorted(self.blocked, key=lambda x: self.blocked[x])[:len(self.blocked) // 2]:
+                self.blocked.pop(k, None)
+                self.blocked_action.pop(k, None)
+
     def _handle_alert(self, alert: dict, datapath):
+        """单条告警的处理入口：**异常隔离**。
+
+        滑窗一次会返回多条 alert。如果某一条触发异常（例如非法 src_ip 让 OFPMatch 抛错），
+        异常会冒泡出去、把同批剩下的告警**全部跳过**——处置系统不能因为一条坏数据就集体失灵。
+        """
+        try:
+            self._handle_alert_inner(alert, datapath)
+        except Exception as exc:  # noqa: BLE001
+            self.logger.error("[guard] 处理告警失败，已跳过该条并继续处理同批其它告警：%s | %s",
+                              exc, alert)
+
+    def _handle_alert_inner(self, alert: dict, datapath):
         src = alert.get("src_ip") or ""
         action = alert.get("action", "observe")
         executed = False
@@ -196,10 +235,18 @@ class GuardSwitch(simple_switch_13.SimpleSwitch13):
             # 在封禁窗口内**不重复下发**规则。否则 60 s 的攻击会往交换机塞进几十条内容完全
             # 相同的流表项，既造成流表抖动，也让"处置动作数"这个指标失去意义。
             # 早期版本的 `self.blocked` 只写不读，等于没有这个保护（真机联调时暴露出来）。
-            if self.blocked.get(src, 0.0) > now:
+            self._prune_blocked(now)
+            in_window = self.blocked.get(src, 0.0) > now
+            cur_action = self.blocked_action.get(src, "")
+            # ⚠️ 幂等只能抑制「同级或更弱」的动作，**更强的动作必须放行**。
+            # 否则服务端「同源反复告警自动升级」（throttle→block）会被这里的幂等吃掉：
+            # 交换机上永远只挂着第一条弱规则，而升级能力形同虚设——
+            # 账面上一切正常，只有交换机的实际状态和预期不一致。
+            stronger = _ACTION_RANK.get(action, 0) > _ACTION_RANK.get(cur_action, -1)
+            if in_window and not stronger:
                 suppressed = True
-                self.logger.info("[guard] src=%s 仍在封禁窗口内（剩余 %.0fs），本次告警不重复下发规则",
-                                 src, self.blocked[src] - now)
+                self.logger.info("[guard] src=%s 仍在封禁窗口内（剩余 %.0fs，当前动作 %s），本次告警不重复下发规则",
+                                 src, self.blocked[src] - now, cur_action or "?")
             elif self.execute:
                 # ⚠️ 这里必须真的把规则下发出去：早期实现写成 `executed = True if action == "block" ...`，
                 # 结果是 block 动作只把 executed 记成 True、却**从未调用 `_drop()`**——
@@ -209,6 +256,7 @@ class GuardSwitch(simple_switch_13.SimpleSwitch13):
                             else self._drop(datapath, src))
                 if executed:
                     self.blocked[src] = now + self.block_seconds
+                    self.blocked_action[src] = action
                 else:
                     self.logger.error("[guard] 动作 %s 下发失败，src=%s —— 已记入台账但未生效", action, src)
             else:
