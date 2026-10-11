@@ -712,6 +712,8 @@ function renderStatusBar() {
 function wireConsole() {
   const sl = $("p-threshold");
   if (sl) sl.addEventListener("input", () => { $("p-threshold-val").textContent = Number(sl.value).toFixed(2); });
+  const unk = $("p-unknown");
+  if (unk) unk.addEventListener("input", () => { $("p-unknown-val").textContent = Number(unk.value).toFixed(2); });
   const btn = $("btn-apply-policy");
   if (btn) btn.addEventListener("click", applyPolicy);
   const feed = $("p-feed");
@@ -747,6 +749,8 @@ function fillPolicyForm(p) {
   if ($("p-confirm")) $("p-confirm").value = String(p.confirm_windows);
   if ($("p-action")) $("p-action").value = String(p.action);
   if ($("p-dryrun")) $("p-dryrun").checked = !!p.dry_run;
+  const u = Number(p.unknown_threshold || 0);
+  if ($("p-unknown")) { $("p-unknown").value = String(u); $("p-unknown-val").textContent = u.toFixed(2); }
 }
 
 function setPolicyBadge(text, cls) {
@@ -764,7 +768,9 @@ function renderPolicyEcho(extra) {
   box.innerHTML =
     `服务端回显策略：阈值 <b>${Number(p.threshold).toFixed(2)}</b> · 连续确认 <b>${p.confirm_windows}</b> 窗口 · ` +
     `动作 <b>${p.action}</b> · 演练模式 <b>${p.dry_run ? "开启（只出建议）" : "关闭（真正下发）"}</b><br>` +
-    `白名单（本页已提交）：<b>${wl}</b>`;
+    `白名单（本页已提交）：<b>${wl}</b><br>` +
+    `未知形态阈值：<b>${Number(p.unknown_threshold || 0).toFixed(2)}</b>` +
+    `${Number(p.unknown_threshold || 0) > 0 ? "（复核台已启用）" : "（0 = 关闭，复核台不会有待研判项）"}`;
   if (extra) box.innerHTML += "<br>" + extra;
   if (SOC.detector.ready === false) setPolicyBadge("在线服务未就绪", "warn");
   else setPolicyBadge(p.dry_run ? "演练模式" : "已启用下发", p.dry_run ? "warn" : "ok");
@@ -777,6 +783,8 @@ async function applyPolicy() {
     action: $("p-action").value,
     whitelist: parseWhitelist($("p-whitelist").value),
     dry_run: $("p-dryrun").checked,   // 必须是真布尔：服务端对 "false" 字符串会判为 True
+    // 未知形态阈值（0=关闭）。做成控件是为了"未知攻击怎么处理"能现场开出来演示。
+    unknown_threshold: Number($("p-unknown") ? $("p-unknown").value : 0),
   };
   try {
     const r = await fetch("/api/policy", {

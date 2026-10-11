@@ -172,6 +172,17 @@
             <input type="text" id="p-whitelist" placeholder="10.0.0.1, 10.0.0.2（逗号分隔源 IP）" />
           </div>
         </div>
+        <!-- 「未知形态」阈值：默认 0=关闭。开启后复核台才会有待研判项——
+             这是"未知攻击怎么处理"唯一能被现场看到的入口，所以做成可现场调的控件。 -->
+        <div class="ctl-row">
+          <label for="p-unknown">未知形态阈值</label>
+          <div class="ctl-body">
+            <input type="range" id="p-unknown" min="0" max="2" step="0.05" value="0" />
+            <b class="mono" id="p-unknown-val">0.00</b>
+            <span class="tip">0=关闭。开启后新颖性越界的窗口会被标为「未知形态」并进复核台；
+              标定值见 <code>results/openset_thresholds.md</code>（须在安静时段标定）</span>
+          </div>
+        </div>
         <div class="ctl-row">
           <label for="p-dryrun">演练模式</label>
           <div class="ctl-body">
