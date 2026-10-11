@@ -543,6 +543,83 @@ def test_feedback_dataset_builder_guards():
         raise AssertionError("空输入必须被拒绝")
 
 
+def _patch_infer_sequence(svc, scores):
+    """按**窗口顺序**逐个给出 p_attack 的推理假件（用于精确验证连续确认语义）。"""
+    seq = list(scores)
+    n_cls = max(len(svc.class_names), 2)
+
+    def _fake(raw):
+        n = raw.shape[0]
+        got = [float(seq.pop(0)) if seq else 0.0 for _ in range(n)]
+        p_mc = np.full((n, n_cls), 0.01)
+        p_mc[:, 0] = 1.0 - 0.01 * (n_cls - 1)
+        return p_mc, np.asarray(got, dtype=float)
+
+    svc._infer = _fake
+
+
+def _collect_window_flags(svc, n_windows: int, max_batches: int = 80):
+    """推流并收集逐窗口的 (alarm, confirmed) 标记（窗口由 stride 决定，故循环到够为止）。"""
+    row = {f: 0.0 for f in svc.feature_names}
+    flags: list = []
+    for _ in range(max_batches):
+        if len(flags) >= n_windows:
+            break
+        res = svc.push([dict(row) for _ in range(int(svc.cfg.window_size))], {})
+        assert res.get("ok"), res
+        for item in res["rows"]:
+            w = item.get("window")
+            if w is not None:
+                flags.append((bool(w["alarm"]), bool(w["confirmed"])))
+    assert len(flags) >= n_windows, f"只产生 {len(flags)} 个窗口，期望 {n_windows}"
+    return flags[:n_windows]
+
+
+def test_confirmation_semantics_agree_across_implementations():
+    """连续确认（去抖）语义在三个实现里必须**完全一致**——用断言钉住，而不是靠"读过觉得一致"。
+
+    同一规则被写了三遍：服务端 `src/service.py::push`、`src/evaluate.py::confirm_alarms`、
+    `tools/real_eval.py::online_metrics`。本工程已两次栽在"同一语义多处各判一次、后来只改一处"
+    （白名单 vs 升级、服务端升级 vs 适配层幂等），所以这里对同一串窗口分数要求三处给出同一结果。
+    """
+    import importlib.util
+    import tempfile
+
+    from src.evaluate import confirm_alarms
+
+    tool = Path(__file__).resolve().parents[1] / "tools" / "real_eval.py"
+    spec = importlib.util.spec_from_file_location("cida_real_eval_for_confirm", tool)
+    real = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(real)  # type: ignore[union-attr]
+
+    thr = 0.5
+    # 覆盖：连续命中、中断后重来、刚好达阈值次数、长连击
+    seq = [0.9, 0.9, 0.2, 0.9, 0.9, 0.9, 0.1, 0.9, 0.9, 0.9, 0.9, 0.2]
+    above = np.asarray([s >= thr for s in seq])
+
+    for k in (1, 2, 3, 5):
+        ref = list(confirm_alarms(above, k))
+
+        # ② real_eval 的实现：全 1 标签 → 所有告警都在片段内，故 alarms 数即确认数
+        r = real.online_metrics(np.arange(len(seq), dtype=float) * 60.0,
+                               np.ones(len(seq), dtype=int), np.asarray(seq, dtype=float), thr, k)
+        assert int(r["alarms"]) == int(sum(ref)), \
+            f"real_eval 的确认数与 evaluate 不一致（N={k}）：{r['alarms']} vs {sum(ref)}"
+
+        # ③ 服务端的实现：逐窗口标记必须与参考实现逐位相同
+        with tempfile.TemporaryDirectory() as td:
+            svc = _review_service(Path(td))
+            svc.reload_policy(threshold=thr, confirm_windows=k, unknown_threshold=0.0,
+                              action="observe", dry_run=True)
+            _patch_infer_sequence(svc, seq)
+            flags = _collect_window_flags(svc, len(seq))
+        got_confirmed = [f[1] for f in flags]
+        assert got_confirmed == ref, \
+            f"服务端确认语义与 evaluate 不一致（N={k}）：\n  服务端 {got_confirmed}\n  参考   {ref}"
+        assert [f[0] for f in flags] == list(above), \
+            f"服务端报警语义与阈值比较不一致（N={k}）"
+
+
 def _run_all() -> int:
     fns = [v for k, v in sorted(globals().items()) if k.startswith("test_") and callable(v)]
     failed = 0
