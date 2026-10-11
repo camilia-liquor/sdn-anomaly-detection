@@ -218,6 +218,69 @@
     </div>
   </section>
 
+  <!-- 复核台：未知攻击与漏报的出口。系统承认"不认识"的告警在这里等人给结论；
+       结论写入 review_feedback.jsonl，与 review_evidence.jsonl 的窗口特征按 review_id 关联即为训练样本。 -->
+  <section class="panel span-3" id="review-panel">
+    <div class="panel-head">
+      <h2>复核台 · 待研判队列与观察池（未知攻击的出口）</h2>
+      <div class="legend"><span class="lg" id="rv-counts">读取中…</span></div>
+    </div>
+    <div class="console">
+      <div class="ledger-box">
+        <div class="panel-head">
+          <h3>待研判队列（未知形态告警）</h3>
+          <span class="hint" id="rv-meta">等待数据…</span>
+        </div>
+        <div class="ctl-row">
+          <label for="rv-class">确认攻击时的类别</label>
+          <div class="ctl-body">
+            <select id="rv-class"></select>
+            <button id="btn-rv-refresh" class="btn">立即刷新</button>
+            <span class="toast" id="rv-toast"></span>
+          </div>
+        </div>
+        <div class="table-wrap ledger-wrap">
+          <table id="rv-table">
+            <thead>
+              <tr>
+                <th class="l">#</th><th class="l">窗口</th><th class="l">判为</th>
+                <th>新颖性</th><th class="l">源 → 目的</th><th class="l">建议动作</th>
+                <th class="l">来源</th><th class="l">状态</th><th class="l">操作</th>
+              </tr>
+            </thead>
+            <tbody id="rv-body"></tbody>
+          </table>
+        </div>
+        <div class="hint">
+          未知形态<b>不会被直接阻断</b>（最多限速，这是硬护栏）；鼠标悬停"源 → 目的"可看该窗口的流证据。
+          结论写入 <code>results/review_feedback.jsonl</code>，与 <code>results/review_evidence.jsonl</code>
+          里的窗口特征按 <code>review_id</code> 关联即可拼成训练样本。
+        </div>
+      </div>
+
+      <div class="ledger-box">
+        <div class="panel-head">
+          <h3>观察池（差一点到阈值 / 形态新颖但未确认）</h3>
+          <span class="hint" id="rv-obs-meta">等待数据…</span>
+        </div>
+        <div class="table-wrap ledger-wrap">
+          <table id="rv-obs-table">
+            <thead>
+              <tr>
+                <th class="l">窗口</th><th>分数</th><th class="l">判为</th>
+                <th>新颖性</th><th class="l">源 → 目的</th><th class="l">原因</th><th class="l">操作</th>
+              </tr>
+            </thead>
+            <tbody id="rv-obs-body"></tbody>
+          </table>
+        </div>
+        <div class="hint">
+          过去判为正常的窗口<b>零留痕</b>，漏报无从复盘；观察池把它们留了下来，可随时提升进待研判队列。
+        </div>
+      </div>
+    </div>
+  </section>
+
   <section class="panel">
     <div class="panel-head"><h2>一键注入攻击（真实攻击片段回放）</h2></div>
     <div class="inject" id="inject-buttons"></div>

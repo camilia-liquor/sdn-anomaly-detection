@@ -28,6 +28,7 @@ const MAXROWS = 60;
 
 const STATUS_REFRESH_MS = 3000;   // 健康状态条刷新周期
 const LEDGER_REFRESH_MS = 2000;   // 审计台账刷新周期
+const REVIEW_REFRESH_MS = 3000;   // 复核台（待研判队列 / 观察池）刷新周期
 const FEED_BATCH_MAX = 32;        // 单次推给在线检测接口的最大流记录数
 const ATTACK_HOLD_MS = 4000;      // 攻击态保持时长（无新判定后自动回落）
 const DISPOSAL_HOLD_MS = 30000;   // 处置标记保持时长（真实系统里封禁是持续的）
@@ -456,15 +457,197 @@ window.addEventListener("resize", () => { drawChart(); driftScheduleDraw(); });
    迷你 SOC 控制台
    ================================================================================== */
 
+/* ---------------------------------------------------------------- 5) 复核台 */
+/* 未知攻击与漏报的出口：待研判队列（未知形态告警）+ 观察池（差一点到阈值 / 形态新颖但未确认）。
+   这两个接口是"未知 → 已知"闭环的入口；结论回流后与窗口特征按 review_id 关联即为训练样本。 */
+const RV = { queue: [], obs: [] };
+
+async function postJSON(url, body) {
+  const r = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body || {}),
+  });
+  let data = null;
+  try { data = await r.json(); } catch (e) { data = null; }
+  // 服务端对非法输入返回 400 + {ok:false,error}：把原因原样透出，不要吞成"未知错误"
+  if (!r.ok || (data && data.ok === false)) {
+    throw new Error((data && data.error) || (url + " → " + r.status));
+  }
+  return data;
+}
+
+function rvToast(msg, isErr) {
+  const t = $("rv-toast");
+  if (!t) return;
+  t.textContent = msg;
+  t.className = "toast show" + (isErr ? " err" : "");
+  if (RV.timer) clearTimeout(RV.timer);
+  RV.timer = setTimeout(() => { t.className = "toast" + (isErr ? " err" : ""); }, 4000);
+}
+
+function rvEsc(v) {
+  return String(v === null || v === undefined ? "" : v)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+function rvEvidence(ev) {
+  // 证据只含定位字段（五元组/协议/标签）：首条做"源 → 目的"摘要，全部挂 title 供悬停查看
+  const rows = Array.isArray(ev) ? ev : [];
+  if (!rows.length) return { text: "-", title: "该条目没有随附流证据（证据条数可能被配成 0）" };
+  const r0 = rows[0] || {};
+  const src = r0["Src IP"] || r0["Source IP"] || "?";
+  const dst = r0["Dst IP"] || r0["Destination IP"] || "?";
+  const dp = r0["Dst Port"] || r0["Destination Port"];
+  return {
+    text: src + " → " + dst + (dp ? ":" + dp : ""),
+    title: "窗口内 " + rows.length + " 条流证据：\n" + JSON.stringify(rows, null, 1).slice(0, 1200),
+  };
+}
+
+function rvNum(v, nd) {
+  const n = Number(v);
+  return Number.isFinite(n) ? n.toFixed(nd === undefined ? 4 : nd) : "-";
+}
+
+function fillReviewClasses() {
+  const sel = $("rv-class");
+  if (!sel || sel.options.length) return;
+  const names = (SOC.stats && SOC.stats.class_names) || [];
+  const list = names.length ? names
+    : ["DDoS", "DoS", "Probe", "BruteForce", "WebAttack", "Botnet", "U2R"];
+  sel.innerHTML = list.map((c) => '<option value="' + rvEsc(c) + '">' + rvEsc(c) + "</option>").join("");
+}
+
+function renderReview() {
+  fillReviewClasses();
+  const q = RV.queue || [], obs = RV.obs || [];
+  const tb = $("rv-body");
+  if (tb) {
+    tb.innerHTML = q.length ? q.map((it) => {
+      const ev = rvEvidence(it.evidence);
+      const done = it.status === "labeled";
+      const ops = done
+        ? '<span class="hint">已回流：' + rvEsc(it.verdict || "") + "</span>"
+        : '<button class="btn" data-act="attack" data-id="' + it.review_id + '">确认为攻击</button>' +
+          '<button class="btn" data-act="normal" data-id="' + it.review_id + '">判为正常</button>';
+      return "<tr>" +
+        "<td class='l'>" + rvEsc(it.review_id) + "</td>" +
+        "<td class='l'>" + rvEsc(it.window_index) + "</td>" +
+        "<td class='l'>" + rvEsc(it.pred_class) + "</td>" +
+        "<td>" + rvNum(it.novelty, 3) + "</td>" +
+        "<td class='l' title=\"" + rvEsc(ev.title) + "\">" + rvEsc(ev.text) + "</td>" +
+        "<td class='l'>" + rvEsc(it.action) + "</td>" +
+        "<td class='l'>" + rvEsc(it.why) + "</td>" +
+        "<td class='l'>" + (done ? "已研判" : "待研判") + "</td>" +
+        "<td class='l'>" + ops + "</td>" +
+        "</tr>";
+    }).join("")
+      : '<tr><td colspan="9" class="hint">暂无待研判项 —— 没有出现"未知形态"告警' +
+        '（未知标记阈值默认为 0=关闭，需按标定 SOP 在安静时段标定后开启）</td></tr>';
+  }
+  const obTb = $("rv-obs-body");
+  if (obTb) {
+    obTb.innerHTML = obs.length ? obs.map((it, i) => {
+      const ev = rvEvidence(it.evidence);
+      return "<tr>" +
+        "<td class='l'>" + rvEsc(it.window_index) + "</td>" +
+        "<td>" + rvNum(it.p_attack, 4) + "</td>" +
+        "<td class='l'>" + rvEsc(it.pred_class) + "</td>" +
+        "<td>" + rvNum(it.novelty, 3) + "</td>" +
+        "<td class='l' title=\"" + rvEsc(ev.title) + "\">" + rvEsc(ev.text) + "</td>" +
+        "<td class='l'>" + rvEsc(it.why) + "</td>" +
+        "<td class='l'><button class='btn' data-act='promote' data-idx='" + i + "'>提升进队列</button></td>" +
+        "</tr>";
+    }).join("") : '<tr><td colspan="7" class="hint">观察池为空</td></tr>';
+  }
+  const st = SOC.stats || {};
+  const pick = (k) => (st[k] === undefined ? "-" : st[k]);
+  const counts = $("rv-counts");
+  if (counts) {
+    counts.textContent = "待研判 " + pick("review_pending") + " · 已回流 " + pick("review_labeled") +
+      " · 确认为攻击 " + pick("review_confirmed_attack") + " · 观察池 " + pick("observations") +
+      " · 证据 " + pick("review_evidence_total") + " 条";
+  }
+  const meta = $("rv-meta");
+  if (meta) meta.textContent = "队列 " + q.length + " 条（最多显示 50）";
+  const om = $("rv-obs-meta");
+  if (om) om.textContent = "观察池 " + obs.length + " 条（最多显示 50）";
+}
+
+async function pollReview() {
+  try {
+    const [q, ob] = await Promise.all([
+      fetchJSON("/api/review?limit=50"),
+      fetchJSON("/api/observations?limit=50"),
+    ]);
+    RV.queue = Array.isArray(q) ? q : [];
+    RV.obs = Array.isArray(ob) ? ob : [];
+    renderReview();
+  } catch (e) {
+    const meta = $("rv-meta");
+    if (meta) meta.textContent = "复核接口不可用：" + e.message;
+  }
+}
+
+async function submitVerdict(id, verdict) {
+  try {
+    await postJSON("/api/review", { review_id: id, verdict: verdict });
+    rvToast("已回流：" + verdict + "（#" + id + "）", false);
+    pollReview();
+  } catch (e) {
+    rvToast("提交失败：" + e.message, true);
+  }
+}
+
+async function promoteObservation(index) {
+  try {
+    const res = await postJSON("/api/review/promote", { index: index });
+    const rid = res && res.item ? res.item.review_id : "?";
+    rvToast("已提升进待研判队列（#" + rid + "）", false);
+    pollReview();
+  } catch (e) {
+    rvToast("提升失败：" + e.message, true);
+  }
+}
+
+function wireReview() {
+  const tb = $("rv-body");
+  if (tb) {
+    tb.addEventListener("click", (ev) => {
+      const btn = ev.target.closest("button[data-act]");
+      if (!btn) return;
+      const id = Number(btn.dataset.id);
+      if (btn.dataset.act === "normal") submitVerdict(id, "normal");
+      else if (btn.dataset.act === "attack") {
+        const sel = $("rv-class");
+        submitVerdict(id, "attack:" + ((sel && sel.value) ? sel.value : "Unknown"));
+      }
+    });
+  }
+  const obTb = $("rv-obs-body");
+  if (obTb) {
+    obTb.addEventListener("click", (ev) => {
+      const btn = ev.target.closest("button[data-act='promote']");
+      if (btn) promoteObservation(Number(btn.dataset.idx));
+    });
+  }
+  const rf = $("btn-rv-refresh");
+  if (rf) rf.addEventListener("click", () => { pollReview(); rvToast("已刷新", false); });
+}
+
 /* ---------------------------------------------------------------- 启动控制台 */
 function bootSocConsole() {
   wireConsole();
+  wireReview();
   startTopoLoop();
   loadPolicy();
   pollStatus();
   pollAlerts();
+  pollReview();
   setInterval(pollStatus, STATUS_REFRESH_MS);
   setInterval(pollAlerts, LEDGER_REFRESH_MS);
+  setInterval(pollReview, REVIEW_REFRESH_MS);
 }
 
 /* ---------------------------------------------------------------- 3) 服务健康状态条 */

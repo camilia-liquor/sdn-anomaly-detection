@@ -85,6 +85,13 @@ artifacts/_pub_baselines/
 refs/
 _tmp/refs/
 
-# Univer ����������.docx ������Ŀɱ༭Դ�����м���
+# Univer .docx（原注释编码损坏，无法还原）
 *.univer
 
+
+# 运行期研判产物：观察池/待研判队列的窗口证据与人工结论（每次运行都会追加；
+# 用法与口径见 docs/07_真实数据处置门槛与流程.md 与 competition/06_检测与处置体系.md）
+results/review_evidence*.jsonl
+results/review_feedback*.jsonl
+# 由 tools/retrain_from_feedback.py 从上面的运行期数据派生，属可再生成产物
+results/feedback_dataset.*

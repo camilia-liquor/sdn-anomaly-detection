@@ -339,6 +339,9 @@ def test_unknown_alert_enters_review_and_label_flows_back():
         assert e0["feature_names"] == svc.feature_names, "证据文件必须自描述（带特征名与列序）"
         assert e0["n_features"] == len(svc.feature_names)
         assert len(e0["X"]) == int(svc.cfg.window_size) * len(svc.feature_names), "向量长度应为 T×F"
+        # 流级证据也要随盘落下来：否则复核时看不到"当时是哪些流"，
+        # 而且下游就无法核验/忽略回放数据自带的真实标签（会退化成无根据的保证）
+        assert e0.get("flow_evidence"), "证据记录必须随附流级定位字段"
         # 证据 + 结论可以拼成一条带标签的训练样本（这就是重训的输入）
         fb = json.loads(svc.feedback_path.read_text(encoding="utf-8").strip().splitlines()[-1])
         joined = {**e0, "verdict": fb["verdict"]}
@@ -429,6 +432,60 @@ def test_observation_pool_carries_evidence():
         assert len(ev) <= int(svc.cfg.window_size), "证据条数不应超过窗口长度"
         # 存的是定位字段，不是全部 71 维特征（否则观察池会吃到几十 MB）
         assert all(len(r) <= 6 for r in ev), [len(r) for r in ev]
+
+
+def test_feedback_dataset_builder_guards():
+    """回流数据集构建器：只认人工 verdict、硬校验特征列序、检出并忽略真实标签、拒绝退化输入。"""
+    import importlib.util
+
+    tool = Path(__file__).resolve().parents[1] / "tools" / "retrain_from_feedback.py"
+    spec = importlib.util.spec_from_file_location("cida_retrain_tool", tool)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)  # type: ignore[union-attr]
+
+    feats = ["f0", "f1"]
+    classes = ["Normal", "DDoS", "Botnet"]
+    win = 2
+    x_ok = [0.1, 0.2, 0.3, 0.4]          # T×F = 2×2
+
+    def ev(rid, names=None, x=None, gt=False):
+        flow = [{"Src IP": "10.0.0.1", "Dst IP": "10.0.0.2"}]
+        if gt:
+            flow[0]["Label"] = "WebAttack"       # 回放数据自带的真值：必须被忽略
+        return {"review_id": rid, "X": x_ok if x is None else x,
+                "feature_names": feats if names is None else names,
+                "window_size": win, "flow_evidence": flow}
+
+    fb = [
+        {"review_id": 1, "verdict": "attack:Botnet"},
+        {"review_id": 2, "verdict": "normal"},
+        {"review_id": 3, "verdict": "maybe"},           # 非法结论 → 跳过
+        {"review_id": 4, "verdict": "attack:Probe"},    # 类别不在模型类别表 → 拒绝
+        {"review_id": 5, "verdict": "normal"},          # 有结论但缺证据 → 跳过
+        {"review_id": 6, "verdict": "normal"},          # 特征列序不同 → 跳过
+        {"review_id": 7, "verdict": "normal"},          # 向量长度不对 → 跳过
+    ]
+    evs = [ev(1, gt=True), ev(2), ev(4), ev(6, names=["f1", "f0"]), ev(7, x=[0.1])]
+
+    ds = mod.build_feedback_dataset(evs, fb, feats, classes, win)
+    assert ds["X"].shape == (2, win, len(feats)), ds["X"].shape
+    assert list(ds["y_mc"]) == [2, 0], ds["y_mc"]        # Botnet=2；normal → Normal=0
+    assert list(ds["y_bin"]) == [1.0, 0.0], ds["y_bin"]
+    assert ds["normal_index"] == 0
+    assert ds["evidence_with_gt_label"] == 1, "必须检出证据里的真实标签（并已忽略）"
+    assert len(ds["bad_class"]) == 1 and "Probe" in ds["bad_class"][0], ds["bad_class"]
+    skipped = " ".join(ds["skipped"])
+    for frag in ("verdict 非法", "缺证据", "特征名"):
+        assert frag in skipped, f"应跳过「{frag}」：{ds['skipped']}"
+    assert any("向量长度" in s for s in ds["skipped"]), ds["skipped"]
+
+    # 没有任何可用样本时必须拒绝，而不是产出一个空数据集装作成功
+    try:
+        mod.build_feedback_dataset([], [], feats, classes, win)
+    except SystemExit as exc:
+        assert "没有" in str(exc)
+    else:
+        raise AssertionError("空输入必须被拒绝")
 
 
 def _run_all() -> int:

@@ -472,7 +472,7 @@ class DetectionService:
                 except KeyError as exc:
                     return {"ok": False, "error": str(exc), "row_index": i}
                 self.buffer.append(vec[0])
-                self.buffer_rows.append(self._id_fields(row))
+                self.buffer_rows.append(self._id_fields(row, meta))
                 self.stats["rows"] += 1
                 item = {"row_index": i, "window": None}
                 if len(self.buffer) == self.buffer.maxlen and self.stats["rows"] % stride == 0:
@@ -629,15 +629,26 @@ class DetectionService:
             LOGGER.warning("审计日志写入失败：%s", exc)
 
     # ------------------------------------------------------------------ 观测
-    def _id_fields(self, row: dict) -> dict:
+    def _id_fields(self, row: dict, meta: dict | None = None) -> dict:
         """从一条流记录里挑出**定位用**字段（五元组/协议/标签），作为观察池证据。
 
         为什么不整条留下：完整 71 维特征 × 500 条观察项 × 16 行会让观察池吃到几十 MB。
         复核真正需要的是"这条窗口里是哪些流"，而不是全部标准化后的数值。
+
+        ⚠️ 源/目的 IP 常常**不在流特征里**（IP 不是模型输入），而在 `meta` 中由大屏或控制器传入。
+        只从 row 取会让证据变成空壳、研判时看不到"是哪些流"，所以这里把 meta 一并并入。
         """
         keep = ("Src IP", "Source IP", "Dst IP", "Destination IP", "Src Port", "Source Port",
                 "Dst Port", "Destination Port", "Protocol", "Label", "target")
-        return {k: row[k] for k in keep if k in row}
+        out = {k: row[k] for k in keep if k in row}
+        m = meta or {}
+        if not (out.get("Src IP") or out.get("Source IP")) and m.get("src_ip"):
+            out["Src IP"] = m.get("src_ip")
+        if not (out.get("Dst IP") or out.get("Destination IP")) and m.get("dst_ip"):
+            out["Dst IP"] = m.get("dst_ip")
+        if out.get("Dst Port") is None and m.get("dst_port") is not None:
+            out["Dst Port"] = m.get("dst_port")
+        return out
 
     def _escalate(self, src_ip: str | None, base_action: str, unknown: bool) -> tuple[str, bool]:
         """反复告警的源自动升级动作，返回 (动作, 是否发生了升级)。
@@ -668,12 +679,17 @@ class DetectionService:
 
     # ------------------------------------------------------ 待研判队列与人工回流
     def _write_evidence(self, review_id: int, kind: str, window_index: int,
-                        vector, extra: dict | None = None) -> None:
+                        vector, extra: dict | None = None,
+                        flow_evidence: list | None = None) -> None:
         """把进入研判队列的窗口特征向量落盘，使人工结论**真的可以用于重训**。
 
         为什么必须单独存：`review_feedback.jsonl` 只有结论与分数、**没有特征**，
         那样标注完也训不了模型，"未知 → 已知"就只是话术。
         证据与结论分开存并以 `review_id` 关联——结论可以改判，特征不必重复写。
+
+        为什么还要存流级 `flow_evidence`：复核时要能看见"当时是哪些流"；
+        另外回放/演示数据在流记录里带真实标签 `Label`，把它随证据一起存下来，
+        下游重训工具才能**检测并明确忽略**它——否则"已忽略真实标签"就成了无根据的保证。
         落盘失败只告警、不抛异常：证据缺失不该让检测主链路中断。
         """
         if not bool(getattr(self.policy, "review_evidence", True)) or vector is None:
@@ -688,6 +704,7 @@ class DetectionService:
                 # 自带特征名，使该文件**自描述**——否则日后重训无法确定列序
                 "feature_names": list(self.feature_names),
                 "X": [round(float(v), 6) for v in arr],
+                "flow_evidence": [dict(r) for r in (flow_evidence or [])],
                 "time": round(time.time(), 3),
                 **(extra or {}),
             }, max_bytes=int(getattr(self.policy, "audit_max_bytes", 0) or 0),
@@ -712,6 +729,9 @@ class DetectionService:
             "src_ip": alert.get("src_ip"),
             "dst_ip": alert.get("dst_ip"),
             "why": "unknown_shape",       # 未知形态告警：模型不知道它是什么
+            # 与观察池同样附上窗口内流记录的定位字段：研判时看得到"是哪些流"，而不是只有一个分数
+            "evidence": [dict(r) for r in list(self.buffer_rows)[
+                -max(0, int(getattr(self.policy, "observe_evidence_rows", 16))):]] or [],
             "verdict": None,
             "note": "",
         })
@@ -719,7 +739,8 @@ class DetectionService:
         self._write_evidence(self.review_seq, "alert", int(alert.get("window_index") or 0), vector,
                              {"pred_class": alert.get("pred_class"),
                               "novelty": alert.get("novelty"),
-                              "p_attack": alert.get("p_attack")})
+                              "p_attack": alert.get("p_attack")},
+                             flow_evidence=list(self.review_queue)[-1].get("evidence"))
         return self.review_seq
 
     def promote_observation(self, index: int = -1, why: str = "manual") -> dict:
@@ -744,7 +765,8 @@ class DetectionService:
             self.stats["review_enqueued"] = int(self.stats.get("review_enqueued", 0)) + 1
             self._write_evidence(self.review_seq, "observation", int(ob.window_index), ob.vector,
                                  {"why": str(why or "manual"), "pred_class": ob.pred_class,
-                                  "p_attack": round(float(ob.p_attack), 4)})
+                                  "p_attack": round(float(ob.p_attack), 4)},
+                                 flow_evidence=item.get("evidence"))
             return {"ok": True, "item": item}
 
     def list_review(self, limit: int = 50, status: str | None = None) -> list[dict]:
