@@ -20,7 +20,6 @@
 """
 from __future__ import annotations
 
-import json
 import os
 import threading
 import time
@@ -32,7 +31,8 @@ from typing import Any, Iterable
 import numpy as np
 
 from .config import Config
-from .utils import ARTIFACT_DIR, PROCESSED_DIR, RESULT_DIR, get_logger, load_json, resolve_dir
+from .utils import (ARTIFACT_DIR, PROCESSED_DIR, RESULT_DIR, append_jsonl, get_logger,
+                    load_json, resolve_dir)
 
 LOGGER = get_logger("cida.service")
 
@@ -66,6 +66,17 @@ class DetectorConfig:
     observe_pool_size: int = 500      # 观察池容量（有界，防止长期运行吃内存）
     review_queue_size: int = 200      # 待研判队列容量
     recent_windows: int = 1000        # 回看环形缓冲容量（回答"这段为什么没报警"）
+    # ---------------- 长期运行的资源边界与运维面 ----------------
+    # 告警在内存里保留多少条（`self.alerts` 过去是**无上界 list**，长跑会一直涨）。
+    # 总量另有 alerts_total 计数器，因此"保留条数"不影响统计口径。
+    alerts_retained: int = 5000
+    audit_max_bytes: int = 20_000_000  # 审计台账单文件上限（约 20MB），超过即轮转
+    audit_backups: int = 3             # 审计台账保留的历史文件数
+    observe_evidence_rows: int = 16    # 观察池条目随附的窗口内流记录条数（0=不留）
+    # 反复告警的源自动**升级**动作：同源在 escalate_window_sec 内告警达到 escalate_after 次，
+    # 建议动作上抬一级（observe→throttle→block）。未知形态受硬护栏约束，最高只到 throttle。
+    escalate_after: int = 3
+    escalate_window_sec: int = 300
 
     @classmethod
     def from_env(cls, cfg: Config | None = None, **overrides) -> "DetectorConfig":
@@ -92,6 +103,8 @@ class DetectorConfig:
             "unknown_threshold": float(os.environ.get("CIDA_UNKNOWN_THRESHOLD", 0.0) or 0.0),
             "unknown_action": str(os.environ.get("CIDA_UNKNOWN_ACTION", "throttle")).strip().lower(),
             "observe_margin": float(os.environ.get("CIDA_OBSERVE_MARGIN", 0.5) or 0.0),
+            "audit_max_bytes": int(os.environ.get("CIDA_AUDIT_MAX_BYTES", 20_000_000) or 0),
+            "audit_backups": int(os.environ.get("CIDA_AUDIT_BACKUPS", 3) or 3),
         }
         params.update({k: v for k, v in overrides.items() if v is not None})
         conf = cls(**params)
@@ -123,6 +136,7 @@ class Alert:
     executed: bool = False
     unknown: bool = False            # 是否为「未知形态」窗口（见 DetectorConfig.unknown_threshold）
     novelty: float = 0.0             # 触发未知标记时的新颖性分数（熵），便于审计与调阈值
+    escalated: bool = False          # 本条动作是否由"反复告警"自动升级而来（见 DetectorConfig.escalate_after）
 
     def to_dict(self) -> dict:
         return {
@@ -139,6 +153,7 @@ class Alert:
             "ground_truth": self.true_class,
             "unknown": bool(self.unknown),
             "novelty": round(float(self.novelty), 4),
+            "escalated": bool(self.escalated),
         }
 
 
@@ -160,6 +175,9 @@ class Observation:
     src_ip: str | None = None
     dst_ip: str | None = None
     rows_covered: tuple = ()
+    # 窗口内的流记录（只保留定位字段：五元组/协议/标签），让复核能追到具体流而不是只有一个分数。
+    # 存定位字段而不是全部 71 维特征，是容量与可用性的折中：500 条观察项 × 16 行仍只有 MB 级。
+    evidence: list = field(default_factory=list)
     # near_threshold：差一点到阈值；unknown_observed：形态新颖但未达确认条件
     why: str = "near_threshold"
 
@@ -174,6 +192,7 @@ class Observation:
             "src_ip": self.src_ip,
             "dst_ip": self.dst_ip,
             "rows_covered": list(self.rows_covered),
+            "evidence": [dict(r) for r in self.evidence],
             "why": self.why,
         }
 
@@ -191,7 +210,14 @@ class DetectionService:
         self.policy = DetectorConfig.from_env(self.cfg)
         self.lock = threading.Lock()
         self.buffer: deque = deque(maxlen=int(self.cfg.window_size))
-        self.alerts: list[Alert] = []
+        # 与 self.buffer 同进同出的「原始行」缓冲：滑窗里每条向量对应的流记录（只留定位字段），
+        # 用于给观察池条目附上可追溯的证据。只留 window_size 条，内存恒定。
+        self.buffer_rows: deque = deque(maxlen=int(self.cfg.window_size))
+        # ⚠️ 这里过去是**无上界 list**：长跑时内存只增不减。改为有界 deque，
+        # 总量另用 alerts_total 计数，因此"保留多少条"不影响任何统计口径。
+        self.alerts: deque = deque(maxlen=max(1, int(self.policy.alerts_retained)))
+        # 同源告警时间戳（用于反复告警自动升级）；有界，防止大量源 IP 撑爆内存
+        self._escalation: dict[str, list[float]] = {}
         self.audit_path = RESULT_DIR / "audit_alerts.jsonl"
         # 漏报兜底三件套（都有界，长期运行不会吃内存）：
         #   observations 观察池：差一点到阈值 / 形态新颖但未确认的窗口留痕
@@ -208,7 +234,7 @@ class DetectionService:
             "alarm_run": 0, "latency_ms": deque(maxlen=2000),
             "by_class": {}, "started_at": time.time(),
             "observations": 0, "review_enqueued": 0, "review_labeled": 0,
-            "review_confirmed_attack": 0,
+            "review_confirmed_attack": 0, "alerts_total": 0, "escalations": 0,
         }
         self.model = None
         self.feature_names: list[str] = []
@@ -400,6 +426,9 @@ class DetectionService:
         with self.lock:
             dropped = len(self.buffer)
             self.buffer.clear()
+            self.buffer_rows.clear()
+            # 流被重置意味着"攻击可能已经中断"，升级计数也应归零，否则换段后会被误升级。
+            self._escalation.clear()
             self.stats["alarm_run"] = 0
             self.stats.setdefault("stream_resets", 0)
             self.stats["stream_resets"] += 1
@@ -430,6 +459,7 @@ class DetectionService:
                 except KeyError as exc:
                     return {"ok": False, "error": str(exc), "row_index": i}
                 self.buffer.append(vec[0])
+                self.buffer_rows.append(self._id_fields(row))
                 self.stats["rows"] += 1
                 item = {"row_index": i, "window": None}
                 if len(self.buffer) == self.buffer.maxlen and self.stats["rows"] % stride == 0:
@@ -494,6 +524,9 @@ class DetectionService:
                                 dst_ip=str(ob_dst) if ob_dst else None,
                                 rows_covered=(self.stats["rows"] - self.cfg.window_size + 1,
                                               self.stats["rows"]),
+                                evidence=list(self.buffer_rows)[
+                                    -max(0, int(getattr(self.policy, "observe_evidence_rows", 16))):]
+                                or [],
                                 why="unknown_observed" if unknown else "near_threshold",
                             ))
                             self.stats["observations"] = int(self.stats.get("observations", 0)) + 1
@@ -505,11 +538,17 @@ class DetectionService:
                             dst_port = int(dst_port) if dst_port is not None else None
                         except (TypeError, ValueError):
                             dst_port = None
+                        base_action = self._decide_action(str(src_ip) if src_ip else None,
+                                                          unknown=bool(unknown))
+                        action, escalated = self._escalate(str(src_ip) if src_ip else None,
+                                                           base_action, bool(unknown))
+                        if escalated:
+                            self.stats["escalations"] = int(self.stats.get("escalations", 0)) + 1
                         alert = Alert(
                             time=time.time(), window_index=self.stats["windows"], p_attack=p_attack,
                             pred_class=pred_class, true_class=row.get("Label") or row.get("target"),
-                            action=self._decide_action(str(src_ip) if src_ip else None,
-                                                       unknown=bool(unknown)),
+                            action=action,
+                            escalated=bool(escalated),
                             src_ip=str(src_ip) if src_ip else None,
                             dst_ip=str(dst_ip) if dst_ip else None,
                             dst_port=dst_port,
@@ -518,6 +557,7 @@ class DetectionService:
                             unknown=bool(unknown), novelty=float(novelty),
                         )
                         self.alerts.append(alert)
+                        self.stats["alerts_total"] = int(self.stats.get("alerts_total", 0)) + 1
                         self.stats["alarms_confirmed"] += 1
                         self.stats["by_class"][pred_class] = self.stats["by_class"].get(pred_class, 0) + 1
                         d = alert.to_dict()
@@ -527,8 +567,9 @@ class DetectionService:
                             d = {**d, "review_id": self._enqueue_review(d)}
                         new_alerts.append(d)
                         self._append_audit(d)
-                        LOGGER.warning("告警 #%d：%s p=%.3f 处置=%s%s 源=%s",
+                        LOGGER.warning("告警 #%d：%s p=%.3f 处置=%s%s%s 源=%s",
                                        alert.window_index, pred_class, p_attack, alert.action,
+                                       "（升级）" if escalated else "",
                                        "（已执行）" if alert.executed else "（演练）", alert.src_ip)
                     out_rows[row_pos]["window"] = {
                         "p_attack": round(p_attack, 4), "pred_class": pred_class,
@@ -559,15 +600,56 @@ class DetectionService:
                 "observe_margin": float(getattr(self.policy, "observe_margin", 0.5) or 0.0)}
 
     def _append_audit(self, record: dict) -> None:
-        """写审计台账（JSONL，追加）：出事可追溯，这是"可用系统"的基本要求。"""
+        """写审计台账（JSONL，追加 + 超限轮转）：出事可追溯，这是"可用系统"的基本要求。
+
+        轮转是必需的：台账只追加不删除，长期运行会把磁盘写满，
+        也会让"出事回查"变成打不开的巨型文件（见 `src/utils.py::append_jsonl`）。
+        """
         try:
-            self.audit_path.parent.mkdir(parents=True, exist_ok=True)
-            with self.audit_path.open("a", encoding="utf-8") as f:
-                f.write(json.dumps(record, ensure_ascii=False) + "\n")
+            append_jsonl(self.audit_path, record,
+                         max_bytes=int(getattr(self.policy, "audit_max_bytes", 0) or 0),
+                         backups=int(getattr(self.policy, "audit_backups", 3) or 3))
         except Exception as exc:  # pragma: no cover
             LOGGER.warning("审计日志写入失败：%s", exc)
 
     # ------------------------------------------------------------------ 观测
+    def _id_fields(self, row: dict) -> dict:
+        """从一条流记录里挑出**定位用**字段（五元组/协议/标签），作为观察池证据。
+
+        为什么不整条留下：完整 71 维特征 × 500 条观察项 × 16 行会让观察池吃到几十 MB。
+        复核真正需要的是"这条窗口里是哪些流"，而不是全部标准化后的数值。
+        """
+        keep = ("Src IP", "Source IP", "Dst IP", "Destination IP", "Src Port", "Source Port",
+                "Dst Port", "Destination Port", "Protocol", "Label", "target")
+        return {k: row[k] for k in keep if k in row}
+
+    def _escalate(self, src_ip: str | None, base_action: str, unknown: bool) -> tuple[str, bool]:
+        """反复告警的源自动升级动作，返回 (动作, 是否发生了升级)。
+
+        为什么需要：单窗口判定看的是"此刻像不像攻击"，而持续攻击的特征是**反复触发**。
+        同一源在时间窗内连续告警，说明它不是偶发抖动，应当抬高处置级别。
+        未知形态受硬护栏约束——升级也**不得越过 throttle**。
+        """
+        if not src_ip or base_action not in ACTIONS:
+            return base_action, False
+        now = time.time()
+        win = max(1, int(getattr(self.policy, "escalate_window_sec", 300) or 300))
+        need = max(2, int(getattr(self.policy, "escalate_after", 3) or 3))
+        hist = self._escalation.setdefault(str(src_ip), [])
+        hist[:] = [t for t in hist if now - t <= win]
+        hist.append(now)
+        # 有界：跟踪的源 IP 数量也要有上限，否则被大量不同源刷爆内存
+        if len(self._escalation) > 2048:
+            for k in list(self._escalation)[:1024]:
+                self._escalation.pop(k, None)
+        if len(hist) < need:
+            return base_action, False
+        idx = min(len(ACTIONS) - 1, ACTIONS.index(base_action) + 1)
+        esc = ACTIONS[idx]
+        if unknown and ACTIONS.index(esc) > ACTIONS.index("throttle"):
+            esc = "throttle"                       # 未知分支硬护栏
+        return esc, esc != base_action
+
     # ------------------------------------------------------ 待研判队列与人工回流
     def _enqueue_review(self, alert: dict) -> int:
         """把一条告警放进待研判队列，返回 review_id。"""
@@ -654,9 +736,9 @@ class DetectionService:
                 "window_index": target.get("window_index"), "labeled_at": target["labeled_at"],
             }
             try:
-                self.feedback_path.parent.mkdir(parents=True, exist_ok=True)
-                with self.feedback_path.open("a", encoding="utf-8") as fh:
-                    fh.write(json.dumps(rec, ensure_ascii=False) + "\n")
+                append_jsonl(self.feedback_path, rec,
+                             max_bytes=int(getattr(self.policy, "audit_max_bytes", 0) or 0),
+                             backups=int(getattr(self.policy, "audit_backups", 3) or 3))
             except OSError as exc:
                 # 落盘失败**不能吞掉**：否则"回流"会无声失灵，而这正是本机制的全部意义。
                 LOGGER.error("标注回流写入失败：%s", exc)
@@ -676,6 +758,9 @@ class DetectionService:
             "windows": int(self.stats["windows"]),
             "alarms": int(self.stats["alarms"]),
             "alarms_confirmed": int(self.stats["alarms_confirmed"]),
+            "alerts_total": int(self.stats.get("alerts_total", 0)),
+            "alerts_retained": len(self.alerts),
+            "escalations": int(self.stats.get("escalations", 0)),
             "by_class": dict(self.stats["by_class"]),
             "unknown_windows": int(self.stats.get("unknown_windows", 0)),
             "observations": len(self.observations),
@@ -742,6 +827,13 @@ class DetectionService:
             "# HELP sdn_ids_review_confirmed_attack_total 人工研判确认为攻击并已回流的条数",
             "# TYPE sdn_ids_review_confirmed_attack_total counter",
             f"sdn_ids_review_confirmed_attack_total {s['review_confirmed_attack']}",
+            # 累计告警数是**计数器**（不受内存保留条数影响）；内存里只保留最近 alerts_retained 条。
+            "# HELP sdn_ids_alerts_total 累计产生的告警数（不受内存保留上限影响）",
+            "# TYPE sdn_ids_alerts_total counter",
+            f"sdn_ids_alerts_total {s['alerts_total']}",
+            "# HELP sdn_ids_escalations_total 因同源反复告警而自动升级动作的次数",
+            "# TYPE sdn_ids_escalations_total counter",
+            f"sdn_ids_escalations_total {s['escalations']}",
         ]
         for cls, n in s["by_class"].items():
             lines.append(f'sdn_ids_alarms_by_class_total{{class="{cls}"}} {n}')

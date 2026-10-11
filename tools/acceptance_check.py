@@ -1142,7 +1142,7 @@ def main() -> int:
             "passed": passed, "warned": r.warned, "failed": r.failed,
             "ts": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "tools": len(list((ROOT / "tools").glob("*.py"))),
-            "tests": {"test_core": 13, "test_ryu_guard": 28, "test_pcap_tools": 58},
+            "tests": {"test_core": 16, "test_ryu_guard": 28, "test_pcap_tools": 58},
             "self_tests": {"ryu_live_check": 12, "feature_selection": 9},
             "note": "由 tools/acceptance_check.py 生成；评审视图 /api/judge 读取本文件显示真实项数",
         }, RESULT_DIR / "acceptance_summary.json")

@@ -1103,7 +1103,29 @@ def api_alerts():
     """告警审计台账（可用系统的基本要求：每条告警可追溯）。"""
     det = get_detector()
     limit = request.args.get("limit", default=100, type=int)
-    return jsonify(json_safe([a.to_dict() for a in det.alerts[-limit:]][::-1]))
+    # ⚠️ det.alerts 是**有界 deque**（长期运行不吃内存），deque 不支持切片，
+    # 必须先 list() 再切；否则这里会抛 TypeError，把审计台账整条链路打断。
+    recent = list(det.alerts)[-max(1, int(limit)):]
+    return jsonify(json_safe([a.to_dict() for a in reversed(recent)]))
+
+
+def _require_token():
+    """写接口的可选令牌校验（纵深防御，默认关闭）。
+
+    为什么只保护**写接口**：能造成实际损害的是改策略（例如把 `dry_run` 关掉、动作改成 block）
+    和写入研判结论；读接口（大屏轮询 /api/*）保持开放，前端不必持有令牌。
+    `DEPLOYMENT.md` 的做法是反代加 Basic 认证，这里再补一层应用级校验——避免反代配置失误
+    或内网可达时，任何人都能关掉演练模式、把建议动作改成真实封禁。
+    **未设置 `CIDA_API_TOKEN` 时完全放行**（本地演示与验收自检不受影响）。
+    """
+    tok = os.environ.get("CIDA_API_TOKEN", "").strip()
+    if not tok:
+        return None
+    auth = request.headers.get("Authorization", "")
+    got = request.headers.get("X-API-Token") or (auth[7:].strip() if auth.startswith("Bearer ") else "")
+    if got == tok:
+        return None
+    return jsonify({"ok": False, "error": "缺少或错误的 API 令牌（写接口需要 CIDA_API_TOKEN）"}), 401
 
 
 @app.route("/api/observations")
@@ -1122,6 +1144,9 @@ def api_review():
         limit = request.args.get("limit", default=50, type=int)
         status = request.args.get("status") or None
         return jsonify(json_safe(det.list_review(limit=limit, status=status)))
+    deny = _require_token()
+    if deny:
+        return deny
     body = request.get_json(silent=True) or {}
     if "review_id" not in body:
         return jsonify({"ok": False, "error": "缺少 review_id"}), 400
@@ -1136,6 +1161,9 @@ def api_review():
 @app.route("/api/review/promote", methods=["POST"])
 def api_review_promote():
     """把观察池里的一条提升进待研判队列（值班员做漏报复盘时的动作）。"""
+    deny = _require_token()
+    if deny:
+        return deny
     det = get_detector()
     body = request.get_json(silent=True) or {}
     try:
@@ -1152,6 +1180,9 @@ def api_policy():
     det = get_detector()
     if request.method == "GET":
         return jsonify(json_safe(det.snapshot()["policy"]))
+    deny = _require_token()
+    if deny:
+        return deny
     body = request.get_json(silent=True) or {}
     return jsonify(json_safe(det.reload_policy(**body)))
 

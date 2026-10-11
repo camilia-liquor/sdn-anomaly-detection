@@ -226,21 +226,26 @@ def _patch_infer(svc, p_attack: float, uniform: bool) -> None:
     svc._infer = _fake
 
 
-def _push_until_windows(svc, target: int, src_ip: str = "10.0.0.9") -> list:
-    """推流直到产生 target 个窗口，返回这批告警。
+def _push_until_windows(svc, target: int, src_ip: str = "10.0.0.9", extra: dict | None = None) -> list:
+    """再产生 target 个窗口后返回这批告警（**相对**当前窗口数，便于在同一服务上分阶段测试）。
 
     窗口由 `online_stride` 决定，不能"推一次就假设出了窗口"——那会让测试在不同配置下静默失效。
+    也不要用绝对窗口数：同一服务二次调用时会因为窗口数已达标而空转。
     """
     row = {f: 0.0 for f in svc.feature_names}
     row["Src IP"] = src_ip
+    if extra:
+        row.update(extra)
+    start = int(svc.stats["windows"])
+    want = start + max(1, int(target))
     alerts: list = []
-    for _ in range(20):
-        if svc.stats["windows"] >= target:
+    for _ in range(40):
+        if svc.stats["windows"] >= want:
             break
         res = svc.push([dict(row) for _ in range(int(svc.cfg.window_size))], {"src_ip": src_ip})
         assert res.get("ok"), res
         alerts.extend(res.get("alerts", []))
-    assert svc.stats["windows"] >= target, f"未能产生 {target} 个窗口"
+    assert svc.stats["windows"] >= want, f"未能再产生 {target} 个窗口（当前 {svc.stats['windows']}）"
     return alerts
 
 
@@ -321,6 +326,92 @@ def test_unknown_alert_enters_review_and_label_flows_back():
         # 非法输入必须被拒绝，而不是静默写入脏数据
         assert not svc.label_review(a["review_id"], "maybe")["ok"]
         assert not svc.label_review(999999, "normal")["ok"]
+
+
+def test_bounded_alerts_and_jsonl_rotation():
+    """长期运行的资源边界：告警在内存里有上界，审计/回流文件写满即轮转并丢弃最旧。"""
+    import json as _json
+    import tempfile
+    from collections import deque as _deque
+
+    from src.utils import append_jsonl
+
+    # 1) JSONL 轮转：历史文件数不超过 backups，且当前文件始终可解析（不能写出半行）
+    with tempfile.TemporaryDirectory() as td:
+        p = Path(td) / "audit.jsonl"
+        for i in range(60):
+            append_jsonl(p, {"i": i, "pad": "x" * 40}, max_bytes=200, backups=2)
+        files = sorted(x.name for x in Path(td).glob("audit.jsonl*"))
+        assert p.exists(), "轮转后当前文件必须仍然存在"
+        assert len(files) <= 3, f"最多 1 个当前文件 + 2 个备份，实际 {files}"
+        for line in p.read_text(encoding="utf-8").strip().splitlines():
+            _json.loads(line)
+        kept = "".join((Path(td) / f).read_text(encoding="utf-8") for f in files)
+        assert '"i": 0,' not in kept, "最旧的记录应已被轮转丢弃（保留的是最近的）"
+        assert '"i": 59' in kept or '"i": 58' in kept, "最新记录必须保留"
+
+    # 2) 内存告警有上界，但累计计数器与保留条数解耦
+    with tempfile.TemporaryDirectory() as td:
+        svc = _review_service(Path(td))
+        assert svc.alerts.maxlen == int(svc.policy.alerts_retained), "告警列表必须是有界 deque"
+        svc.reload_policy(threshold=0.5, confirm_windows=1, action="observe")
+        _patch_infer(svc, p_attack=0.9, uniform=False)
+        _push_until_windows(svc, 1)
+        assert svc.stats["alerts_total"] >= 1
+        svc.alerts = _deque(svc.alerts, maxlen=1)     # 人为把保留上限压到 1 条
+        total_before = int(svc.stats["alerts_total"])
+        _push_until_windows(svc, 2)
+        assert len(svc.alerts) == 1, "保留条数必须受 maxlen 约束"
+        assert int(svc.stats["alerts_total"]) > total_before, "累计计数不受保留上限影响"
+
+
+def test_alarm_escalation_state_machine():
+    """同源反复告警自动升级动作；未知形态受硬护栏约束，最高只到 throttle。"""
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as td:
+        svc = _review_service(Path(td))
+        svc.reload_policy(threshold=0.5, confirm_windows=1, unknown_threshold=0.0,
+                          action="observe", escalate_after=3, escalate_window_sec=300)
+        _patch_infer(svc, p_attack=0.9, uniform=False)
+        alerts = _push_until_windows(svc, 3)
+        acts = [a["action"] for a in alerts]
+        assert len(acts) >= 3, acts
+        assert acts[0] == "observe" and acts[1] == "observe", f"前两次不应升级：{acts}"
+        assert acts[2] == "throttle", f"第 3 次应升级为限速：{acts}"
+        assert alerts[2]["escalated"] is True
+        assert int(svc.stats["escalations"]) >= 1
+
+        # 未知形态：即便反复告警也只能到 throttle，绝不升到 block
+        svc.reload_policy(threshold=0.5, confirm_windows=1, unknown_threshold=1.0,
+                          action="block", unknown_action="throttle",
+                          escalate_after=2, escalate_window_sec=300)
+        svc.reset_stream("测试换段")
+        assert svc._escalation == {}, "流重置后升级计数必须归零，否则换段后会被误升级"
+        _patch_infer(svc, p_attack=0.9, uniform=True)
+        u = _push_until_windows(svc, 3, src_ip="10.0.0.77")
+        assert u, "应产生未知告警"
+        assert all(a["action"] == "throttle" for a in u), [a["action"] for a in u]
+
+
+def test_observation_pool_carries_evidence():
+    """观察池条目必须带可追溯的流证据（五元组级），而不是只有一个分数。"""
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as td:
+        svc = _review_service(Path(td))
+        svc.reload_policy(threshold=0.5, confirm_windows=99, action="observe")
+        _patch_infer(svc, p_attack=0.9, uniform=False)
+        _push_until_windows(svc, 1, src_ip="10.1.2.3",
+                            extra={"Dst IP": "10.9.9.9", "Dst Port": 80})
+        ob = svc.list_observations(1)[0]
+        ev = ob.get("evidence") or []
+        assert ev, "观察池条目必须附流证据"
+        assert all(r.get("Src IP") == "10.1.2.3" for r in ev), ev[:2]
+        assert any(r.get("Dst IP") == "10.9.9.9" for r in ev), ev[:2]
+        assert len(ev) <= int(svc.cfg.window_size), "证据条数不应超过窗口长度"
+        # 存的是定位字段，不是全部 71 维特征（否则观察池会吃到几十 MB）
+        assert all(len(r) <= 6 for r in ev), [len(r) for r in ev]
 
 
 def _run_all() -> int:

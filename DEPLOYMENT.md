@@ -78,7 +78,7 @@ python tools/check_env.py
 
 ```bash
 python tools/smoke_test.py        # 冒烟：小样本全链路跑通（约 1 分钟，产物写在 _smoke 隔离目录）
-python tests/test_core.py         # 单元测试：13 个用例，覆盖数据切分/窗口/泄漏防护/复核闭环
+python tests/test_core.py         # 单元测试：16 个用例，覆盖数据切分/窗口/泄漏防护/复核闭环
 python tests/test_ryu_guard.py    # Ryu 适配层行为测试：28 个用例，无需安装 Ryu（见 3.5）
 python tests/test_pcap_tools.py   # pcap 解析往返一致性：58 个用例，无需真实抓包
 python tools/acceptance_check.py  # 交付验收：文件齐全性 + 指标复算 + 在线接口真实调用（130 项）
@@ -114,6 +114,11 @@ python app/app.py --host 0.0.0.0 --port 5000
 | `CIDA_CONFIRM_WINDOWS` | — | 3 | 初始连续确认窗口数 |
 | `CIDA_WHITELIST` | — | 空 | 永不处置的源 IP，空格分隔 |
 | `CIDA_UNKNOWN_THRESHOLD` | — | `0`（关闭） | 「未知形态」标记阈值（多分类概率熵），见 2.4 最后一节 |
+| `CIDA_UNKNOWN_ACTION` | — | `throttle` | 未知形态的保守动作。**硬护栏：不允许升级为 `block`**，填了也会被降级 |
+| `CIDA_OBSERVE_MARGIN` | — | `0.5` | 观察池下界比例（漏报留痕的起点），见 5. 安全清单 |
+| `CIDA_API_TOKEN` | — | 空（放行） | 设置后写接口（改策略/写研判结论）必须带令牌；读接口保持开放 |
+| `CIDA_AUDIT_MAX_BYTES` | — | `20000000` | 审计台账/回流文件单文件上限，超过即轮转 |
+| `CIDA_AUDIT_BACKUPS` | — | `3` | 轮转保留的历史文件数 |
 
 环境变量只决定**启动时的初始策略**，运行时仍可用 `POST /api/policy` 热更新。
 
@@ -367,7 +372,14 @@ python tools/controller_simulator.py --rows 3000 --batch 50 --policy block --no-
 - [ ] **演练先行**：`dry_run=true` 或 `--execute` 缺省状态下至少观察一个完整业务周期。
 - [ ] **处置有超时**：`--block-seconds` 不为 0（否则误封不会自动解除）。
 - [ ] **不对外裸奔**：`/api/detect`、`/api/policy` 只在管理网可达；需要跨网时套反向代理 + 认证。
-- [ ] **审计可追溯**：`results/audit_alerts*.jsonl` 已纳入日志留存策略。
+- [ ] **写接口鉴权（纵深防御）**：设置 `CIDA_API_TOKEN`。nginx Basic 认证是第一层，应用级令牌是第二层——
+      只靠反代时，一旦反代配置失误或内网可达，任何人都能关掉演练模式、把建议动作改成真实封禁。
+      只读接口不校验，故大屏前端无需持令牌。
+- [ ] **审计可追溯**：`results/audit_alerts.jsonl`（含轮转出的 `.1/.2/.3`）与 `results/review_feedback.jsonl` 已纳入日志留存策略。
+- [ ] **磁盘不会写满**：确认 `CIDA_AUDIT_MAX_BYTES` / `CIDA_AUDIT_BACKUPS` 与本单位日志留存要求一致
+      （台账与回流文件只追加不删除，**不轮转会把磁盘写满**）。
+- [ ] **内存不会只涨不降**：确认长期运行下 RSS 稳定（告警/观察池/回看缓冲/研判队列均为有界容器，
+      累计量走计数器 `alerts_total`，可在 `/metrics` 观察）。
 - [ ] **降级预案**：检测服务不可达时，控制器按 3.2 的实现只会记日志、不改流表（**fail-open，不会因为算法挂了把网络搞断**）。
 - [ ] **模型与 scaler 同源**：替换模型时 `meta.json`、`scaler.joblib`、`model.keras` 三者一起换。
 - [ ] **数据合规**：流入检测服务的流记录若含真实 IP，请确认符合所在单位的日志留存与隐私要求。

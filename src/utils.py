@@ -293,3 +293,32 @@ def markdown_table(headers: list[str], rows: list[list[Any]]) -> str:
     for r in rows:
         out.append("| " + " | ".join("" if v is None else str(v) for v in r) + " |")
     return "\n".join(out)
+
+
+def _rotate_jsonl(p: Path, backups: int) -> None:
+    """把 p 依 `<name>.1` / `<name>.2` … 滚动，删掉超出 backups 的最旧文件。"""
+    backups = max(1, int(backups))
+    oldest = p.with_name(f"{p.name}.{backups}")
+    if oldest.exists():
+        oldest.unlink()
+    for i in range(backups - 1, 0, -1):
+        src = p.with_name(f"{p.name}.{i}")
+        if src.exists():
+            src.replace(p.with_name(f"{p.name}.{i + 1}"))
+    p.replace(p.with_name(f"{p.name}.1"))
+
+
+def append_jsonl(path: str | Path, record: dict, max_bytes: int = 0, backups: int = 3) -> Path:
+    """向 JSONL 追加一条记录；当前文件达到 max_bytes 时轮转并只保留 backups 个历史文件。
+
+    为什么必须有轮转：审计台账（`audit_alerts.jsonl`）与标注回流（`review_feedback.jsonl`）
+    都是**只追加、从不删除**的。长期运行会把磁盘写满，也会让"出事回查"变成一个打不开的巨型文件。
+    `max_bytes<=0` 表示不轮转（一次性工具与测试用）。
+    """
+    p = Path(path)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    if max_bytes and max_bytes > 0 and p.exists() and p.stat().st_size >= int(max_bytes):
+        _rotate_jsonl(p, backups)
+    with p.open("a", encoding="utf-8") as fh:
+        fh.write(json.dumps(record, ensure_ascii=False) + "\n")
+    return p
