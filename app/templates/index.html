@@ -47,6 +47,21 @@
 </div>
 
 <div class="layout">
+  <!-- 全流程流水线：把十环链路做成一条实时联动的进度条。
+       放在最前面，是为了让评委**一眼看到整套流程**（含后期处置：复核 → 回流 → 评测 → 验收），
+       而不是只看到"检测"这一段。每个节点的数字都来自 /api/stats，有增量时节点会脉冲。 -->
+  <section class="panel span-3" id="pipeline-panel">
+    <div class="panel-head">
+      <h2>全流程流水线 · 采集 → 检测 → 分级 → 确认 → 处置 → 留痕 → 复核 → 回流 → 评测 → 验收</h2>
+      <span class="hint" id="pl-meta">正在等待在线数据…</span>
+    </div>
+    <div class="pipeline" id="pipeline"></div>
+    <div class="hint">
+      节点数字全部来自在线检测服务（<code>/api/stats</code>）与磁盘产物；
+      <b>有新增数据的节点会脉冲</b>，箭头方向即数据流向。后期处置（复核 / 回流）与前端检测在同一条链上。
+    </div>
+  </section>
+
   <!-- 攻击拓扑动画：节点着色与标记全部来自真实判定与真实处置动作 -->
   <section class="panel span-3">
     <div class="panel-head">

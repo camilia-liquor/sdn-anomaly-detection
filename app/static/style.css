@@ -228,6 +228,30 @@ tr.fresh { animation: fresh 1.4s ease-out; }
 .drift-chip.hot { border-color: rgba(239,68,68,.55); }
 .drift-chip.hot b { color: #fca5a5; }
 .drift-chip.warn { border-color: rgba(245,158,11,.5); }
+
+/* ===== 全流程流水线：十环链路实时联动（评委一眼看到整套流程，含后期处置） ===== */
+.pipeline { display: flex; align-items: stretch; gap: 4px; flex-wrap: wrap; }
+.pl-node { flex: 1 1 96px; min-width: 96px; position: relative; padding: 7px 9px;
+  background: var(--bg-soft); border: 1px solid var(--border); border-radius: 9px;
+  transition: border-color .3s, box-shadow .3s, transform .3s; }
+.pl-node .n { font-size: 11px; color: var(--muted); }
+.pl-node .v { font-family: var(--mono); font-size: 15px; font-weight: 600;
+  color: var(--text); margin-top: 2px; line-height: 1.15; }
+.pl-node .s { font-size: 10px; color: var(--muted); margin-top: 2px; }
+/* 有新增数据时脉冲：让"数据正在流过这一环"变成看得见的东西 */
+.pl-node.hot { border-color: #38bdf8; box-shadow: 0 0 0 1px rgba(56,189,248,.35), 0 0 14px rgba(56,189,248,.25);
+  transform: translateY(-1px); }
+.pl-node .pulse { position: absolute; top: 7px; right: 7px; width: 6px; height: 6px;
+  border-radius: 50%; background: #38bdf8; opacity: 0; }
+.pl-node.hot .pulse { animation: plpulse 1.1s ease-out infinite; }
+@keyframes plpulse { 0% { opacity: .95; transform: scale(1); }
+  70% { opacity: 0; transform: scale(2.8); } 100% { opacity: 0; transform: scale(2.8); } }
+/* 后期处置这一段（复核/回流）用不同色，强调"检测之后还有闭环" */
+.pl-node.late { background: linear-gradient(180deg, rgba(56,189,248,.07), transparent); }
+.pl-node.late .n { color: #7dd3fc; }
+.pl-arrow { align-self: center; color: #38506e; font-size: 12px; user-select: none; }
+.pl-node .badge-mini { position: absolute; right: 7px; bottom: 6px; font-size: 9.5px;
+  color: var(--muted); }
 .drift-chip.warn b { color: #fcd34d; }
 .drift-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .drift-actions .hint { margin-top: 0; }
