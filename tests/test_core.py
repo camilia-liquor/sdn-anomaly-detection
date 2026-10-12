@@ -271,8 +271,93 @@ def test_adversarial_augment_default_off_and_bounded():
 
 
 # ---------------------------------------------------------------------------
-# 多源证据融合（控制面流表 + 数据面 pcap 双路）
+# 回流重训的**触发策略**（"未知 → 已知"闭环的最后一步）
 # ---------------------------------------------------------------------------
+def test_feedback_retrain_trigger_policy(tmp_path=None):
+    """何时该重训：只看**上次之后新增**的结论，且必须有"新确认的攻击"，还有冷却与坏状态保护。
+
+    这一项守的是触发环节的三个典型错误：
+      ① 按**累计**条数判定 → 越过门槛后每次都重训（在同样的数据上反复训同一个模型）；
+      ② 只看条数不看类型 → 全是 normal（普通误报）时也重训，而该动的是工作点，不是模型；
+      ③ 状态文件坏了照跑 → 在错误游标上重训，等于把同一批样本反复灌进模型。
+    """
+    import json as _json
+    import tempfile
+    import time as _time
+
+    from src.feedback_trigger import (REASON_BAD_STATE, REASON_COOLDOWN, REASON_NO_NEW,
+                                      REASON_OK, REASON_TOO_FEW_ATTACK, RetrainState, decide,
+                                      load_state, mark_ran, new_labels, save_state)
+
+    def rec(rid, verdict):
+        return {"review_id": rid, "verdict": verdict, "labeled_at": 1000 + rid}
+
+    # ① 增量口径：只认比游标更新的记录，同一 id 取最后一次（改判）
+    records = [rec(1, "normal"), rec(2, "attack:Botnet"), rec(2, "normal"), rec(5, "attack:Probe")]
+    fresh = new_labels(records, 1)
+    assert [r["review_id"] for r in fresh] == [2, 5], fresh
+    assert fresh[0]["verdict"] == "normal", "同一 review_id 的改判必须以最后一次为准"
+
+    st = RetrainState()
+    now = 10_000.0
+
+    # ② 新增里没有"新确认的攻击" → 不重训（该动工作点，不是模型）
+    d = decide([rec(1, "normal"), rec(2, "normal"), rec(3, "normal")], st,
+               min_new_labels=2, min_new_attack=1, cooldown_hours=0, now=now)
+    assert d["run"] is False and d["reason"] == REASON_TOO_FEW_ATTACK, d
+    assert d["n_new"] == 3 and d["n_new_attack"] == 0, d
+
+    # ③ 攻击够了但新增条数不够 → 不重训
+    d = decide([rec(1, "attack:Botnet")], st, min_new_labels=5, min_new_attack=1,
+               cooldown_hours=0, now=now)
+    assert d["run"] is False and d["reason"] == REASON_NO_NEW, d
+
+    # ④ 两个门槛都满足 → 触发
+    d = decide([rec(1, "attack:Botnet"), rec(2, "normal"), rec(3, "attack:Probe")], st,
+               min_new_labels=3, min_new_attack=2, cooldown_hours=0, now=now)
+    assert d["run"] is True and d["reason"] == REASON_OK, d
+    assert d["next_review_id"] == 3, d
+
+    # ⑤ 执行后游标前移：**同一批结论不再触发第二次**（累计判定的错误就在这里）
+    mark_ran(st, d, exit_code=0, now=now)
+    assert st.last_review_id == 3 and st.n_runs == 1
+    d2 = decide([rec(1, "attack:Botnet"), rec(2, "normal"), rec(3, "attack:Probe")], st,
+                min_new_labels=3, min_new_attack=2, cooldown_hours=0, now=now + 10)
+    assert d2["run"] is False and d2["n_new"] == 0, d2
+
+    # ⑥ 冷却：新增样本再多，间隔没到也不跑（防止一次告警风暴吃掉全部算力）
+    fresh_batch = [rec(10, "attack:Botnet"), rec(11, "attack:Probe")]
+    d3 = decide(fresh_batch, st, min_new_labels=2, min_new_attack=2, cooldown_hours=24,
+                now=now + 3600)
+    assert d3["run"] is False and d3["reason"] == REASON_COOLDOWN and d3["cooldown_left_h"] > 0, d3
+    d4 = decide(fresh_batch, st, min_new_labels=2, min_new_attack=2, cooldown_hours=24,
+                now=now + 25 * 3600)
+    assert d4["run"] is True, d4
+
+    # ⑦ 状态文件坏掉 → 拒绝自动重训（宁可少跑一次，也不要在错的游标上跑）
+    if tmp_path is None:
+        with tempfile.TemporaryDirectory() as td:
+            p = Path(td) / "retrain_state.json"
+            save_state(p, st)
+            again, ok = load_state(p)
+            assert ok and again.last_review_id == 3 and again.n_runs == 1, again
+            p.write_text("{ 这不是 json", encoding="utf-8")
+            _bad, ok2 = load_state(p)
+            assert ok2 is False, "状态文件损坏必须被识别"
+            d5 = decide(fresh_batch, RetrainState(), min_new_labels=1, min_new_attack=1,
+                        cooldown_hours=0, now=now, state_ok=False)
+            assert d5["run"] is False and d5["reason"] == REASON_BAD_STATE, d5
+
+    # ⑧ 历史记录会被裁剪（状态文件不能无界增长）
+    st2 = RetrainState()
+    for i in range(30):
+        mark_ran(st2, {"n_new": 1, "n_new_attack": 1, "next_review_id": i + 1},
+                 exit_code=0, now=now + i, keep_history=5)
+    assert len(st2.history) == 5 and st2.n_runs == 30, st2.history
+    assert _json.dumps(st2.to_dict()) and st2.last_review_id == 30
+
+
+
 def test_multisource_fusion_policy():
     """双源融合：一路静默否掉另一路是**不允许**的；单路/无路必须如实标注而不是编造。
 

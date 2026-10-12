@@ -63,7 +63,7 @@ then `python app/app.py` for the live dashboard. See sections below for details.
 | 10 | **未知攻击（开集）检测：直面"新型攻击"这个真问题** | 把整类攻击从训练中拿掉再评估：**不做拒识时 100% 的未知攻击被自信地错判成已知类**（U2R→WebAttack 84%、Botnet→Normal 96%，后者连告警都不触发）；加入 OOD 拒识后 U2R 在 1% 误报预算下可检出 **70%**、Botnet **44%**，且已知类精度几乎不受损。诚实指出 **AUROC 会骗人**（三者都在 0.978，但低误报预算下的尾部表现差一个数量级） |
 | 11 | **一条命令看一场攻防 + 直接吃真实抓包** | `python tools/live_demo.py`：一条命令在屏幕上演完"安静→攻击爆发→告警→处置→恢复"，自动出事件报告，**检测时延 0.4 毫秒（8 条流记录）、227/227 个窗口与离线评估逐窗口一致（最大 Δp 4.94e-05）**；`python tools/pcap_to_flows.py`：**零依赖**解析 pcap/pcapng（含 VLAN/SLL/分片/纳秒时基），往返 **17 个特征 × 800 条流逐位一致** |
 | 12 | **可核验的方法学** | 错误分析（**漏报 0**、误报集中在 4 组混淆对、错例特征画像）、性能基准（单窗口 **p50 0.92 ms**）、泄漏诊断（公开数据集 **85% 近似重复**）、多种子均值±标准差、分布漂移测试 |
-| 13 | **一键复现 + 现场演示 + 工程规范** | `python run_all.py` 一条命令跑完全流程；**130 项交付验收自检 + 21 项单元测试 + 58 项 Ryu 行为测试 + 58 项 pcap 测试 + CI**；`python app/app.py` 起一个离线可用的实时大屏（迷你 SOC 控制台：攻击拓扑动画 + 处置控制台 + 审计台账 + 服务状态条） |
+| 13 | **一键复现 + 现场演示 + 工程规范** | `python run_all.py` 一条命令跑完全流程；**130 项交付验收自检 + 22 项单元测试 + 58 项 Ryu 行为测试 + 58 项 pcap 测试 + CI**；`python app/app.py` 起一个离线可用的实时大屏（迷你 SOC 控制台：攻击拓扑动画 + 处置控制台 + 审计台账 + 服务状态条） |
 
 ---
 
@@ -120,7 +120,7 @@ python tools/controller_simulator.py --rows 3000 --batch 50 --policy block --no-
 
 # 7) 生成实验报告 + 交付验收自检
 python tools/make_report.py
-python tests/test_core.py                 # 单元测试（21 项，不依赖 TensorFlow）
+python tests/test_core.py                 # 单元测试（22 项，不依赖 TensorFlow）
 python tests/test_ryu_guard.py            # Ryu 适配层行为测试（58 项，不需要安装 Ryu）
 python tests/test_pcap_tools.py           # pcap 往返一致性测试（58 项，不需要真实抓包）
 python tools/acceptance_check.py          # 130 项全过 = 可以直接提交（须先激活 .venv；缺 flask 会以退出码 2 拒跑）
@@ -142,7 +142,7 @@ python app/app.py            # 浏览器打开 http://127.0.0.1:5000
 > 它们产生的 `*_smoke*` 产物已加入 `.gitignore`，所以在正式实验之后随时可以再跑一次快跑做验证，
 > **工作区不会变脏**。
 >
-> **工程质量**：`python tests/test_core.py` 跑 21 项单元测试（生成器物理自洽性、列名自动识别、
+> **工程质量**：`python tests/test_core.py` 跑 22 项单元测试（生成器物理自洽性、列名自动识别、
 > 行号泄漏回归测试、滑窗纯窗口/多数投票、类别逆频加权、评估口径边界），无需 pytest；
 > `python tests/test_ryu_guard.py` 再跑 58 项 **Ryu 适配层行为测试**（桩件替代 Ryu，验证接口契约、
 > 演练默认、白名单与规则下发路径、**下发后回读校验与失败回滚**），**同样不需要安装 Ryu**；
@@ -970,6 +970,7 @@ generate_normal_traffic/
 │  ├─ service.py               ★ 在线检测服务（滑窗缓冲/确认告警/处置策略/审计台账/批量推理）
 │  ├─ visualize.py             图表（混淆矩阵/ROC/PR/时间轴/注意力/消融）
 │  ├─ fusion.py                ★ 多源证据融合（控制面流表 + 数据面 pcap：对齐/冲突护栏/互补度量）
+│  ├─ feedback_trigger.py      ★ 回流重训的触发策略（增量游标 + 攻击门槛 + 冷却，供定时任务调用）
 │  └─ utils.py                 路径、种子、日志、中文字体
 ├─ app/                        可视化演示大屏 + 检测服务接口（Flask，离线可用）
 │  ├─ app.py                   大屏 + /api/detect|alerts|policy|stats + /metrics
@@ -1016,7 +1017,7 @@ generate_normal_traffic/
 │  ├─ fetch_wheel.py           大 wheel 断点续传下载器（国内镜像卡死时用）
 │  └─ predict_cli.py           对新流量 CSV 做推理（演示"上线怎么用"）
 ├─ tests/
-│  ├─ test_core.py             单元测试（生成器/管线/滑窗/评估口径，21 项，无需 pytest）
+│  ├─ test_core.py             单元测试（生成器/管线/滑窗/评估口径，22 项，无需 pytest）
 │  ├─ test_ryu_guard.py        Ryu 适配层行为测试（桩件替代 Ryu，58 项）
 │  └─ test_pcap_tools.py       pcap 往返一致性测试（58 项）
 ├─ competition/                AIC「AI+学科交叉」参赛材料（技术报告/资源清单/视频脚本/合规自查）
@@ -1307,7 +1308,7 @@ python app/app.py --processed-dir data/processed_sdn --model-tag sdn_ctrl
 - [x] 文档：README、**部署与对接指南 DEPLOYMENT.md**、原代码问题清单、实验报告（自动生成）、答辩要点、配置速查
 - [x] **统一入口 `tools/cida.py`**：把散落的工具与进程收成一条命令 —— `doctor`（环境+产物+数据体检）/ `status`（**全系统状态**：检测服务·适配层心跳·产物是否早于代码·验收·待研判积压·磁盘）/ `demo`（起大屏，自动避开浏览器不安全端口）/ `guard`（起适配层，带白名单与演练检查）/ `verify`（三套测试+130 项自检）/ `inventory`（产物与数据清单，**按体积列出可清候选**，判据是"未被任何文档**或代码**引用"）/ `config`（**生效配置单一视图**，并抓出"设了但没有任何代码读"的环境变量拼写错误）/ `retrain`（**回流触发**：人工研判样本够了才重训出隔离候选模型，不足则拒绝并给出操作步骤）
 - [x] 工具（41 个，含交付验收自检）：环境自检、无 TF 自检、重新评估、漂移测试、工作点选择、运维换算、**窗口消融**、**困难基准复测**、跨域诊断、开集评估与阈值标定、实况演示、多攻击连演、逐类在线指标、pcap 转换、报告生成、命令行推理、**一页纸/运维 SLO 卡**、**真实数据集下载与体检**、**真实数据无泄漏评测**、**回流重训（人工研判 → 训练样本）**、**统一入口 cida**、大文件下载器
-- [x] 测试：21 项单元测试 + 58 项 Ryu 行为测试 + **58 项 pcap 测试** + **130 项交付验收自检** + CI
+- [x] 测试：22 项单元测试 + 58 项 Ryu 行为测试 + **58 项 pcap 测试** + **130 项交付验收自检** + CI
 
 > **目录体积提示**：`data/`（原始 CSV + 预处理张量，约 200MB）、`artifacts/`（模型，约 190MB，
 > 其中未剪枝的 ET/RF 基线占了 140MB）、`.venv/`（依赖，约 1.8GB）都是**可再生成的**，

@@ -23,9 +23,9 @@ python tools/cida.py verify      # 三套测试 + 130 项交付自检 —— 改
 | 详细版/附录 | `competition/02_技术报告.md` 与 `_精简稿.md`（**已不再是提交主体**） |
 | 统一入口 | `python tools/cida.py {doctor,status,demo,guard,verify,inventory,config,retrain}` |
 | 工具数 | **40**（新增 `tools/*.py` 会触发约 6 处文档口径级联，优先在**已有文件内**改动） |
-| 测试项数 | 单元 21 / Ryu 58 / pcap 58 / 验收自检 130 |
+| 测试项数 | 单元 22 / Ryu 58 / pcap 58 / 验收自检 130 |
 
-## 2. 体系缺口：①②⑤ 已完成；④ 机制已落地（实测数据待产）；③ 未做
+## 2. 体系缺口：①②④⑤ 已完成；只剩 ③（漏报代价换算）
 
 > 来源：`competition/06_检测与处置体系.md` §8「仍在的缺口」。**已完成的不要重做**，直接看下一节。
 
@@ -83,6 +83,13 @@ python tools/cida.py verify      # 三套测试 + 130 项交付自检 —— 改
   - ⚠️ 结论口径：双视角来自**同一条仿真流的两种投影**，只能证明"机制可用、互补与冲突会被如实标出"，
     **不能当真实环境数字**；报告里必须写清这一点
 
+### ✅ 原清单第 1 项：回流重训的**触发自动化**（本轮完成）
+- `src/feedback_trigger.py`：判定策略（纯函数）+ 状态（`results/retrain_state.json`），
+  判据 = 新增结论 ≥10 **且** 其中新确认攻击 ≥3 **且** 距上次 ≥24h；坏状态**拒绝自动跑**
+- 入口：`python tools/cida.py retrain --auto`（未达标**安静退出**，退出码 0 → 定时任务可反复调用）
+- 为什么看「新增」而不是累计：累计越过门槛后会每次都重训同一批数据
+- 回归测试：`tests/test_core.py::test_feedback_retrain_trigger_policy`（单元测试 21 → **22**）
+- 定时任务配方见 `DEPLOYMENT.md` §2.5（systemd timer / Windows 计划任务）
 ### ⏳ ③ 漏报代价换算（影响面）　【价值中 / 成本中 / **风险高**（若改主流程）】
 - 改 `src/evaluate.py::online_alarm_evaluation`：记录**被漏掉片段的持续时长**并换算影响面
 - ⚠️ **重跑会改动 `results/summary.json` 与 `artifacts/main_model.json` 的 sha256**
@@ -115,6 +122,6 @@ python tools/cida.py verify      # 三套测试 + 130 项交付自检 —— 改
 
 ## 5. 新会话开场白（可直接复制）
 
-> 读 `NEXT_STEPS.md`，然后按第 2 节：先把 **④ 的双视角实测数据**跑出来（机制已在 `src/fusion.py`，只差实验入口），
+> 读 `NEXT_STEPS.md`，然后按第 2 节继续做 **③ 漏报代价换算**（建议走只读派生分析那条路，不破产物守护）：
 > 改完跑 `python tools/cida.py verify`，并同步受影响的文档口径。
-> 再决定 ③（若要动主流程会破产物 sha256 守护；只做派生分析则不用）。已完成的是 ①②⑤ 与 ④ 的机制部分，**不要重做**。
+> 已完成的是 ①②④⑤ 与「回流触发自动化」，**不要重做**；③ 若动主流程会破产物 sha256 守护，只做派生分析则不用。

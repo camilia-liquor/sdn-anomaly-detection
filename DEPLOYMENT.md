@@ -78,7 +78,7 @@ python tools/check_env.py
 
 ```bash
 python tools/smoke_test.py        # 冒烟：小样本全链路跑通（约 1 分钟，产物写在 _smoke 隔离目录）
-python tests/test_core.py         # 单元测试：21 个用例，覆盖数据切分/窗口/泄漏防护/复核闭环
+python tests/test_core.py         # 单元测试：22 个用例，覆盖数据切分/窗口/泄漏防护/复核闭环
 python tests/test_ryu_guard.py    # Ryu 适配层行为测试：58 个用例，无需安装 Ryu（见 3.5）
 python tests/test_pcap_tools.py   # pcap 解析往返一致性：58 个用例，无需真实抓包
 python tools/acceptance_check.py  # 交付验收：文件齐全性 + 指标复算 + 在线接口真实调用（130 项）
@@ -307,7 +307,43 @@ curl -s http://127.0.0.1:5000/api/stats | python -c "import json,sys;print(json.
 > `sdn_ids_autotighten_total`（自动上调次数）、`sdn_ids_threshold`（当前阈值）。
 > 若这三个数一起往上走而漏报也在涨，说明该重新标定工作点，而不是继续让它放松。
 
-### 2.5 持续运行建议
+### 2.5 回流重训的定时触发（可选，但推荐）
+
+「未知 → 已知」闭环的最后一步是**及时重训**。人工记得住一次两次，记不住三个月——所以触发条件被做成了
+**可判定、可反复调用**的命令：`python tools/cida.py retrain --auto`。判据写在 `src/feedback_trigger.py`：
+
+| 条件 | 默认 | 为什么 |
+|---|---|---|
+| 上次重训后**新增**结论条数 | ≥ `--min-new 10` | 样本太少重训没有统计意义；看「新增」而不是累计，否则越过门槛后会每次都重训同一批数据 |
+| 其中**新确认为攻击**的条数 | ≥ `--min-new-attack 3` | 闭环的价值是把「未知」变成「已知攻击」；全是 `normal` 时该动的是工作点（`autotighten`），不是模型 |
+| 距上次重训时间 | ≥ `--cooldown-hours 24` | 防止一次告警风暴吃掉全部算力 |
+| 状态文件可读 | — | 状态损坏时**拒绝自动重训**（宁可少跑一次，也不要在错的游标上跑） |
+
+满足才训练，且候选模型落在 `artifacts/feedback/`，**绝不覆盖主模型**（是否替换由人决定）；
+不满足则**安静退出**（退出码 0），因此可以放心地挂到定时任务上。
+
+```bash
+# ① 手动看一眼"现在该不该跑"（把门槛调高 = 只做判定，不训练）
+python tools/cida.py retrain --auto --min-new 999999
+
+# ② Linux：systemd timer（每天 03:30 检查一次）
+#    /etc/systemd/system/cida-retrain.service → [Service] Type=oneshot
+#        WorkingDirectory=/opt/cida
+#        ExecStart=/opt/cida/.venv/bin/python tools/cida.py retrain --auto
+#    /etc/systemd/system/cida-retrain.timer  → [Timer] OnCalendar=*-*-* 03:30:00 / Persistent=true
+#    → systemctl enable --now cida-retrain.timer
+
+# ③ Windows：任务计划程序（每天 03:30）
+schtasks /create /tn "CIDA 回流重训" /sc daily /st 03:30 ^
+  /tr "cmd /c cd /d C:\path\to\project && .venv\Scripts\python.exe tools\cida.py retrain --auto"
+```
+
+> 为什么不做成常驻守护进程：这是**低频、可重入、失败可重试**的批处理任务，交给系统调度器更稳
+> （不占常驻内存、不会被检测服务的重启带崩、日志天然进系统日志），检测服务本身不需要知道它存在。
+> 状态文件 `results/retrain_state.json` 记录游标（`last_review_id`）、冷却起点与历史，
+> 出问题时能直接回答"上次什么时候跑的、吃了多少新样本、退出码是什么"。
+
+### 2.6 持续运行建议
 
 * **进程守护**：Windows 用 `nssm`/计划任务，Linux 用 `systemd`，关键字都是「工作目录 = 项目根目录」。
 * **日志**：服务写 `logs/`；告警审计写 `results/audit_alerts.jsonl`（一行一条 JSON，可直接被 ELK 采集）。

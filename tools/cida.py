@@ -13,6 +13,7 @@
     python tools/cida.py inventory   产物与数据清单（当前有效 / 可清候选，按体积）
     python tools/cida.py config      生效配置单一视图 + 抓出"设了但没人读"的环境变量
     python tools/cida.py retrain     回流触发：人工研判样本够了才重训出隔离的候选模型
+    python tools/cida.py retrain --auto   增量触发（定时任务用；未达标则安静退出）
 
 设计取舍：
   · doctor/verify **不重写逻辑**，直接调用既有工具（避免出现"两份实现、只改一处"——
@@ -400,13 +401,51 @@ def cmd_retrain(args) -> int:
         return sum(1 for line in p.read_text(encoding="utf-8", errors="replace").splitlines()
                    if line.strip())
 
+    def _records(p: Path) -> list:
+        out = []
+        if not p.exists():
+            return out
+        for line in p.read_text(encoding="utf-8", errors="replace").splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                out.append(json.loads(line))
+            except json.JSONDecodeError:
+                continue
+        return out
+
     n_fb, n_ev = _count(fb), _count(ev)
     print("=" * 74)
     print("回流触发检查（未知 → 已知 闭环的最后一步）")
     print("=" * 74)
     print(f"\n人工研判结论 {n_fb} 条（{fb.name}）")
     print(f"研判证据     {n_ev} 条（{ev.name}）")
-    print(f"重训门槛     {args.min_labels} 条")
+    print(f"重训门槛     {args.min_labels} 条（累计）")
+
+    # ---------------- 增量触发（--auto，供定时任务反复调用） ----------------
+    auto = bool(getattr(args, "auto", False))
+    state_path = Path(getattr(args, "state", None) or (RESULT_DIR / "retrain_state.json"))
+    decision = None
+    if auto:
+        from src.feedback_trigger import (REASON_OK, decide, load_state, mark_ran,  # noqa: F401
+                                         save_state)
+        state, ok = load_state(state_path)
+        decision = decide(_records(fb), state,
+                          min_new_labels=int(args.min_new),
+                          min_new_attack=int(args.min_new_attack),
+                          cooldown_hours=float(args.cooldown_hours))
+        if not ok:
+            decision["reason"] = "bad_state"
+        print(f"\n[增量判定] 上次重训游标 review_id={decision['since_review_id']}、"
+              f"已跑 {decision['n_runs']} 次")
+        print(f"[增量判定] 新增结论 {decision['n_new']} 条（其中确认攻击 {decision['n_new_attack']} 条）"
+              f"；门槛 新结论≥{decision['min_new_labels']} 且 新攻击≥{decision['min_new_attack']}")
+        if decision["cooldown_left_h"] > 0:
+            print(f"[增量判定] 冷却中，还需 {decision['cooldown_left_h']:.1f} 小时")
+        if not decision["run"]:
+            print(f"\n— 本轮不重训（原因：{decision['reason']}）。定时任务可以安全地反复调用本命令。")
+            return 0
 
     if n_fb < args.min_labels:
         print(f"\n✗ **样本不足，拒绝重训**（{n_fb} < {args.min_labels}）")
@@ -425,9 +464,17 @@ def cmd_retrain(args) -> int:
     argv = _py("tools/retrain_from_feedback.py")
     if not args.no_train:
         argv.append("--retrain")
-    print(f"\n✓ 样本充足（{n_fb} ≥ {args.min_labels}），开始"
+    print(f"\n✓ 触发条件满足，开始"
           f"{'训练候选模型' if not args.no_train else '只构建数据集（--no-train）'}…\n")
     rc = _run("回流重训", argv)
+
+    if auto and decision is not None:
+        from src.feedback_trigger import load_state as _load, mark_ran, save_state
+        state, _ok = _load(state_path)
+        save_state(state_path, mark_ran(state, decision, exit_code=rc))
+        print(f"\n状态已更新：{state_path}"
+              f"（游标 review_id={decision['next_review_id']}，第 {state.n_runs} 次触发）")
+
     if rc == 0 and not args.no_train:
         print("\n候选模型已产出在 artifacts/feedback/ —— **主模型未被改动**。")
         print("下一步：用同一套口径评测候选模型，通过后再决定是否替换：")
@@ -457,6 +504,16 @@ def main(argv=None) -> int:
     r.add_argument("--min-labels", type=int, default=20,
                    help="重训门槛：人工研判结论少于该数量则拒绝（默认 20）")
     r.add_argument("--no-train", action="store_true", help="只构建回流数据集，不训练")
+    # ---- 增量触发（供定时任务反复调用；判据见 src/feedback_trigger.py）----
+    r.add_argument("--auto", action="store_true",
+                   help="增量模式：只看**上次重训之后新增**的结论，未达标则安静退出（定时任务用）")
+    r.add_argument("--min-new", type=int, default=10, help="--auto：新增结论门槛（默认 10）")
+    r.add_argument("--min-new-attack", type=int, default=3,
+                   help="--auto：新增结论里**确认为攻击**的门槛（默认 3）")
+    r.add_argument("--cooldown-hours", type=float, default=24.0,
+                   help="--auto：两次重训之间的最短间隔小时数（默认 24）")
+    r.add_argument("--state", default=None,
+                   help="触发状态文件（默认 results/retrain_state.json）")
 
     args = p.parse_args(argv)
     return {"doctor": cmd_doctor, "status": cmd_status, "demo": cmd_demo,
