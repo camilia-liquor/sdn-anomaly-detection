@@ -57,6 +57,7 @@ import os
 import time
 import urllib.error
 import urllib.request
+from pathlib import Path
 
 from ryu.app import simple_switch_13
 from ryu.controller import ofp_event
@@ -107,6 +108,7 @@ class GuardSwitch(simple_switch_13.SimpleSwitch13):
         self.blocked: dict[str, float] = {}
         # 每个源当前生效的动作级别：幂等要能区分"重复的同级告警"与"升级为更强动作"
         self.blocked_action: dict[str, str] = {}
+        self._n_handled = 0          # 已处理告警数（进心跳，供 cida status 显示）
         os.makedirs(os.path.dirname(self.audit_path) or ".", exist_ok=True)
         self.logger.info("[guard] 检测服务=%s 真实处置=%s 白名单=%s",
                          self.detect_url, self.execute, sorted(self.whitelist) or "（空，建议至少加入控制器与管理网段）")
@@ -126,11 +128,38 @@ class GuardSwitch(simple_switch_13.SimpleSwitch13):
             self.logger.info("[guard] 交换机下线：%016x", dp.id)
 
     def _monitor(self):
-        """周期性拉取流表统计（周期与控制器采集策略一致）。"""
+        """周期性拉取流表统计（周期与控制器采集策略一致）+ 写心跳。"""
         while True:
             for dp in list(self.datapaths.values()):
                 self._request_stats(dp)
+            self._write_heartbeat()
             hub.sleep(10)
+
+    def _write_heartbeat(self):
+        """写心跳文件，让 `python tools/cida.py status` 能判断适配层是否还活着。
+
+        为什么用心跳文件而不是开 HTTP 端口：适配层是跑在另一个进程的 Ryu 应用，
+        为"被监控"而多开一个监听面，等于白送一份攻击面；心跳文件足够判断存活。
+        """
+        try:
+            now = time.time()
+            data = {
+                "ts": now, "pid": os.getpid(),
+                "execute": bool(self.execute),
+                "block_seconds": int(self.block_seconds),
+                "whitelist": sorted(self.whitelist),
+                "datapaths": [f"{d:016x}" for d in self.datapaths],
+                "blocked_now": sum(1 for exp in self.blocked.values() if exp > now),
+                "alerts_handled": int(getattr(self, "_n_handled", 0)),
+                "detect_url": self.detect_url,
+            }
+            p = Path(os.path.join("results", "guard_heartbeat.json"))
+            p.parent.mkdir(parents=True, exist_ok=True)
+            tmp = p.with_suffix(".tmp")
+            tmp.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+            tmp.replace(p)          # 原子替换：避免 status 读到写了一半的文件
+        except Exception as exc:  # noqa: BLE001 - 心跳失败绝不能影响处置主链路
+            self.logger.debug("[guard] 心跳写入失败：%s", exc)
 
     def _request_stats(self, datapath):
         parser = datapath.ofproto_parser
@@ -277,6 +306,7 @@ class GuardSwitch(simple_switch_13.SimpleSwitch13):
                             record["pred_class"], float(record["p_attack"] or 0), src, action,
                             "（已下发）" if executed else ("（封禁窗口内，幂等抑制）" if suppressed
                                                           else "（仅记录）"))
+        self._n_handled = int(getattr(self, "_n_handled", 0)) + 1
 
     def _meter_or_limit(self, datapath, src):
         """限速：下发 Meter **并把流表项挂到这个 Meter 上**，失败则退化为丢弃。
