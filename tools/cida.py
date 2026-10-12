@@ -10,7 +10,8 @@
     python tools/cida.py demo        起演示大屏（自动避开浏览器不安全端口）
     python tools/cida.py guard       起 Ryu 适配层（带白名单与演练模式检查）
     python tools/cida.py verify      三套测试 + 130 项交付自检
-    python tools/cida.py inventory   产物与数据清单（哪些当前有效、哪些可清）
+    python tools/cida.py inventory   产物与数据清单（当前有效 / 可清候选，按体积）
+    python tools/cida.py config      生效配置单一视图 + 抓出"设了但没人读"的环境变量
 
 设计取舍：
   · doctor/verify **不重写逻辑**，直接调用既有工具（避免出现"两份实现、只改一处"——
@@ -241,33 +242,129 @@ def cmd_verify(args) -> int:
     return rc
 
 
+_DOC_CACHE: dict = {}
+
+
+def _doc_blob() -> str:
+    """把全部文档读成一个大字符串（只读一次），用于判断某个目录名是否被引用。"""
+    if "blob" not in _DOC_CACHE:
+        parts = []
+        for name in ("README.md", "DEPLOYMENT.md", "CONTRIBUTING.md", "run_all.py"):
+            p = ROOT / name
+            if p.exists():
+                parts.append(p.read_text(encoding="utf-8", errors="replace"))
+        for sub in ("docs", "competition"):
+            for p in (ROOT / sub).rglob("*.md"):
+                parts.append(p.read_text(encoding="utf-8", errors="replace"))
+        _DOC_CACHE["blob"] = "\n".join(parts)
+    return _DOC_CACHE["blob"]
+
+
 def cmd_inventory(args) -> int:
-    """产物与数据清单：哪些当前有效、哪些可清（②先给最小可用版）。"""
-    print("=" * 74)
-    print("产物与数据清单")
-    print("=" * 74)
+    """产物与数据清单：哪些当前有效、哪些可清。
 
-    def scan(p: Path, note: str, keep: list[str] | None = None) -> None:
-        if not p.exists():
-            print(f"\n{note}：不存在")
-            return
-        subs = sorted([d for d in p.iterdir() if d.is_dir()], key=lambda d: -d.stat().st_mtime)
-        print(f"\n{note}（{len(subs)} 个目录，按最近修改排序，取前 12）")
-        for d in subs[:12]:
-            _, age = _age(d)
-            mark = "★" if (keep and d.name in keep) else " "
-            print(f"  {mark} {d.name:38} {age:>10}")
-
-    keep_art = []
+    "可清"的判据不是凭感觉，而是**该目录名没被任何文档引用**——被引用的删掉就会让文档失效。
+    """
+    print("=" * 74)
+    print("产物与数据清单     ★ 当前主模型相关   · 文档有引用   - 未被任何文档引用（可清候选）")
+    print("=" * 74)
+    blob = _doc_blob()
     ptr = ARTIFACT_DIR / "main_model.json"
-    if ptr.exists():
-        keep_art = [str((load_json(ptr) or {}).get("tag") or "")]
-    print(f"\n★ = 当前主模型相关（{keep_art or '未记录'}）；其余多为消融/对标/试跑的中间产物")
-    scan(ARTIFACT_DIR, "artifacts/（模型产物）", keep_art)
-    scan(ROOT / "data", "data/（数据集与预处理产物）", ["processed", "real", "raw"])
+    keep = [str((load_json(ptr) or {}).get("tag") or "")] if ptr.exists() else []
+    if keep and keep[0]:
+        print(f"\n当前主模型 tag：{keep[0]}（来自 artifacts/main_model.json）")
+
+    for root, label, keepnames in (
+        (ARTIFACT_DIR, "artifacts/（模型产物）", keep),
+        (ROOT / "data", "data/（数据集与预处理产物）", ["processed", "real", "raw"]),
+    ):
+        if not root.exists():
+            print(f"\n{label}：不存在")
+            continue
+        rows = []
+        orphan = 0
+        for d in [x for x in root.iterdir() if x.is_dir()]:
+            sz = sum(f.stat().st_size for f in d.rglob("*") if f.is_file())
+            if d.name in keepnames:
+                mark = "★"
+            elif d.name in blob:
+                mark = "·"
+            else:
+                mark = "-"
+                orphan += 1
+            rows.append((sz, d.name, mark))
+        rows.sort(key=lambda r: -r[0])
+        print(f"\n{label}  共 {len(rows)} 个目录，总 {human_bytes(sum(r[0] for r in rows))}；"
+              f"其中 {orphan} 个未被任何文档引用")
+        print("  按体积取前 12：")
+        for sz, name, mark in rows[:12]:
+            print(f"    {mark} {name:40} {human_bytes(sz):>10}")
+        if orphan:
+            small = [r for r in rows if r[2] == "-"]
+            print(f"  可清候选合计 {human_bytes(sum(r[0] for r in small))}"
+                  f"（{len(small)} 个；删前请再确认一次引用）")
+
     print(f"\nresults/ 共 {len(list(RESULT_DIR.glob('*')))} 个条目")
-    print("  要清理时请先确认没有文档引用：grep -r \"<文件名>\" docs competition README.md")
-    print("  约定：results/*.md 与 *.json 多为交付产物，*_smoke* / _* 为试跑中间产物（已 gitignore）")
+    print("  约定：results/*.md 与 *.json 多为交付产物；*_smoke* / _* 为试跑中间产物（已 gitignore）")
+    print("  清理前请确认：grep -r \"<目录名>\" docs competition README.md")
+    return 0
+
+
+# 检测服务/适配层实际读取的环境变量（用于发现"设了但没人读"的拼写错误）
+SERVICE_ENV = {
+    "HOST", "PORT", "PROCESSED_DIR", "MODEL_TAG", "POLICY_ACTION", "DRY_RUN", "THRESHOLD",
+    "CONFIRM_WINDOWS", "WHITELIST", "UNKNOWN_THRESHOLD", "UNKNOWN_ACTION", "OBSERVE_MARGIN",
+    "API_TOKEN", "AUDIT_MAX_BYTES", "AUDIT_BACKUPS", "REVIEW_EVIDENCE",
+}
+
+
+def cmd_config(args) -> int:
+    """把"当前生效配置"印在一处，并抓出**设了但没有任何代码读**的环境变量。
+
+    ④ 先交付"单一视图 + 漂移检测"，而不是立刻统一四套机制——后者是大重构，
+    而"看不见生效配置、拼错了变量名却毫无反应"才是眼下真会咬人的地方。
+    """
+    import dataclasses
+
+    from src.config import Config
+    cfg = Config()
+    fields = {f.name for f in dataclasses.fields(cfg)}
+
+    print("=" * 74)
+    print("CIDA 生效配置（优先级：代码默认值 ← configs/*.json ← CIDA_* 环境变量）")
+    print("=" * 74)
+
+    env = {k: v for k, v in os.environ.items() if k.startswith("CIDA_")}
+    print(f"\n环境变量：{len(env)} 个 CIDA_*")
+    if not env:
+        print("  （未设置任何 CIDA_*，全部取默认值）")
+    dead = []
+    for k, v in sorted(env.items()):
+        key = k[len("CIDA_"):].upper()
+        hit = next((f for f in fields if f.upper() == key), None)
+        if hit:
+            print(f"  ✅ {k} = {v}    → Config.{hit}")
+        elif key in SERVICE_ENV:
+            print(f"  ✅ {k} = {v}    → 检测服务/适配层参数（不在 Config 上）")
+        else:
+            dead.append(k)
+            print(f"  ⚠️  {k} = {v}    → **没有任何代码读它**（拼写错误？或已废弃？）")
+    if dead:
+        print(f"\n  ⚠️  有 {len(dead)} 个变量不会被任何代码读取：{dead}")
+        print("     这类变量最危险：设了以为生效，实际什么都没有发生。")
+
+    keys = (args.keys.split(",") if args.keys else
+            "seed,window_size,model_variant,train_epochs,report_threshold,"
+            "online_confirm_windows,split_mode".split(","))
+    print("\n关键 Config 字段（代码默认值；被 configs/*.json 覆盖时不在此体现）：")
+    for k in keys:
+        k = k.strip()
+        if k in fields:
+            print(f"  {k:26} = {getattr(cfg, k)}")
+
+    presets = sorted(p.name for p in (ROOT / "configs").glob("*.json"))
+    print(f"\n预设：{presets or '（无）'}   用法：python run_all.py --config configs/full.json")
+    print("提示：服务侧策略的**实时**值请看 python tools/cida.py status 或 GET /api/policy。")
     return 0
 
 
@@ -285,11 +382,14 @@ def main(argv=None) -> int:
     g.add_argument("--whitelist", default="", help="永不处置的源 IP，逗号分隔")
     g.add_argument("--execute", action="store_true", help="开启真实处置（默认仅演练）")
     sub.add_parser("verify", help="三套测试 + 交付验收自检")
-    sub.add_parser("inventory", help="产物与数据清单（哪些当前有效、哪些可清）")
+    sub.add_parser("inventory", help="产物与数据清单（当前有效 / 可清候选）")
+    c = sub.add_parser("config", help="生效配置单一视图 + 抓出没人读的环境变量")
+    c.add_argument("--keys", default="", help="要额外打印的 Config 字段，逗号分隔")
 
     args = p.parse_args(argv)
     return {"doctor": cmd_doctor, "status": cmd_status, "demo": cmd_demo,
-            "guard": cmd_guard, "verify": cmd_verify, "inventory": cmd_inventory}[args.cmd](args)
+            "guard": cmd_guard, "verify": cmd_verify, "inventory": cmd_inventory,
+            "config": cmd_config}[args.cmd](args)
 
 
 if __name__ == "__main__":
