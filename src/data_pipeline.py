@@ -47,6 +47,18 @@ BINARY_NORMAL = "Normal"
 NORMAL_CANDIDATES = ["Normal", "normal", "Normal.", "normal.", "BENIGN", "Benign", "benign", "0"]
 
 
+def inverse_frequency_weights(y_mc, n_classes: int) -> dict[int, float]:
+    """按标签频次做逆频加权（攻击类样本远少于正常流量，必须加权）。
+
+    单独抽成模块级函数（而不是只挂在 `PreparedData` 上）：**对抗训练增广后的标签**
+    也要按同一公式加权，公式若在校验/训练两处各写一份，迟早会出现"只改了一处"的分叉。
+    """
+    counts = np.bincount(np.asarray(y_mc), minlength=int(n_classes)).astype(np.float64)
+    counts[counts == 0] = 1.0
+    total = counts.sum()
+    return {i: float(total / (int(n_classes) * counts[i])) for i in range(int(n_classes))}
+
+
 # ======================================================================================
 # 读取
 # ======================================================================================
@@ -250,10 +262,7 @@ class PreparedData:
 
     def class_weight(self) -> dict[int, float]:
         """按训练集频次做逆频加权（攻击类样本远少于正常流量，必须加权）。"""
-        counts = np.bincount(self.y_train_mc, minlength=self.n_classes).astype(np.float64)
-        counts[counts == 0] = 1.0
-        total = counts.sum()
-        return {i: float(total / (self.n_classes * counts[i])) for i in range(self.n_classes)}
+        return inverse_frequency_weights(self.y_train_mc, self.n_classes)
 
     def summary(self) -> dict:
         # 摘要里不带每个窗口的起始行号（那只是实现细节，写进日志会刷屏）

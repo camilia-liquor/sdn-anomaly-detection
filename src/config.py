@@ -123,6 +123,15 @@ class Config:
     use_class_weight: bool = True    # 类别不平衡：攻击类样本远少于正常流量
     use_balanced_batch: bool = False # 训练集过采样到类别均衡（可选）
     binary_loss_weight: float = 0.3  # 多分类 + 二分类联合损失中，二分类头权重
+    # ---------------- 对抗训练（可选，默认关）----------------
+    # 白盒定向扰动能把逃逸率推到 73%（见 results/adversarial_eval.md），对抗训练是已被实测验证的缓解手段
+    # （ε=0.2 处宏 F1 收益 +0.1237、干净精度代价 −0.0069，按事前判据「收益>代价」划算）。
+    # 但它**默认不开**：0 = 关，主流程的行为与既有产物 sha256 完全不变（不破产物守护）。
+    # >0 时（例如 --set adv_train_eps=0.2）：先用 adv_train_warmup_epochs 轮暖机——随机初始化模型
+    # 没有可用的梯度方向，直接对它做 FGSM 等于加噪声；再生成定向对抗样本与干净样本混合训练。
+    # 威胁模型与评测口径一致（白盒、特征空间、L∞ 有界、目标是把样本推向 Normal）。
+    adv_train_eps: float = 0.0
+    adv_train_warmup_epochs: int = 2
 
     # ---------------- 评估 ----------------
     report_threshold: float = 0.5    # 二分类判定阈值

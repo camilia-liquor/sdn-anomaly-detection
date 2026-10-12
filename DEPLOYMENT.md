@@ -78,7 +78,7 @@ python tools/check_env.py
 
 ```bash
 python tools/smoke_test.py        # 冒烟：小样本全链路跑通（约 1 分钟，产物写在 _smoke 隔离目录）
-python tests/test_core.py         # 单元测试：18 个用例，覆盖数据切分/窗口/泄漏防护/复核闭环
+python tests/test_core.py         # 单元测试：20 个用例，覆盖数据切分/窗口/泄漏防护/复核闭环
 python tests/test_ryu_guard.py    # Ryu 适配层行为测试：34 个用例，无需安装 Ryu（见 3.5）
 python tests/test_pcap_tools.py   # pcap 解析往返一致性：58 个用例，无需真实抓包
 python tools/acceptance_check.py  # 交付验收：文件齐全性 + 指标复算 + 在线接口真实调用（130 项）
@@ -120,6 +120,11 @@ python app/app.py --host 0.0.0.0 --port 5000
 | `CIDA_AUDIT_MAX_BYTES` | — | `20000000` | 审计台账/回流文件单文件上限，超过即轮转 |
 | `CIDA_AUDIT_BACKUPS` | — | `3` | 轮转保留的历史文件数 |
 | `CIDA_REVIEW_EVIDENCE` | — | `1`（开） | 是否把研判队列的窗口特征落盘（`review_evidence.jsonl`）。关掉则人工标注无法用于重训 |
+| `CIDA_AUTOTIGHTEN` | — | `0`（**关**） | 自动放松（自动降级）：人工复核结论以 `normal` 为主时自动上调判定阈值。**默认关**，开启前先看 5. 安全清单 |
+| `CIDA_AUTOTIGHTEN_MIN_LABELED` | — | `10` | 自动放松的样本门槛：人工已给结论至少多少条才允许调整 |
+| `CIDA_AUTOTIGHTEN_NORMAL_RATIO` | — | `0.8` | 自动放松的占比门槛：结论里 `normal` 占比达到多少才动手 |
+| `CIDA_AUTOTIGHTEN_STEP` | — | `0.05` | 每次上调的幅度（0.05 = 阈值 +0.05） |
+| `CIDA_AUTOTIGHTEN_MAX` | — | `0.9` | 阈值上限（硬护栏：不允许推到 1.0，那等于关掉检测） |
 
 > ⚠️ **两个"演练开关"互不相关，必须一起设置 —— 否则会出现"账实不符"。**
 > 检测服务的 `CIDA_DRY_RUN` 与 Ryu 适配层的 `--execute` 是**两个独立开关**：
@@ -242,6 +247,9 @@ curl -X POST http://127.0.0.1:5000/api/policy \
 | `dry_run` | `true` 时只记录不真改流表 | — | 演练必开 |
 | `unknown_threshold` | 多分类概率**熵**超过它就标记为「未知形态」（`Unknown`） | 越高越保守（越少被标未知） | **默认 0 = 关闭**；要用先按下面标定 |
 | `whitelist` | 永不处置的源 IP 列表 | — | **必须**含控制器管理口、网关、监控机 |
+| `autotighten` | 自动放松（自动降级）总开关：人工复核结论以 `normal` 为主时自动上调阈值 | 越长越容易自动变钝 | **默认 `false`**；要开先满足 5. 安全清单的前置条件 |
+| `autotighten_min_labeled` / `_normal_ratio` | 触发门槛：已研判结论条数 / 其中 `normal` 占比 | 越大越难触发（更保守） | 默认 10 条 / 80% |
+| `autotighten_step` / `_max_threshold` | 每次上调幅度 / 阈值上限 | 越大越快变钝 | 默认 +0.05 / 上限 0.9 |
 
 #### 「未知形态」标记怎么开（可选能力）
 
@@ -272,6 +280,32 @@ curl -X POST http://127.0.0.1:5000/api/policy -H "Content-Type: application/json
 > 跨场景 AUROC ≈ 0.978，但**留出的攻击越像正常流量，低误报预算下越检不出**（留出 Botnet 时 1% 预算 44.3%、
 > 0.1% 预算 0.9%）。因此**不要用它替代二分类告警**，它是叠加在告警之上的一层"要不要人工研判"的提示；
 > 换网络/换采集口径后阈值必须重新标定。
+
+#### 自动放松（自动降级）怎么开（可选能力，默认关）
+
+系统默认**只会自动升级**（同源反复告警把动作从限速抬到阻断），长期高误报没有自愈路径。复核闭环建好后，
+人工结论里"判为正常"的占比本身就是**工作点是否偏松**的直接证据——自动放松就是把这份证据接进阈值：
+
+```bash
+# ① 打开（默认关；门槛见 deploy/cida-detect.env 的 CIDA_AUTOTIGHTEN_*）
+curl -X POST http://127.0.0.1:5000/api/policy -H "Content-Type: application/json" \
+     -d "{\"autotighten\": true}"
+
+# ② 看它有没有动、为什么没动（"最近一次判定"直接可查）
+curl -s http://127.0.0.1:5000/api/stats | python -c "import json,sys;print(json.load(sys.stdin)['autotighten_last'])"
+
+# ③ 关闭：设回 false（字符串 "0"/"false" 也认）
+```
+
+规则（写死在代码里，不接受"看着差不多"）：已研判结论 ≥ `autotighten_min_labeled` 条、其中 `normal` 占比
+≥ `autotighten_normal_ratio` → 阈值上调 `autotighten_step`；**上限** `autotighten_max_threshold`（默认 0.9，
+不允许推到 1.0——那等于把检测关掉）。它**只认人工结论**：未研判的告警不计入，模型自己说"我误报了"也不计入。
+
+> ⚠️ 这是**系统自己改工作点**的动作，所以默认关、有门槛、有上限、每次调整都写审计台账
+> （`results/audit_alerts.jsonl` 里 `event=autotighten` 的记录带 `n_labeled` / `n_normal` / 前后阈值）。
+> 与之配套的观测指标：`sdn_ids_review_labeled_normal_total`（人工判为误报的累计条数）、
+> `sdn_ids_autotighten_total`（自动上调次数）、`sdn_ids_threshold`（当前阈值）。
+> 若这三个数一起往上走而漏报也在涨，说明该重新标定工作点，而不是继续让它放松。
 
 ### 2.5 持续运行建议
 
@@ -400,6 +434,9 @@ python tools/controller_simulator.py --rows 3000 --batch 50 --policy block --no-
       （台账与回流文件只追加不删除，**不轮转会把磁盘写满**）。
 - [ ] **内存不会只涨不降**：确认长期运行下 RSS 稳定（告警/观察池/回看缓冲/研判队列均为有界容器，
       累计量走计数器 `alerts_total`，可在 `/metrics` 观察）。
+- [ ] **自动放松有人盯着**：`CIDA_AUTOTIGHTEN` 保持 `0`（默认关），除非满足两个前提——① 复核结论确实有人
+      认真在看（不是应付式点"正常"）；② 已接受"阈值会被系统自己上调"。开启后每次调整都写进审计台账
+      （`event=autotighten`）并暴露为 `sdn_ids_autotighten_total` / `sdn_ids_threshold`，**值班室要能发现"检测在变钝"**。
 - [ ] **降级预案**：检测服务不可达时，控制器按 3.2 的实现只会记日志、不改流表（**fail-open，不会因为算法挂了把网络搞断**）。
 - [ ] **模型与 scaler 同源**：替换模型时 `meta.json`、`scaler.joblib`、`model.keras` 三者一起换。
 - [ ] **数据合规**：流入检测服务的流记录若含真实 IP，请确认符合所在单位的日志留存与隐私要求。

@@ -2,10 +2,10 @@
   "passed": 130,
   "warned": 1,
   "failed": 0,
-  "ts": "2026-10-12 15:28:01",
+  "ts": "2026-10-12 23:46:56",
   "tools": 40,
   "tests": {
-    "test_core": 18,
+    "test_core": 20,
     "test_ryu_guard": 34,
     "test_pcap_tools": 58
   },

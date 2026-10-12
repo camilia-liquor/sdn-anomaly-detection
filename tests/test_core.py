@@ -192,6 +192,85 @@ def test_class_weight_inverse_frequency():
 
 
 # ---------------------------------------------------------------------------
+# 对抗训练增广（可选能力，默认关）
+# ---------------------------------------------------------------------------
+def _tiny_dict_model():
+    """造一个与主模型**输出结构一致**（dict：mc + bin）的极小模型，用于验证对抗增广函数。
+
+    为什么不直接 `build_model`：本测试要验证的是增广函数（形状 / L∞ 边界 / 标签配对），
+    用真模型会把单元测试从秒级拖到分钟级；而"多分类头 + 二分类头"的结构一致性才是关键。
+    """
+    import tensorflow as tf
+
+    inp = tf.keras.Input(shape=(4, 3))
+    h = tf.keras.layers.Flatten()(inp)
+    h = tf.keras.layers.Dense(8, activation="relu")(h)
+    return tf.keras.Model(
+        inputs=inp,
+        outputs={"mc": tf.keras.layers.Dense(2, activation="softmax", name="mc")(h),
+                 "bin": tf.keras.layers.Dense(1, activation="sigmoid", name="bin")(h)},
+    )
+
+
+def test_adversarial_augment_default_off_and_bounded():
+    """对抗训练增广：默认关（原样返回，主流程与产物不动）；开启时只做 L∞ 有界扰动且标签逐行配对。
+
+    守的是三件事：① 默认配置下这个可选能力**不产生任何影响**（既有产物 sha256 不被破）；
+    ② 开启后扰动必须同时满足 L∞ 预算与训练集物理可行域；③ 标签不能被拼错位
+    ——把攻击样本配上正常标签，比不做对抗训练更糟。
+    """
+    from src.train import ADV_OBJECTIVES, adversarial_augment, fgsm_perturb
+
+    model = _tiny_dict_model()
+    rng = np.random.default_rng(0)
+    X = rng.normal(size=(12, 4, 3)).astype(np.float32)
+    y_mc = np.array([0, 1] * 6, dtype=np.int64)
+    y_bin = (y_mc != 0).astype(np.float32)
+
+    # ① 默认（eps=0）原样返回：不复制样本、不改写数据
+    X0 = X.copy()
+    Xa, ma, ba, info = adversarial_augment(model, X, y_mc, y_bin, eps=0.0)
+    assert info["augmented"] is False and info["n_adv"] == 0, info
+    assert np.array_equal(Xa, X) and np.array_equal(ma, y_mc) and np.array_equal(ba, y_bin)
+    assert len(Xa) == len(X0) and np.array_equal(X, X0), "默认关时不得改动输入数据"
+
+    # ② 开启：样本数 = 干净 + 对抗，形状/类型不变，干净部分原样保留
+    eps, seed = 0.3, 3
+    Xa, ma, ba, info = adversarial_augment(model, X, y_mc, y_bin, eps=eps, ratio=0.5, seed=seed)
+    assert info["augmented"] is True and info["n_adv"] == len(X), info
+    assert Xa.shape == (2 * len(X), 4, 3) and Xa.dtype == np.float32
+    assert ma.shape == (len(Xa),) and ba.shape == (len(Xa),)
+    assert np.array_equal(Xa[:len(X)], X), "干净样本必须原样保留（对抗副本只能追加在后面）"
+    assert np.array_equal(ma[:len(X)], y_mc) and np.array_equal(ba[:len(X)], y_bin)
+
+    # ③ 扰动必须同时满足：L∞ 预算 eps、训练集逐特征物理可行域 [lo, hi]
+    adv = Xa[len(X):]
+    assert np.all(np.abs(adv - X) <= eps + 1e-6), "扰动必须落在 L∞ 球面内"
+    lo = X.reshape(-1, X.shape[-1]).min(axis=0)
+    hi = X.reshape(-1, X.shape[-1]).max(axis=0)
+    assert np.all(adv >= lo - 1e-6) and np.all(adv <= hi + 1e-6), "扰动后必须仍在训练集特征可行域内"
+    assert float(np.mean(np.abs(adv - X) > 0)) > 0.5, "FGSM 必须真的产生扰动，不能退化成恒等映射"
+
+    # ④ 标签逐行配对不被打乱（本工程对"标签错位"零容忍）
+    assert np.array_equal(ba, (ma != 0).astype(np.float32)), "增广后二分类标签必须仍与多分类标签一致"
+
+    # ⑤ 定向目标真的生效：对抗副本被判得更像 Normal（不是"加了点噪声"）
+    def _normal_loss(arr):
+        p_normal = model.predict(arr, verbose=0)["mc"][:, 0]
+        return float(-np.log(p_normal + 1e-12).mean())
+
+    assert _normal_loss(adv) < _normal_loss(X), "FGSM(target_normal) 必须让对抗样本更像正常流量"
+
+    # ⑥ 非法目标必须显式报错，而不是悄悄按默认目标跑（否则报告口径会对不上）
+    try:
+        fgsm_perturb(model, X, eps=eps, objective="whatever")
+    except ValueError:
+        pass
+    else:
+        raise AssertionError(f"非法对抗目标必须报错，可选目标为 {ADV_OBJECTIVES}")
+
+
+# ---------------------------------------------------------------------------
 # 漏报兜底与「未知 → 已知」复核闭环（观察池 / 回看缓冲 / 待研判队列 / 人工回流）
 # ---------------------------------------------------------------------------
 def _review_service(tmpdir):
@@ -467,6 +546,98 @@ def test_alarm_escalation_state_machine():
         assert t2, "应产生告警"
         assert all(a["executed"] is True for a in t2), \
             f"throttle + 非演练模式应记为已执行：{[a['executed'] for a in t2]}"
+
+
+def test_autotighten_requires_switch_and_human_verdicts():
+    """自动放松（自动降级）：默认关；开启后只由**人工结论**驱动，有占比门槛、有上限、有审计。
+
+    这一项直接复用本工程已建的复核闭环（`results/review_feedback.jsonl`）：
+    系统此前只会自动升级（越报越狠），长期高误报没有自愈路径。
+    """
+    import json
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as td:
+        svc = _review_service(Path(td))
+        svc.reload_policy(threshold=0.5, confirm_windows=1, unknown_threshold=1.0, action="observe")
+        _patch_infer(svc, p_attack=0.9, uniform=True)
+        alerts = _push_until_windows(svc, 5, src_ip="10.0.0.21")
+        rids = [a["review_id"] for a in alerts if isinstance(a.get("review_id"), int)]
+        assert len(rids) >= 5, f"应有 5 条待研判项，实际 {rids}"
+
+        # ① 默认关：即便人工把告警判成 normal，阈值也不许动（可选能力不得悄悄改变工作点）
+        for rid in rids[:3]:
+            assert svc.label_review(rid, "normal")["ok"]
+        assert svc.policy.autotighten is False
+        r = svc._maybe_autotighten()
+        assert r["applied"] is False and "未开启" in r["reason"], r
+        assert svc.policy.threshold == 0.5 and int(svc.stats.get("autotighten", 0)) == 0
+        assert svc.stats["review_labeled_normal"] == 3
+
+        # ② 显式开启，但已研判结论条数不足 → 不动
+        svc.reload_policy(autotighten=True, autotighten_min_labeled=5,
+                          autotighten_normal_ratio=0.8, autotighten_step=0.05,
+                          autotighten_max_threshold=0.9)
+        r = svc._maybe_autotighten()
+        assert r["applied"] is False and r["n_labeled"] == 3 and "不足" in r["reason"], r
+        assert svc.policy.threshold == 0.5
+
+        # ③ normal 占比不达标（3/4 = 75% < 80%）→ 说明不是"普遍误报"，不得放松
+        assert svc.label_review(rids[3], "attack:Botnet")["ok"]
+        assert svc.policy.threshold == 0.5, "normal 占比未达门槛不得上调阈值"
+        assert int(svc.stats.get("autotighten", 0)) == 0
+        assert svc.stats["review_confirmed_attack"] == 1
+
+        # ④ 达标即自动放松一档：触发点是 label_review 内部那次检查（不需要人工再点一次）
+        assert svc.label_review(rids[4], "normal")["ok"]
+        assert abs(svc.policy.threshold - 0.55) < 1e-9, svc.policy.threshold
+        assert int(svc.stats["autotighten"]) == 1
+        snap = svc.snapshot()
+        assert snap["autotighten_total"] == 1 and snap["review_labeled_normal"] == 4, snap
+        assert snap["autotighten_last"]["applied"] is True
+
+        # 阈值变更必须留在审计台账里，且能回答"凭什么"（人工结论条数与 normal 占比）
+        audit = [json.loads(x) for x in
+                 svc.audit_path.read_text(encoding="utf-8").strip().splitlines()]
+        ev = [x for x in audit if x.get("event") == "autotighten"]
+        assert ev, "阈值被自动上调必须写审计台账"
+        assert ev[-1]["from_threshold"] == 0.5 and ev[-1]["to_threshold"] == 0.55, ev[-1]
+        assert ev[-1]["n_labeled"] == 5 and ev[-1]["n_normal"] == 4, ev[-1]
+        prom = svc.prometheus()
+        assert "sdn_ids_autotighten_total 1" in prom, "Prometheus 必须暴露自动放松次数"
+        assert "sdn_ids_threshold 0.55" in prom, "Prometheus 必须暴露当前阈值"
+
+        # ⑤ 有上限：反复满足条件也只能爬到 autotighten_max_threshold（不许推到 1.0 把检测关掉）
+        for _ in range(30):
+            r = svc._maybe_autotighten()
+        assert abs(svc.policy.threshold - 0.9) < 1e-9, svc.policy.threshold
+        assert r["applied"] is False and "上限" in r["reason"], r
+
+        # ⑥ 口径必须是"人工已给结论的条数"：未研判的队列项不得计入
+        extra = _push_until_windows(svc, 2, src_ip="10.0.0.31")
+        assert extra, "应继续产生告警"
+        assert svc.list_review(status="pending"), "新告警仍在待研判状态"
+        assert svc._maybe_autotighten()["n_labeled"] == 5, "未研判项不得计入放松依据"
+
+        # ⑦ 开关也支持字符串形式关闭（前端表单传 "0"）
+        svc.reload_policy(autotighten="0")
+        assert svc.policy.autotighten is False
+        assert "未开启" in svc._maybe_autotighten()["reason"]
+
+        # ⑧ 轮转备份里装的是**旧内容**：同一 review_id 的改判必须以新记录为准。
+        #    若按文件名顺序（.1 → 当前）读，旧结论会覆盖改判，阈值就会按错误的误报率被调整。
+        import os
+        import time
+
+        assert svc.label_review(rids[0], "attack:Probe")["ok"]       # 改判，写进当前文件
+        rot = svc.feedback_path.with_name(svc.feedback_path.name + ".1")
+        rot.write_text(json.dumps({"review_id": int(rids[0]), "verdict": "normal"}) + "\n",
+                       encoding="utf-8")
+        older = time.time() - 600
+        os.utime(rot, (older, older))                                # 备份 = 更早的内容
+        svc2 = _review_service(Path(td))                             # 模拟重启：只看文件、不看内存
+        assert svc2._review_verdicts()[int(rids[0])] == "attack:Probe", \
+            "轮转备份里的旧结论不得覆盖当前文件里的改判"
 
 
 def test_observation_pool_carries_evidence():

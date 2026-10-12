@@ -2,7 +2,7 @@
 
 > **给下一个接手的人或 AI 会话**：这份文件是**权威起点**。它不依赖记忆系统
 > （项目记忆需要主动读取，关键记忆轨需要人工确认），只看这一个文件就能接着干。
-> 最后更新：2026-10-12 ｜ 当前分支 `master` ｜ 工作区干净 ｜ 门禁 **130 项通过 / 1 警告 / 0 失败**。
+> 最后更新：2026-10-13 ｜ 当前分支 `master` ｜ 工作区干净 ｜ 门禁 **130 项通过 / 1 警告 / 0 失败**。
 
 ## 0. 先跑一遍再动手（1 分钟）
 
@@ -23,25 +23,30 @@ python tools/cida.py verify      # 三套测试 + 130 项交付自检 —— 改
 | 详细版/附录 | `competition/02_技术报告.md` 与 `_精简稿.md`（**已不再是提交主体**） |
 | 统一入口 | `python tools/cida.py {doctor,status,demo,guard,verify,inventory,config,retrain}` |
 | 工具数 | **40**（新增 `tools/*.py` 会触发约 6 处文档口径级联，优先在**已有文件内**改动） |
-| 测试项数 | 单元 18 / Ryu 34 / pcap 58 / 验收自检 130 |
+| 测试项数 | 单元 20 / Ryu 34 / pcap 58 / 验收自检 130 |
 
-## 2. 待做的五项体系缺口（已排序：先低风险）
+## 2. 体系缺口：② 与 ⑤ 已完成（本轮），剩 ①③④
 
-> 来源：`competition/06_检测与处置体系.md` §8「仍在的缺口」。
+> 来源：`competition/06_检测与处置体系.md` §8「仍在的缺口」。**已完成的不要重做**，直接看下一节。
 
-### ② 对抗训练做成默认可选　【价值中 / 成本中 / **风险低** ← 建议先做】
-- `src/config.py` 加 `adv_train_eps: float = 0.0`（0 = 关）
-- `src/train.py` 在 `model.fit` 前用 FGSM 增广训练集（**在 src 内自包含一个小的 FGSM 函数**，
-  不要从 `src` 反向 import `tools`）
-- 默认关 → **不动既有产物、不破 sha256 守护**
-- 测试：只测增广函数输出形状/范围，不跑完整训练
+### ✅ ② 对抗训练做成默认可选（本轮完成）
+- `src/config.py`：`adv_train_eps`（默认 `0.0` = 关）、`adv_train_warmup_epochs`（默认 2）
+- `src/train.py`：`fgsm_perturb()` + `adversarial_augment()`（自包含，不从 `src` 反向 import `tools`）；
+  L∞ 有界 + 投影回训练集逐特征可行域 + 标签逐行配对；**开启时先暖机再生成对抗样本**
+  （对随机初始化模型做 FGSM 等于加噪声）；总轮数预算不变（暖机计入）、`eps=0` 时原样返回
+- 默认关 → 既有产物与 sha256 不变；回归测试：`test_adversarial_augment_default_off_and_bounded`
+- 用法：`python run_all.py --set adv_train_eps=0.2`
 
-### ⑤ 自动降级（自动放松）　【价值中 / 成本低-中 / **风险低** ← 建议同时做】
-- `src/service.py` 加 `_maybe_autotighten()`，**复用已有的复核数据**：
-  已研判结论 ≥ N 条且其中 `normal` 占比 ≥ X（如 80%）→ 阈值上调一档
-- 必须有**显式开关**（默认关）、有上限、写审计台账、记 stats 与 Prometheus
-- `tests/test_core.py` 加断言
-- 这是唯一能直接复用「复核闭环」的缺口（`review_feedback.jsonl` 已就绪）
+### ✅ ⑤ 自动放松（自动降级）（本轮完成）
+- `src/service.py`：`DetectorConfig.autotighten`（**默认 `False`**）+ `autotighten_min_labeled`(10) /
+  `_normal_ratio`(0.8) / `_step`(0.05) / `_max_threshold`(0.9) / `_check_windows`(200)
+- 判定只认**人工复核结论**（`review_feedback.jsonl` + 轮转备份 + 内存队列，按 `review_id` 去重，
+  按文件 `mtime+size` 缓存）：结论 ≥N 条且 `normal` 占比 ≥X → 阈值上调一档
+- 触发点：`label_review()` 内即时检查 + `push()` 里按窗口节流兜底；每次调整写审计台账
+  （`event=autotighten`）、计数进 `stats`/`snapshot`、暴露为 Prometheus `sdn_ids_autotighten_total`
+  与 `sdn_ids_threshold`；开关与门槛可用 `POST /api/policy` 热更新
+- 回归测试：`test_autotighten_requires_switch_and_human_verdicts`
+- 用法：`CIDA_AUTOTIGHTEN=1`（门槛见 `deploy/cida-detect.env`）
 
 ### ① 下发后回读校验 + 失败回滚　【价值**高** / 成本中高 / 风险中】
 - `integrations/ryu_guard.py`：下发后发 `OFPFlowStatsRequest` 回读确认，失败则回滚
@@ -54,7 +59,7 @@ python tools/cida.py verify      # 三套测试 + 130 项交付自检 —— 改
   （项目对这两个有守护，此前全程未变），必须同步更新多处引用与文档
 
 ### ④ 多源证据融合（控制面流表 + 数据面 pcap 双路）　【价值**高** / 成本高 / 风险中】
-- 需引入第二数据源与融合层，是五项里最大的一项
+- 需引入第二数据源与融合层，是剩下几项里最大的一项
 
 ## 3. 必须遵守的纪律（都是踩过坑换来的）
 
@@ -80,5 +85,6 @@ python tools/cida.py verify      # 三套测试 + 130 项交付自检 —— 改
 
 ## 5. 新会话开场白（可直接复制）
 
-> 读 `NEXT_STEPS.md`，然后按第 2 节做**缺口 ② 和 ⑤**（都是低风险项）。
+> 读 `NEXT_STEPS.md`，然后按第 2 节继续做**缺口 ① 或 ③**（①价值最高但风险中，③会破产物 sha256 守护）。
 > 改完跑 `python tools/cida.py verify`，并同步受影响的文档口径。
+> 已完成的是 ② 与 ⑤（对抗训练可选化、自动放松），**不要重做**。

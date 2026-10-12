@@ -83,6 +83,21 @@ class DetectorConfig:
     # 也无法用于重训，数据在源头就丢了，"回流"就成了名不副实的空闭环。
     # 证据与结论分开存（按 review_id 关联）：结论可以改判而不必重复存特征。
     review_evidence: bool = True
+    # ---------------- 自动放松（自动降级）----------------
+    # 为什么需要：系统此前只会"自动升级"（同源反复告警越报越狠），**长期高误报没有任何自愈路径**——
+    # 复核台里人已经明确判了一堆 normal，工作点却只能靠人工改 `/api/policy`。
+    # 触发条件（必须同时满足，且**默认关**）：人工已给结论的条数 ≥ autotighten_min_labeled，
+    # 且其中 normal 占比 ≥ autotighten_normal_ratio → 判定阈值上调一档 autotighten_step。
+    # 硬护栏：① 默认关（不改既有行为）；② 有上限 autotighten_max_threshold（不会一路推到 1.0
+    # 把检测关掉）；③ 只由**人工结论**驱动（未研判的告警不算、模型自己说"我误报了"不算）；
+    # ④ 每次动作写审计台账 + 计数 + Prometheus，可追溯"阈值什么时候被调、依据是什么"。
+    autotighten: bool = False
+    autotighten_min_labeled: int = 10
+    autotighten_normal_ratio: float = 0.8
+    autotighten_step: float = 0.05
+    autotighten_max_threshold: float = 0.9
+    # 检查节流：每处理多少个窗口最多检查一次（复核结论是稀疏事件，不必每个窗口都读盘）
+    autotighten_check_windows: int = 200
 
     @classmethod
     def from_env(cls, cfg: Config | None = None, **overrides) -> "DetectorConfig":
@@ -90,7 +105,10 @@ class DetectorConfig:
 
         支持（见 `deploy/cida-detect.env`）：
         `CIDA_POLICY_ACTION` / `CIDA_DRY_RUN` / `CIDA_THRESHOLD` /
-        `CIDA_CONFIRM_WINDOWS` / `CIDA_WHITELIST`（空格分隔的源 IP 列表）。
+        `CIDA_CONFIRM_WINDOWS` / `CIDA_WHITELIST`（空格分隔的源 IP 列表）/
+        `CIDA_UNKNOWN_THRESHOLD` / `CIDA_UNKNOWN_ACTION` / `CIDA_OBSERVE_MARGIN` /
+        `CIDA_AUTOTIGHTEN`（自动放松总开关，默认关）及其门槛
+        `CIDA_AUTOTIGHTEN_MIN_LABELED` / `_NORMAL_RATIO` / `_STEP` / `_MAX`。
 
         传入的关键字参数优先级最高（用于代码内显式指定）。
         """
@@ -113,6 +131,13 @@ class DetectorConfig:
             "audit_backups": int(os.environ.get("CIDA_AUDIT_BACKUPS", 3) or 3),
             "review_evidence": str(os.environ.get("CIDA_REVIEW_EVIDENCE", "1")).strip().lower()
             not in ("0", "false", "no", "off"),
+            # 自动放松（默认关；见 DetectorConfig.autotighten 的护栏说明）
+            "autotighten": str(os.environ.get("CIDA_AUTOTIGHTEN", "0")).strip().lower()
+            in ("1", "true", "yes", "on"),
+            "autotighten_min_labeled": int(os.environ.get("CIDA_AUTOTIGHTEN_MIN_LABELED", 10) or 10),
+            "autotighten_normal_ratio": float(os.environ.get("CIDA_AUTOTIGHTEN_NORMAL_RATIO", 0.8) or 0.8),
+            "autotighten_step": float(os.environ.get("CIDA_AUTOTIGHTEN_STEP", 0.05) or 0.05),
+            "autotighten_max_threshold": float(os.environ.get("CIDA_AUTOTIGHTEN_MAX", 0.9) or 0.9),
         }
         params.update({k: v for k, v in overrides.items() if v is not None})
         conf = cls(**params)
@@ -242,11 +267,17 @@ class DetectionService:
         self.feedback_path = RESULT_DIR / "review_feedback.jsonl"
         # 研判证据（窗口特征向量）单独落盘：只有结论没有特征，人工标注就无法用于重训。
         self.review_evidence_path = RESULT_DIR / "review_evidence.jsonl"
+        # 自动放松（见 DetectorConfig.autotighten）：结论缓存（按文件 mtime+size 失效）、
+        # 下次检查的窗口水位、最近一次判定结果（对外可查"为什么没有放松/为什么放松了"）
+        self._verdict_cache: tuple | None = None
+        self._autotighten_next_at: int = 0
+        self._autotighten_last: dict = {}
         self.stats: dict[str, Any] = {
             "rows": 0, "windows": 0, "alarms": 0, "alarms_confirmed": 0,
             "alarm_run": 0, "latency_ms": deque(maxlen=2000),
             "by_class": {}, "started_at": time.time(),
             "observations": 0, "review_enqueued": 0, "review_labeled": 0,
+            "review_labeled_normal": 0, "autotighten": 0,
             "review_confirmed_attack": 0, "alerts_total": 0, "escalations": 0,
             "review_evidence": 0,
         }
@@ -611,6 +642,14 @@ class DetectionService:
                     }
             self.stats["batches"] = int(self.stats.get("batches", 0)) + 1
             self.stats["windows_per_batch"] = len(pending)
+            # 自动放松的兜底检查点（节流：每 autotighten_check_windows 个窗口最多一次）：
+            # 复核结论也可能由**别的进程/人**写进回流文件，所以除了 label_review 里的即时检查，
+            # 运行中也要按节流看一眼。开关默认关，这里等同于不存在。
+            if bool(getattr(self.policy, "autotighten", False)) and \
+                    int(self.stats["windows"]) >= int(self._autotighten_next_at):
+                self._autotighten_next_at = int(self.stats["windows"]) + max(
+                    1, int(getattr(self.policy, "autotighten_check_windows", 200) or 200))
+                self._maybe_autotighten()
         self.stats["latency_ms"].append((time.perf_counter() - t0) * 1000.0)
         return {
             "ok": True,
@@ -629,7 +668,14 @@ class DetectionService:
                 "whitelist": list(self.policy.whitelist),
                 "unknown_threshold": float(getattr(self.policy, "unknown_threshold", 0.0) or 0.0),
                 "unknown_action": str(getattr(self.policy, "unknown_action", "throttle")),
-                "observe_margin": float(getattr(self.policy, "observe_margin", 0.5) or 0.0)}
+                "observe_margin": float(getattr(self.policy, "observe_margin", 0.5) or 0.0),
+                # 自动放松的当前设定（默认关）：写进策略快照，大屏/运维才能看到"它有没有被打开"
+                "autotighten": bool(getattr(self.policy, "autotighten", False)),
+                "autotighten_min_labeled": int(getattr(self.policy, "autotighten_min_labeled", 10) or 10),
+                "autotighten_normal_ratio": float(getattr(self.policy, "autotighten_normal_ratio", 0.8)),
+                "autotighten_step": float(getattr(self.policy, "autotighten_step", 0.05)),
+                "autotighten_max_threshold": float(
+                    getattr(self.policy, "autotighten_max_threshold", 0.9))}
 
     def _append_audit(self, record: dict) -> None:
         """写审计台账（JSONL，追加 + 超限轮转）：出事可追溯，这是"可用系统"的基本要求。
@@ -696,6 +742,127 @@ class DetectionService:
         if unknown and ACTIONS.index(esc) > ACTIONS.index("throttle"):
             esc = "throttle"                       # 未知分支硬护栏
         return esc, esc != base_action
+
+    # ------------------------------------------------------ 自动放松（自动降级）
+    def _feedback_candidates(self) -> list[Path]:
+        """回流结论文件的候选清单：当前文件 + 轮转备份（按名字排序，后者更新）。"""
+        out: list[Path] = [self.feedback_path]
+        try:
+            out.extend(sorted(self.feedback_path.parent.glob(self.feedback_path.name + ".*")))
+        except OSError:  # pragma: no cover
+            pass
+        return out
+
+    def _review_verdicts(self) -> dict[int, str]:
+        """已研判结论：``review_id → verdict``（同一 id 后写的覆盖先写的）。
+
+        两个来源合并，**内存优先**：
+          ① `results/review_feedback.jsonl`（含轮转备份）——跨重启的持久事实；
+          ② 本进程 `review_queue` 里 status=labeled 的条目——刚刚标过、还没落盘或被外部截断时兜底。
+        文件按 `mtime+size` 缓存：这个函数会被 push 的节流检查反复调用，不能每次都读盘。
+
+        ⚠️ 读文件的顺序按 **mtime 升序**，不能按文件名排序：轮转后的 `.1/.2/.3` 装的是**更旧**的内容，
+        若从 `.1` 读到当前文件，"同一 review_id 的改判"会被旧结论覆盖，阈值就会按错误的误报率调整。
+        """
+        entries: list[tuple[Path, int, int]] = []
+        for p in self._feedback_candidates():
+            try:
+                st = p.stat()
+            except OSError:
+                continue
+            entries.append((p, int(st.st_mtime_ns), int(st.st_size)))
+        sig_t = tuple((str(p), m, s) for p, m, s in entries)
+        cache = self._verdict_cache
+        if cache is not None and cache[0] == sig_t:
+            out: dict[int, str] = dict(cache[1])
+        else:
+            out = {}
+            for p, _mtime, _size in sorted(entries, key=lambda e: e[1]):
+                try:
+                    with p.open("r", encoding="utf-8", errors="replace") as fh:
+                        for line in fh:
+                            line = line.strip()
+                            if not line:
+                                continue
+                            try:
+                                rec = json.loads(line)
+                                rid, verdict = int(rec.get("review_id")), str(rec.get("verdict") or "")
+                            except (ValueError, TypeError, json.JSONDecodeError):
+                                continue
+                            if verdict:
+                                out[rid] = verdict
+                except OSError as exc:  # pragma: no cover
+                    LOGGER.warning("读取 %s 统计复核结论失败：%s", p.name, exc)
+            self._verdict_cache = (sig_t, dict(out))
+        for it in self.review_queue:
+            if it.get("status") == "labeled" and it.get("verdict"):
+                try:
+                    out[int(it["review_id"])] = str(it["verdict"])
+                except (KeyError, TypeError, ValueError):
+                    continue
+        return out
+
+    def _autotighten_inputs(self) -> dict:
+        """自动放松的判定输入（同时用于决策与对外解释"当前该不该放松"）。"""
+        verdicts = self._review_verdicts()
+        n = len(verdicts)
+        n_normal = sum(1 for v in verdicts.values() if v == "normal")
+        return {
+            "n_labeled": int(n),
+            "n_normal": int(n_normal),
+            "normal_ratio": round(n_normal / n, 4) if n else 0.0,
+            "threshold": float(self.policy.threshold),
+            "min_labeled": max(1, int(getattr(self.policy, "autotighten_min_labeled", 10) or 10)),
+            "normal_ratio_required": float(getattr(self.policy, "autotighten_normal_ratio", 0.8)),
+            "step": max(1e-6, float(getattr(self.policy, "autotighten_step", 0.05) or 0.05)),
+            "max_threshold": min(1.0, max(0.0, float(
+                getattr(self.policy, "autotighten_max_threshold", 0.9)))),
+        }
+
+    def _maybe_autotighten(self) -> dict:
+        """按人工复核结论把判定阈值**上调一档**（自动放松）。返回本次判定结果。
+
+        为什么叫"放松"：阈值越高越不敏感——长期高误报（人工把绝大多数告警判成 normal）说明
+        工作点选得太松，该往回收；这与 `_escalate()` 的"自动升级"是一对反向机制。
+
+        调用方必须**已持有 self.lock**（threading.Lock 不可重入，这里不再加锁）。
+        返回体固定带 `applied` + 判定输入，便于测试与运维回答"为什么没有放松"。
+        """
+        info = self._autotighten_inputs()
+        if not bool(getattr(self.policy, "autotighten", False)):
+            res = {"applied": False, "reason": "autotighten 未开启（默认关）", **info}
+            self._autotighten_last = res
+            return res
+        if info["n_labeled"] < info["min_labeled"]:
+            res = {"applied": False,
+                   "reason": f"已研判结论不足（{info['n_labeled']} < {info['min_labeled']} 条）", **info}
+        elif info["normal_ratio"] < info["normal_ratio_required"]:
+            res = {"applied": False,
+                   "reason": (f"normal 占比 {info['normal_ratio']:.0%} 未达 "
+                              f"{info['normal_ratio_required']:.0%}（说明不是普遍误报）"), **info}
+        elif info["threshold"] >= info["max_threshold"] - 1e-12:
+            res = {"applied": False, "reason": f"阈值已达上限 {info['max_threshold']}", **info}
+        else:
+            new_thr = round(min(info["max_threshold"], info["threshold"] + info["step"]), 4)
+            self.policy.threshold = new_thr
+            self.stats["autotighten"] = int(self.stats.get("autotighten", 0)) + 1
+            res = {"applied": True, "reason": "已研判结论以 normal 为主，工作点偏松 → 阈值上调一档",
+                   "from_threshold": info["threshold"], "to_threshold": new_thr, **info}
+            LOGGER.warning("自动放松：判定阈值 %.3f → %.3f（已研判 %d 条，其中 normal %d 条 = %.0f%%；"
+                           "上限 %.2f）", info["threshold"], new_thr, info["n_labeled"],
+                           info["n_normal"], 100.0 * info["normal_ratio"], info["max_threshold"])
+            # 阈值变更必须留痕：这是**系统自己改工作点**的动作，事后要能回答"谁改的、凭什么"。
+            self._append_audit({
+                "event": "autotighten",
+                "time": round(time.time(), 3),
+                "from_threshold": info["threshold"],
+                "to_threshold": new_thr,
+                **info,
+                "rule": ("人工已研判结论 ≥ autotighten_min_labeled 且 normal 占比 ≥ "
+                         "autotighten_normal_ratio → 阈值上调一档（不超上限）"),
+            })
+        self._autotighten_last = res
+        return res
 
     # ------------------------------------------------------ 待研判队列与人工回流
     def _recover_review_seq(self) -> int:
@@ -888,7 +1055,13 @@ class DetectionService:
             if v.startswith("attack:"):
                 self.stats["review_confirmed_attack"] = int(
                     self.stats.get("review_confirmed_attack", 0)) + 1
-            return {"ok": True, "item": target, "feedback_path": str(self.feedback_path)}
+            else:
+                self.stats["review_labeled_normal"] = int(
+                    self.stats.get("review_labeled_normal", 0)) + 1
+            # 新结论到达是**最自然的**自动放松触发点（开关默认关，未开启时这里立刻返回）。
+            self._maybe_autotighten()
+            return {"ok": True, "item": target, "feedback_path": str(self.feedback_path),
+                    "autotighten": self._autotighten_last}
 
     def snapshot(self) -> dict:
         lat = np.asarray(list(self.stats["latency_ms"]), dtype=float) if self.stats["latency_ms"] else np.zeros(1)
@@ -908,7 +1081,11 @@ class DetectionService:
             "review_pending": sum(1 for x in self.review_queue if x.get("status") == "pending"),
             "review_total": len(self.review_queue),
             "review_labeled": int(self.stats.get("review_labeled", 0)),
+            "review_labeled_normal": int(self.stats.get("review_labeled_normal", 0)),
             "review_confirmed_attack": int(self.stats.get("review_confirmed_attack", 0)),
+            "autotighten_total": int(self.stats.get("autotighten", 0)),
+            # 最近一次自动放松判定（含"为什么没有放松"）：运维与测试都要能查，而不是只能看日志
+            "autotighten_last": dict(self._autotighten_last),
             "review_evidence_total": int(self.stats.get("review_evidence", 0)),
             "stream_resets": int(self.stats.get("stream_resets", 0)),
             "uptime_sec": round(time.time() - self.stats["started_at"], 1),
@@ -968,6 +1145,17 @@ class DetectionService:
             "# HELP sdn_ids_review_confirmed_attack_total 人工研判确认为攻击并已回流的条数",
             "# TYPE sdn_ids_review_confirmed_attack_total counter",
             f"sdn_ids_review_confirmed_attack_total {s['review_confirmed_attack']}",
+            # 自动放松：人工把告警判成 normal 的比例是**工作点是否偏松**的直接证据，
+            # 阈值被自动上调的次数 + 当前阈值一起暴露出去，值班室才能发现"检测在悄悄变钝"。
+            "# HELP sdn_ids_review_labeled_normal_total 人工研判判为正常（误报）并已回流的条数",
+            "# TYPE sdn_ids_review_labeled_normal_total counter",
+            f"sdn_ids_review_labeled_normal_total {s['review_labeled_normal']}",
+            "# HELP sdn_ids_autotighten_total 因人工复核以 normal 为主而自动上调阈值的次数",
+            "# TYPE sdn_ids_autotighten_total counter",
+            f"sdn_ids_autotighten_total {s['autotighten_total']}",
+            "# HELP sdn_ids_threshold 当前判定阈值（自动放松会把工作点抬高）",
+            "# TYPE sdn_ids_threshold gauge",
+            f"sdn_ids_threshold {s['policy']['threshold']}",
             # 累计告警数是**计数器**（不受内存保留条数影响）；内存里只保留最近 alerts_retained 条。
             "# HELP sdn_ids_alerts_total 累计产生的告警数（不受内存保留上限影响）",
             "# TYPE sdn_ids_alerts_total counter",
@@ -986,7 +1174,9 @@ class DetectionService:
                 continue
             if k == "whitelist" and isinstance(v, (list, tuple)):
                 setattr(self.policy, k, tuple(str(x) for x in v))
-            elif k in ("threshold", "confirm_windows", "unknown_threshold", "observe_margin"):
+            elif k in ("threshold", "confirm_windows", "unknown_threshold", "observe_margin",
+                       "autotighten_min_labeled", "autotighten_normal_ratio", "autotighten_step",
+                       "autotighten_max_threshold"):
                 cur = getattr(self.policy, k)
                 newv = type(cur)(v)
                 if k == "unknown_threshold":
@@ -995,11 +1185,26 @@ class DetectionService:
                 if k == "observe_margin":
                     # 观察池下界比例，夹到 [0,1]：>1 会让观察池永远为空（静默失效）。
                     newv = min(1.0, max(0.0, float(newv)))
+                if k == "autotighten_min_labeled":
+                    newv = max(1, int(newv))
+                if k == "autotighten_normal_ratio":
+                    newv = min(1.0, max(0.0, float(newv)))
+                if k == "autotighten_step":
+                    # 步长必须为正：0/负会让"自动放松"要么静默失效、要么**把阈值往下调**（反了）
+                    newv = max(1e-6, float(newv))
+                if k == "autotighten_max_threshold":
+                    newv = min(1.0, max(0.0, float(newv)))
                 setattr(self.policy, k, newv)
-            elif k in ("action", "dry_run", "unknown_action"):
+            elif k in ("action", "dry_run", "unknown_action", "autotighten"):
                 if k in ("action", "unknown_action") and str(v) not in ACTIONS:
                     continue
-                setattr(self.policy, k, bool(v) if k == "dry_run" else str(v))
+                if k == "autotighten":
+                    # 显式开关：字符串形式也要认（前端表单会传 "0"/"false"/"on"）
+                    raw = str(v).strip().lower() if isinstance(v, str) else ""
+                    setattr(self.policy, k, raw not in ("0", "false", "no", "off", "") if raw
+                            else bool(v))
+                else:
+                    setattr(self.policy, k, bool(v) if k == "dry_run" else str(v))
         LOGGER.info("策略已更新：threshold=%.2f confirm=%d action=%s dry_run=%s "
                     "unknown_threshold=%.4f unknown_action=%s",
                     self.policy.threshold, self.policy.confirm_windows, self.policy.action,

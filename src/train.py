@@ -20,7 +20,7 @@ from pathlib import Path
 import numpy as np
 
 from .config import Config
-from .data_pipeline import PreparedData, prepare_dataset
+from .data_pipeline import PreparedData, inverse_frequency_weights, prepare_dataset
 from .model import build_model, load_model_bundle
 from .utils import ARTIFACT_DIR, get_logger, save_json, set_seed
 
@@ -88,6 +88,109 @@ def build_callbacks(cfg: Config, ckpt_path: Path, log_path: Path | None = None):
 
 
 # --------------------------------------------------------------------------------------
+# 对抗训练增广（可选能力，默认关 —— 见 Config.adv_train_eps）
+# --------------------------------------------------------------------------------------
+ADV_OBJECTIVES = ("target_normal", "evade_binary")
+
+
+def fgsm_perturb(model, X, *, eps: float, objective: str = "target_normal", normal_idx: int = 0,
+                 batch_size: int = 512, lo=None, hi=None) -> np.ndarray:
+    """单步 FGSM（L∞ 有界）：返回被推向「更像正常流量」的扰动样本。
+
+    为什么在 ``src`` 内自己实现，而不是 import ``tools/adversarial_eval.py``：
+    工具是**评测脚本**（依赖 CLI 参数、数据目录、报告产物），上线训练主流程反向依赖评测脚本，
+    会让"能上线的路径"被"做实验的路径"绑住（改一次实验脚本就可能改坏训练）。
+    这里只保留最小内核，且与工具语义逐项一致：
+      ① 目标函数：``target_normal`` = 最大化 Normal 类概率（报告中被评测的威胁模型）；
+         ``evade_binary`` = 最小化「是攻击」的概率（对照用）；
+      ② 投影一：L∞ 球面 ``x0 ± eps``；
+      ③ 投影二：训练集逐特征取值范围 ``[lo, hi]``（原始量纲的物理可行域，避免造出物理上不存在的流）。
+
+    注意：这里**不做就地修改**，输入 ``X`` 不被改写（训练集可能被多处复用）。
+    """
+    import tensorflow as tf
+
+    X0 = np.asarray(X, dtype=np.float32)
+    eps = float(eps)
+    if objective not in ADV_OBJECTIVES:
+        raise ValueError(f"未知对抗目标 {objective}，可选 {ADV_OBJECTIVES}")
+    if eps <= 0.0 or len(X0) == 0:
+        return X0.copy()
+    lo_t = None if lo is None else tf.constant(np.asarray(lo, dtype=np.float32))
+    hi_t = None if hi is None else tf.constant(np.asarray(hi, dtype=np.float32))
+    out = np.empty_like(X0)
+    step = max(1, int(batch_size))
+    for s in range(0, len(X0), step):
+        xb = tf.convert_to_tensor(X0[s:s + step], dtype=tf.float32)
+        with tf.GradientTape() as tape:
+            tape.watch(xb)
+            pred = model(xb, training=False)
+            if isinstance(pred, dict):
+                p_mc, p_bin = pred["mc"], tf.reshape(pred["bin"], [-1])
+            else:   # 只有多分类头的模型（如消融变体）
+                p_mc = pred
+                p_bin = 1.0 - tf.gather(pred, int(normal_idx), axis=1)
+            if objective == "evade_binary":
+                loss = tf.reduce_mean(p_bin)
+            else:
+                p_normal = tf.gather(p_mc, int(normal_idx), axis=1)
+                loss = -tf.reduce_mean(tf.math.log(p_normal + 1e-12))
+        grad = tape.gradient(loss, xb)
+        adv = xb - eps * tf.sign(grad)
+        adv = tf.clip_by_value(adv, xb - eps, xb + eps)
+        if lo_t is not None and hi_t is not None:
+            adv = tf.clip_by_value(adv, lo_t, hi_t)
+        out[s:s + step] = np.asarray(adv)
+    return out.astype(np.float32)
+
+
+def adversarial_augment(model, X, y_mc, y_bin, *, eps: float, ratio: float = 0.5,
+                        objective: str = "target_normal", normal_idx: int = 0,
+                        batch_size: int = 512, seed: int = 0):
+    """把对抗副本拼进训练集，返回 ``(X_aug, y_mc_aug, y_bin_aug, info)``。
+
+    ``ratio`` = 对抗样本在**增广后**训练集里的占比（0.5 → 干净:对抗 = 1:1，与
+    ``tools/adversarial_eval.py`` 的口径一致）。为 <0.5 时按固定种子随机抽子集——
+    不能取"前 k 条"：时间序切分下训练集是按时间排的，取前缀会把某个攻击类整段抽掉或整段重复。
+    标签按同一索引复制，因此**逐行配对关系不变**（多分类标签与二分类标签不会错位）。
+
+    ``eps<=0`` 或 ``ratio<=0`` 时原样返回（``info["augmented"]=False``）——这正是默认配置下的行为：
+    不复制样本、不动数据，主流程与既有产物 sha256 完全不变。
+    """
+    X = np.asarray(X, dtype=np.float32)
+    y_mc = np.asarray(y_mc)
+    y_bin = np.asarray(y_bin)
+    n = int(len(X))
+    eps, ratio = float(eps), float(ratio)
+    info: dict = {"augmented": False, "eps": eps, "ratio": ratio, "objective": objective,
+                  "n_clean": n, "n_adv": 0}
+    if eps <= 0.0 or ratio <= 0.0 or n == 0:
+        info["reason"] = "eps≤0 或 ratio≤0：不做增广（默认关，不改变主流程与产物）"
+        return X, y_mc, y_bin, info
+
+    ratio = min(0.9, max(0.0, ratio))
+    k = int(round(n * ratio / (1.0 - ratio)))
+    k = max(1, min(k, n))
+    idx = np.arange(n) if k >= n else np.sort(np.random.default_rng(int(seed)).permutation(n)[:k])
+    # 物理可行域 = 训练集自身逐特征取值范围（与 adversarial_eval 的投影口径一致）
+    lo = X.reshape(-1, X.shape[-1]).min(axis=0)
+    hi = X.reshape(-1, X.shape[-1]).max(axis=0)
+    X_adv = fgsm_perturb(model, X[idx], eps=eps, objective=objective, normal_idx=normal_idx,
+                         batch_size=batch_size, lo=lo, hi=hi)
+    X_aug = np.concatenate([X, X_adv], axis=0).astype(np.float32)
+    y_mc_aug = np.concatenate([y_mc, y_mc[idx]])
+    y_bin_aug = np.concatenate([y_bin, y_bin[idx]])
+    info.update({
+        "augmented": True,
+        "n_adv": int(len(X_adv)),
+        "ratio": round(len(X_adv) / float(n + len(X_adv)), 4),
+        "seed": int(seed),
+        "projected_to_train_range": True,
+    })
+    return X_aug, y_mc_aug, y_bin_aug, info
+
+
+# --------------------------------------------------------------------------------------
 # 训练
 # --------------------------------------------------------------------------------------
 def run_training(
@@ -125,16 +228,53 @@ def run_training(
         pass
 
     n_epochs = int(epochs if epochs is not None else cfg.epochs)
-    y_train = {"mc": data.y_train_mc, "bin": data.y_train_bin}
-    y_val = {"mc": data.y_val_mc, "bin": data.y_val_bin}
-    if isinstance(model.output, dict):
-        y_train = {k: v for k, v in y_train.items() if k in model.output}
-        y_val = {k: v for k, v in y_val.items() if k in model.output}
+
+    def _labels(y_mc, y_bin) -> dict:
+        """按模型实际输出头裁剪标签字典（消融变体可能没有二分类头）。"""
+        d = {"mc": y_mc, "bin": y_bin}
+        if isinstance(model.output, dict):
+            d = {k: v for k, v in d.items() if k in model.output}
+        return d
+
+    y_val = _labels(data.y_val_mc, data.y_val_bin)
+
+    # ---------------- 对抗训练增广（默认关；见 Config.adv_train_eps） ----------------
+    X_train = data.X_train
+    y_mc_train = data.y_train_mc
+    y_bin_train = data.y_train_bin
+    adv_info: dict = {"augmented": False,
+                      "eps": float(getattr(cfg, "adv_train_eps", 0.0) or 0.0)}
+    adv_eps = float(getattr(cfg, "adv_train_eps", 0.0) or 0.0)
+    if adv_eps > 0.0:
+        # 先暖机再生成对抗样本：刚 build 出来的模型是随机权重，它的梯度方向没有意义
+        #（对随机模型做 FGSM ≈ 加噪声）。暖机的轮数计入总轮数预算，保证总训练量不变。
+        # 暖机段**不挂回调、不加类别权重**：它只为拿到一个有意义的梯度方向，不是交付产物；
+        # 最优权重 / 早停 / 学习率衰减全部由后面的主训练段决定。
+        warmup = max(1, int(getattr(cfg, "adv_train_warmup_epochs", 2) or 2))
+        warmup = max(1, min(warmup, max(1, n_epochs // 3)))
+        LOGGER.info("对抗训练开启：先干净训练 %d 轮暖机，再用 FGSM(ε=%.3f、目标=Normal) 生成对抗样本混合训练",
+                    warmup, adv_eps)
+        model.fit(X_train, _labels(y_mc_train, data.y_train_bin),
+                  epochs=warmup, batch_size=cfg.batch_size, verbose=0)
+        X_train, y_mc_train, y_bin_train, adv_info = adversarial_augment(
+            model, X_train, y_mc_train, data.y_train_bin, eps=adv_eps,
+            normal_idx=int(getattr(data, "normal_class_id", 0)), batch_size=cfg.batch_size,
+            seed=int(cfg.seed),
+        )
+        n_epochs = max(1, n_epochs - warmup)
+        adv_info["warmup_epochs"] = warmup
+        LOGGER.info("对抗增广完成：干净 %d 条 + 对抗 %d 条（对抗占比 %.0f%%），主训练剩 %d 轮",
+                    adv_info["n_clean"], adv_info["n_adv"], 100.0 * adv_info["ratio"], n_epochs)
+
+    y_train = _labels(y_mc_train, y_bin_train)
 
     sample_weight = None
     if cfg.use_class_weight:
-        cw = data.class_weight()
-        sw = np.asarray([cw[int(c)] for c in data.y_train_mc], dtype="float32")
+        # 逆频权重按**实际用于训练的那份标签**算（开启对抗增广时含对抗副本）：
+        # 公式本身只有一处实现（src/data_pipeline.py::inverse_frequency_weights），
+        # 避免"同一规则两处各算一次、后来只改一处"。
+        cw = inverse_frequency_weights(y_mc_train, data.n_classes)
+        sw = np.asarray([cw[int(c)] for c in y_mc_train], dtype="float32")
         LOGGER.info("类别权重：%s", {data.class_names[k]: round(v, 3) for k, v in cw.items()})
         if isinstance(model.output, dict):
             sample_weight = {k: sw for k in model.output}
@@ -145,7 +285,7 @@ def run_training(
     started = time.time()
     try:
         history = model.fit(
-            data.X_train, y_train,
+            X_train, y_train,
             validation_data=(data.X_val, y_val),
             epochs=n_epochs,
             batch_size=cfg.batch_size,
@@ -157,7 +297,7 @@ def run_training(
         # 某些 Keras 版本不接受 dict 形式的 sample_weight；退化为不加权，但保留其余流程
         LOGGER.warning("sample_weight 不被当前 Keras 接受（%s），改为不使用类别权重重跑。", exc)
         history = model.fit(
-            data.X_train, y_train,
+            X_train, y_train,
             validation_data=(data.X_val, y_val),
             epochs=n_epochs,
             batch_size=cfg.batch_size,
@@ -196,7 +336,8 @@ def run_training(
         history_path=history_path, variant=variant, duration_s=duration,
         best_epoch=best_epoch, best_val_loss=best_val_loss,
         n_params=int(model.count_params()), tag=tag,
-        extra={"model_saved": save_ok, "checkpoint": str(ckpt_path)},
+        extra={"model_saved": save_ok, "checkpoint": str(ckpt_path),
+               **({"adv_train": adv_info} if adv_info.get("augmented") else {})},
     )
     LOGGER.info("训练完成：%s", result.summary())
     return result

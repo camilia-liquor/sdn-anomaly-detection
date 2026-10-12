@@ -1100,6 +1100,21 @@ def missing_runtime_deps() -> list[str]:
     return [m for m in RUNTIME_DEPS if importlib.util.find_spec(m) is None]
 
 
+def _count_unit_tests() -> int:
+    """数出 `tests/test_core.py` 里的测试函数个数（= `_run_all()` 实际执行的用例数）。
+
+    为什么动态统计而不是写死：这个数字每加一个用例就会变，写死必然出现"面板写 18、实际跑 20"
+    这类没人会注意的口径漂移（本工程对"每个数字都要能对回磁盘产物"有硬要求）。
+    ryu / pcap 两套测的是**每个函数内部的 check() 断言条数**，静态数不出来，故仍用稳定字面值。
+    """
+    path = ROOT / "tests" / "test_core.py"
+    try:
+        return sum(1 for ln in path.read_text(encoding="utf-8").splitlines()
+                   if ln.startswith("def test_"))
+    except OSError:  # pragma: no cover
+        return 0
+
+
 def main() -> int:
     missing = missing_runtime_deps()
     if missing:
@@ -1142,7 +1157,8 @@ def main() -> int:
             "passed": passed, "warned": r.warned, "failed": r.failed,
             "ts": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "tools": len(list((ROOT / "tools").glob("*.py"))),
-            "tests": {"test_core": 18, "test_ryu_guard": 34, "test_pcap_tools": 58},
+            "tests": {"test_core": _count_unit_tests(), "test_ryu_guard": 34,
+                      "test_pcap_tools": 58},
             "self_tests": {"ryu_live_check": 12, "feature_selection": 9},
             "note": "由 tools/acceptance_check.py 生成；评审视图 /api/judge 读取本文件显示真实项数",
         }, RESULT_DIR / "acceptance_summary.json")
