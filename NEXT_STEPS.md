@@ -94,6 +94,14 @@ python tools/cida.py verify      # 三套测试 + 130 项交付自检 —— 改
 - 改 `src/evaluate.py::online_alarm_evaluation`：记录**被漏掉片段的持续时长**并换算影响面
 - ⚠️ **重跑会改动 `results/summary.json` 与 `artifacts/main_model.json` 的 sha256**
   （项目对这两个有守护，此前全程未变），必须同步更新多处引用与文档
+- ✅ 实现路径**已全部勘察清楚（只读派生，不碰守护产物）**：
+  * `results/predictions_cli.csv`：1498 行，列 = `row/pred_class/p_attack/alarm/true_class` + 8 类概率
+    ——**逐窗口预测 + 真值都有**，`alarm` 直接可用
+  * `data/processed/tensors.npz`：含 `test_stream_labels`(21478) 与 **`test_stream_time`(21478, float64)**
+    ——**时间戳齐了**，所以"被漏掉的攻击片段持续了多少秒"可以直接算
+  * 还缺的只有一件：**影响面换算系数**（每秒攻击流量 → 业务损失）必须**先定义并写死判据**
+    （例如"用同一批数据的攻击片段平均包速率/字节速率换算成等效攻击流量"），
+    不能拍一个系数——那是编数字，会被现场追问打死
 - 💡 若只为**答辩材料**要做这一项：**不必**改主流程——`results/predictions_cli.csv` 已缓存逐窗口预测，
   完全可以写一个**只读**的派生分析（读缓存 → 数漏片段时长 × 放大倍数 → 写新产物），
   一个守卫产物都不用动。动手前先确认缓存里的窗口与测试流标签能对齐
