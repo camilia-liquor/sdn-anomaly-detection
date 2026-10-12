@@ -137,23 +137,29 @@ ebefc2d feat: operating-point tooling, error analysis, latency benchmark (AIC su
 
 推送前请执行匿名化检查：`python tools/sanitize_paths.py --apply`（把产物里的本机绝对路径替换为占位符）。
 
-### 技术报告怎么导出 PDF（≤15 页 / ≤10MB）
+### 技术方案怎么导出 docx / PDF
+
+**提交版是 `09_学科交叉技术方案.md`**（按赛道八节大纲组织）；`02_技术报告*` 转为详细版/附录。
 
 ```powershell
-# 方式一：VS Code 装 "Markdown PDF" 插件，打开 competition/02_技术报告.md → 右键 Export (pdf)
-# 方式二：浏览器打开 Markdown（如 typora/vscode 预览）→ 打印 → 目标选"另存为 PDF"
-# 导出后请核对：页数 ≤15 页、文件 ≤10MB、无本机路径、无学校/姓名信息
+# 方式一（推荐，无需写代码）：VS Code 装 "Markdown PDF" 插件
+#   打开 competition/09_学科交叉技术方案.md → 右键 Export (pdf)
+# 方式二：浏览器打开 Markdown 预览 → 打印 → 目标选"另存为 PDF"
+# 方式三（走受控 office 通道，可生成 docx）：
+#   python _tmp/md_to_office_json.py     # 把 09 编译成 office_write 的 blocks JSON
+#   再用 office_write(format=docx, input=<该 JSON>, path=competition/09_学科交叉技术方案.docx)
+#   注：本机没有 pandoc / LibreOffice / python-docx；项目的 Univer 管线已停用
+#   （大容器会被 GUI 复核面板加载并卡死界面），故只保留以上三条路径。
 ```
 
-> 本技术报告新增了「系统实现与可部署性」「运维工作量换算」「控制器原生字段口径」「控制平面闭环实测」四节，
-> 页数可能偏紧；若超出 15 页，优先压缩：附录 D、参考文献、5.3 中已详述的表格细节
-> （正文保留结论与数字，细节指向 `results/` 下的原始文件）。
+> 导出后请核对：无本机绝对路径、**无学校名 / 学院名 / LOGO / 指导教师信息**（赛道硬性要求）、
+> 文件 ≤10MB；`02_技术报告` 若用于提交则核对页数 ≤15 页。
 
-## 五、还需要你（团队）亲自做的三件事
+## 五、还需要作者亲自做的三件事
 
 1. **注册报名**：在 https://reg.aicomp.cn 注册、选「AI+学科交叉」赛道、缴纳 500 元参赛费
 2. **建仓库并推送**：按 `05_匿名化与合规自查清单.md` 的 E 节步骤，在干净路径下初始化 git 并推送
-   （**务必先做 A 节匿名化检查**；推送前把 `LICENSE` 里的 `[参赛团队名称 / 队伍编号]` 换成实际信息）
+   （**务必先做 A 节匿名化检查**；`LICENSE` 版权行已填 `沈轩昊`，README 的 CI 徽章待公开仓库后启用）
 3. **录屏**：按 `04_演示视频脚本.md` 的分镜与讲解词录 3–5 分钟视频
 
 ## 六、提交前必读
