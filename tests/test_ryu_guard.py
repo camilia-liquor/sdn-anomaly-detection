@@ -26,6 +26,7 @@ import json
 import logging
 import sys
 import tempfile
+import time
 import types
 from pathlib import Path
 
@@ -96,6 +97,10 @@ def _install_ryu_stubs():
     hub = types.ModuleType("ryu.lib.hub")
     hub.spawn = lambda fn, *a, **k: None          # 不启动后台线程，避免测试里空转
     hub.sleep = lambda *_a, **_k: None
+    # 回读校验用 hub.Event 做异步等待；替身用标准库 Event（wait(timeout) 语义一致），
+    # 这样测试既能模拟"回复到了"，也能模拟"超时"（不 set 即超时）。
+    import threading as _threading
+    hub.Event = _threading.Event
     packet = types.ModuleType("ryu.lib.packet")
     packet.ether_types = types.SimpleNamespace(ETH_TYPE_IP=0x0800)
 
@@ -145,9 +150,15 @@ class _FakeParser:
 
 class _FakeOfproto:
     OFPIT_APPLY_ACTIONS = 4
+    OFPIT_METER = 6
     OFPFC_ADD = 0
     OFPMC_ADD = 0
     OFPMF_KBPS = 1
+    # 回滚用到的常量（OF1.3）
+    OFPFC_DELETE_STRICT = 4
+    OFPMC_DELETE = 2
+    OFPP_ANY = 0xffffffff
+    OFPG_ANY = 0xffffffff
 
 
 class _FakeDatapath:
@@ -156,18 +167,41 @@ class _FakeDatapath:
         self.ofproto = _FakeOfproto()
         self.ofproto_parser = _FakeParser()
         self.sent: list = []
+        self._xid = 1000
 
     def send_msg(self, msg) -> None:
+        # 真实 Ryu 的 Datapath.send_msg 会给未分配 xid 的消息分配一个（回复必须沿用同一 xid），
+        # 桩件必须复现这一步：回读校验正是靠 xid 把回复与请求配对的。
+        if isinstance(msg, dict) and not msg.get("xid"):
+            self._xid += 1
+            msg["xid"] = self._xid
         self.sent.append(msg)
 
     def flowmods(self) -> list[dict]:
         return [m for m in self.sent if isinstance(m, dict) and m.get("__kind__") == "OFPFlowMod"]
+
+    def flow_stats_requests(self) -> list[dict]:
+        return [m for m in self.sent
+                if isinstance(m, dict) and m.get("__kind__") == "OFPFlowStatsRequest"]
+
+    def deletes(self) -> list[dict]:
+        """回滚用的 DELETESTRICT 流表删除（command=OFPFC_DELETE_STRICT）。"""
+        return [m for m in self.flowmods() if int(m.get("command", -1)) == _FakeOfproto.OFPFC_DELETE_STRICT]
+
+
+class _FakeInstruction:
+    """流表项里的一条指令（回读校验要据此判断"这条规则到底做了什么"）。"""
+
+    def __init__(self, itype: int, actions=None) -> None:
+        self.type = itype
+        self.actions = actions if actions is not None else []
 
 
 class _FakeFlowStat:
     def __init__(self, **kw) -> None:
         self.priority = kw.pop("priority", 1)
         self.match = kw.pop("match", {})
+        self.instructions = kw.pop("instructions", [])
         self.duration_sec = kw.pop("duration_sec", 10)
         self.duration_nsec = kw.pop("duration_nsec", 0)
         self.idle_timeout = kw.pop("idle_timeout", 0)
@@ -178,14 +212,15 @@ class _FakeFlowStat:
 
 
 class _FakeMsg:
-    def __init__(self, datapath, body) -> None:
+    def __init__(self, datapath, body, xid: int | None = None) -> None:
         self.datapath = datapath
         self.body = body
+        self.xid = xid
 
 
 class _FakeEvent:
-    def __init__(self, datapath, body) -> None:
-        self.msg = _FakeMsg(datapath, body)
+    def __init__(self, datapath, body, xid: int | None = None) -> None:
+        self.msg = _FakeMsg(datapath, body, xid)
 
 
 def _load_guard(tmpdir: Path):
@@ -215,9 +250,17 @@ def test_arguments_registered(mod) -> None:
     check(int(args.block_seconds) > 0, "处置有有效期（--block-seconds > 0，到期自动解除）",
           f"{args.block_seconds} 秒")
     check(isinstance(args.whitelist, list), "提供 --whitelist 参数（默认空，需上线时填）")
+    check(getattr(args, "verify_readback", None) is False,
+          "回读校验默认关闭（--verify-readback 需显式打开）",
+          f"verify_readback={getattr(args, 'verify_readback', None)}")
+    check(float(getattr(args, "verify_timeout", 0)) > 0 and getattr(args, "rollback_on_fail", None) is True,
+          "回读校验有超时且默认失败即回滚（--no-rollback-on-fail 可关）",
+          f"verify_timeout={getattr(args, 'verify_timeout', None)} "
+          f"rollback_on_fail={getattr(args, 'rollback_on_fail', None)}")
 
 
-def _make_guard(mod, tmpdir: Path, *, execute: bool, whitelist=()):
+def _make_guard(mod, tmpdir: Path, *, execute: bool, whitelist=(), verify: bool = False,
+                verify_timeout: float = 2.0, rollback: bool = True):
     app = mod.GuardSwitch.__new__(mod.GuardSwitch)      # 绕过需要 RyuApp 的 __init__
     app.datapaths = {}
     app.detect_url = "http://127.0.0.1:0"
@@ -227,6 +270,13 @@ def _make_guard(mod, tmpdir: Path, *, execute: bool, whitelist=()):
     app.audit_path = str(tmpdir / "audit_ryu.jsonl")
     app.blocked = {}
     app.blocked_action = {}       # 与 __init__ 保持一致：幂等要能区分"重复"与"升级"
+    # 与 __init__ 保持一致：回读校验的可选字段（桩件绕过 __init__，这类漂移本身是隐患）
+    app.verify_readback = verify
+    app.verify_timeout = verify_timeout
+    app.rollback_on_fail = rollback
+    app._pending_verify = {}
+    app._n_verified = 0
+    app._n_rollbacks = 0
     app.logger = _StubLogger()
     return app
 
@@ -458,6 +508,153 @@ def test_observe_action_is_inert(mod, tmpdir: Path) -> None:
               f"guard={sorted(mod._ACTION_RANK)} service={list(ACTIONS)} ranks={ranks}")
 
 
+def test_readback_verification_and_rollback(mod, tmpdir: Path) -> None:
+    """下发后回读校验 + 失败回滚（可选能力，默认关）。
+
+    守三件事：
+      ① 默认关时**不发**额外的流表请求、行为与产物不变；
+      ② 开启后必须真的用 OFPFlowStatsRequest 把流表读回来，并按**动作是否正确**判定
+         （只"找到同源规则"不算通过——本该丢弃却变成限速同样是账实不符）；
+      ③ 判定失败/超时 → 回滚（删规则 + 删 Meter）并**解开幂等窗口**，否则一次失败的处置
+         会被永久固化成"看起来在处理"。
+    """
+    src = "10.0.0.42"
+    alert = {"src_ip": src, "pred_class": "DDoS", "p_attack": 0.99, "action": "block"}
+
+    # ---- ① 默认关：不发额外请求，台账如实标注"未校验" ----
+    g0 = _make_guard(mod, tmpdir, execute=True)
+    dp0 = _FakeDatapath()
+    g0._handle_alert(dict(alert), dp0)
+    check(len(dp0.flow_stats_requests()) == 0,
+          "默认关（verify_readback=False）时不下发任何额外的流表回读请求",
+          f"实际发出 {len(dp0.flow_stats_requests())} 条 OFPFlowStatsRequest")
+    rec0 = [json.loads(x) for x in Path(g0.audit_path).read_text(encoding="utf-8").strip().splitlines()]
+    rec0 = [r for r in rec0 if r.get("src_ip") == src and r.get("action") == "block"]
+    check(bool(rec0) and (rec0[-1].get("verify") or {}).get("checked") is False,
+          "台账不谎报校验：未开启时 verify.checked=False",
+          f"verify={rec0[-1].get('verify') if rec0 else None}")
+
+    # ---- ② 开启 + 交换机确实生效 → 校验通过、不回滚 ----
+    g = _make_guard(mod, tmpdir, execute=True, verify=True)
+    dp = _FakeDatapath()
+    detects: list = []
+    g._call_detect = lambda rows, datapath=None: (detects.append(rows), {"ok": True, "alerts": []})[1]
+    g._handle_alert(dict(alert), dp)
+    reqs = dp.flow_stats_requests()
+    check(len(reqs) == 1, "开启后下发成功会发 1 条 OFPFlowStatsRequest（回读流表确认生效）",
+          f"实际 {len(reqs)} 条")
+    check(len(dp.flowmods()) == 1 and len(dp.deletes()) == 0, "下发阶段只有 1 条 ADD 规则、没有回滚动作")
+    if not reqs:
+        return
+    xid = reqs[0].get("xid")
+    check(isinstance(xid, int), "回读请求携带 xid（回复必须沿用同一 xid，才能与周期采集区分开）",
+          f"xid={xid}")
+
+    # 交换机回：该源上确实挂着 priority=100、APPLY_ACTIONS 且动作为空的丢弃规则
+    ok_body = [_FakeFlowStat(priority=1, match={"ipv4_src": "10.0.0.1"}),
+               _FakeFlowStat(priority=100, match={"ipv4_src": src},
+                             instructions=[_FakeInstruction(_FakeOfproto.OFPIT_APPLY_ACTIONS, [])])]
+    g._flow_stats_reply_handler(_FakeEvent(dp, ok_body, xid=xid))
+    check(g._n_verified == 1 and g._n_rollbacks == 0, "回读确认规则生效后计入「已验证」且不回滚",
+          f"verified={g._n_verified} rollbacks={g._n_rollbacks}")
+    check(len(g._pending_verify) == 0, "校验完成即从待校验表中移除（不留悬挂条目）",
+          f"pending={len(g._pending_verify)}")
+    check(detects == [], "校验回复不得被当成新一轮流量喂给检测器（否则会重复告警）",
+          f"检测调用次数={len(detects)}")
+    recs = [json.loads(x) for x in Path(g.audit_path).read_text(encoding="utf-8").strip().splitlines()]
+    ver = [r for r in recs if r.get("event") == "verify" and r.get("src_ip") == src]
+    check(bool(ver) and ver[-1]["ok"] is True and ver[-1]["reason"] == "ok",
+          "台账单独记录校验结论（event=verify，含期望动作与判定依据）",
+          f"{ver[-1] if ver else None}")
+
+    # 采集回复（xid 不匹配）必须照旧走检测路径
+    g._flow_stats_reply_handler(_FakeEvent(dp, [_FakeFlowStat(priority=1,
+                                                             match={"ip_proto": 6, "ipv4_src": "10.0.0.5"})],
+                                          xid=999999))
+    check(len(detects) == 1, "xid 不匹配的流表回复仍按周期采集处理（继续喂检测器）",
+          f"检测调用次数={len(detects)}")
+
+    # ---- ③ 动作不符：本该丢弃、交换机上却是限速 → 回滚 ----
+    g2 = _make_guard(mod, tmpdir, execute=True, verify=True)
+    dp2 = _FakeDatapath()
+    g2._handle_alert({"src_ip": "10.0.0.43", "pred_class": "DDoS", "p_attack": 0.99,
+                      "action": "block"}, dp2)
+    xid2 = dp2.flow_stats_requests()[0].get("xid")
+    wrong_body = [_FakeFlowStat(priority=100, match={"ipv4_src": "10.0.0.43"},
+                                instructions=[_FakeInstruction(_FakeOfproto.OFPIT_METER)])]
+    g2._flow_stats_reply_handler(_FakeEvent(dp2, wrong_body, xid=xid2))
+    check(len(dp2.deletes()) == 1, "回读发现「动作与预期不符」时下发 DELETESTRICT 回滚",
+          f"回滚报文 {len(dp2.deletes())} 条")
+    if dp2.deletes():
+        check(int(dp2.deletes()[0].get("command", -1)) == _FakeOfproto.OFPFC_DELETE_STRICT
+              and (dp2.deletes()[0].get("match") or {}).get("ipv4_src") == "10.0.0.43",
+              "回滚按源 IP 精确删除刚下发的规则（DELETE_STRICT + 同 match + 同优先级）")
+    check("10.0.0.43" not in g2.blocked, "回滚后解开该源的封禁窗口（否则幂等会把重试永久抑制掉）")
+    recs2 = [json.loads(x) for x in Path(g2.audit_path).read_text(encoding="utf-8").strip().splitlines()]
+    v2 = [r for r in recs2 if r.get("event") == "verify" and r.get("src_ip") == "10.0.0.43"]
+    check(bool(v2) and v2[-1]["ok"] is False and v2[-1].get("rolled_back") is True,
+          "回滚写进台账（ok=false + rolled_back=true + 原因）", f"{v2[-1] if v2 else None}")
+
+    # 回滚之后：同一源再来告警必须重新尝试下发（不能因为幂等而沉默）
+    n_before = len(dp2.flowmods())
+    g2._handle_alert({"src_ip": "10.0.0.43", "pred_class": "DDoS", "p_attack": 0.99,
+                      "action": "block"}, dp2)
+    check(len(dp2.flowmods()) > n_before, "回滚后同源新告警会重新尝试下发（幂等窗口已解开）",
+          f"flowmods {n_before} → {len(dp2.flowmods())}")
+
+    # ---- ④ 超时 = 未确认：同样回滚 ----
+    g3 = _make_guard(mod, tmpdir, execute=True, verify=True, verify_timeout=0.01)
+    dp3 = _FakeDatapath()
+    g3._handle_alert({"src_ip": "10.0.0.44", "pred_class": "Probe", "p_attack": 0.9,
+                      "action": "block"}, dp3)
+    check(len(g3._pending_verify) == 1, "未收到回复时条目挂在待校验表里（异步等待，不阻塞事件循环）",
+          f"pending={len(g3._pending_verify)}")
+    time.sleep(0.15)          # 超时下限是 0.1s（见 _schedule_verify 的 max(0.1, …)）
+    done = g3._sweep_verifications(now=time.time() + 10.0)   # 显式给"未来时刻"，判定可确定复现
+    check(len(done) == 1 and done[0]["reason"] == "timeout" and done[0]["rolled_back"] is True,
+          "超时扫描把「等不到回复」判定为未确认并回滚（不确定 ≠ 生效）",
+          f"{done[0] if done else None}")
+    check(len(g3._pending_verify) == 0 and len(dp3.deletes()) == 1,
+          "超时判定后清空待校验表并下发回滚报文")
+
+    # ---- ⑤ throttle 回滚要连 Meter 一起删（否则限速残留在交换机上） ----
+    g4 = _make_guard(mod, tmpdir, execute=True, verify=True)
+    dp4 = _FakeDatapath()
+    g4._handle_alert({"src_ip": "10.0.0.45", "pred_class": "Probe", "p_attack": 0.9,
+                      "action": "throttle"}, dp4)
+    xid4 = dp4.flow_stats_requests()[0].get("xid")
+    g4._flow_stats_reply_handler(_FakeEvent(dp4, [], xid=xid4))     # 流表里什么都没有
+    meter_deletes = [m for m in dp4.sent if isinstance(m, dict)
+                     and m.get("__kind__") == "OFPMeterMod"
+                     and int(m.get("command", -1)) == _FakeOfproto.OFPMC_DELETE]
+    check(len(dp4.deletes()) == 1 and len(meter_deletes) == 1,
+          "限速规则回滚时同时删除 Meter（只删流表项会留下孤儿 Meter）",
+          f"deletes={len(dp4.deletes())} meter_deletes={len(meter_deletes)}")
+
+    # ---- ⑥ 待校验表必须有界（交换机完全不回包 + 大量告警也不能无界增长） ----
+    g5 = _make_guard(mod, tmpdir, execute=True, verify=True, verify_timeout=3600.0)
+    dp5 = _FakeDatapath()
+    cap = int(mod._PENDING_VERIFY_CAP)
+    for i in range(cap + 5):
+        g5._handle_alert({"src_ip": f"10.9.{i // 250}.{i % 250}", "pred_class": "DDoS",
+                          "p_attack": 0.99, "action": "block"}, dp5)
+    check(len(g5._pending_verify) <= cap, "待校验条目有硬上限（不会因为交换机不回包而无限增长）",
+          f"pending={len(g5._pending_verify)} ≤ cap={cap}")
+    recs5 = [json.loads(x) for x in Path(g5.audit_path).read_text(encoding="utf-8").strip().splitlines()]
+    skipped = [r for r in recs5 if (r.get("verify") or {}).get("reason") == "pending_cap"]
+    check(bool(skipped), "超限时如实记账「本次未校验」，而不是假装校验过", f"{len(skipped)} 条")
+
+    # ---- ⑦ 关闭回滚开关时只记账不移除规则（把选择权留给运维） ----
+    g6 = _make_guard(mod, tmpdir, execute=True, verify=True, rollback=False)
+    dp6 = _FakeDatapath()
+    g6._handle_alert({"src_ip": "10.0.0.46", "pred_class": "DDoS", "p_attack": 0.99,
+                      "action": "block"}, dp6)
+    xid6 = dp6.flow_stats_requests()[0].get("xid")
+    g6._flow_stats_reply_handler(_FakeEvent(dp6, [], xid=xid6))
+    check(len(dp6.deletes()) == 0 and len(g6._pending_verify) == 0,
+          "rollback_on_fail=False 时校验失败只记账、不回滚（fail-closed 由运维选择）")
+
+
 def _run_all() -> int:
     print("=" * 74)
     print("Ryu 适配层行为测试（用桩件替代 Ryu，验证接口契约与安全默认值）")
@@ -480,6 +677,7 @@ def _run_all() -> int:
             test_repeated_alerts_are_idempotent(mod, tmpdir)
             test_throttle_falls_back_to_drop(mod, tmpdir)
             test_observe_action_is_inert(mod, tmpdir)
+            test_readback_verification_and_rollback(mod, tmpdir)
     n_fail = sum(1 for ok, _, _ in _results if not ok)
     print("-" * 74)
     print(f"{len(_results) - n_fail}/{len(_results)} 项通过" + ("" if n_fail == 0 else f"，{n_fail} 项失败 ❌"))

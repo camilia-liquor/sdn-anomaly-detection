@@ -79,7 +79,7 @@ python tools/check_env.py
 ```bash
 python tools/smoke_test.py        # 冒烟：小样本全链路跑通（约 1 分钟，产物写在 _smoke 隔离目录）
 python tests/test_core.py         # 单元测试：20 个用例，覆盖数据切分/窗口/泄漏防护/复核闭环
-python tests/test_ryu_guard.py    # Ryu 适配层行为测试：34 个用例，无需安装 Ryu（见 3.5）
+python tests/test_ryu_guard.py    # Ryu 适配层行为测试：58 个用例，无需安装 Ryu（见 3.5）
 python tests/test_pcap_tools.py   # pcap 解析往返一致性：58 个用例，无需真实抓包
 python tools/acceptance_check.py  # 交付验收：文件齐全性 + 指标复算 + 在线接口真实调用（130 项）
 ```
@@ -352,6 +352,15 @@ ryu-manager integrations/ryu_guard.py --execute --whitelist 10.0.0.1 10.0.0.254 
 | `--block-seconds` | `60` | 处置有效期，到期由交换机自动解除（避免误封长期影响业务） |
 | `--whitelist` | 空 | 永不处置的源 IP。**上线前必须填**，至少包含控制器管理口与网关 |
 | `--audit` | `results/audit_alerts_ryu.jsonl` | 控制器侧审计台账 |
+| `--verify-readback` | 关 | **下发后回读校验**：再发 `OFPFlowStatsRequest` 把流表读回来，确认该源上确实挂着**动作正确**的规则 |
+| `--verify-timeout` | `2.0` | 回读等待回复的超时（秒）。超时按"未确认"处理（**不确定 ≠ 生效**） |
+| `--no-rollback-on-fail` | 回滚 | 缺省校验失败/超时即回滚；加上本开关则改为"只记账、不回滚"（由运维按自己的风险偏好选 fail-open / fail-closed） |
+
+> ⚠️ **`--verify-readback` 为什么默认关**：`executed=true` 只代表"消息已发出"，**不代表交换机上真的生效**
+> （权限、table 满、指令不支持、meter 超限、中间设备吞包都可能让它落空）。默认开启会让"不确定"变成"回滚"，
+> 在响应慢或不支持带 match 的 stats 请求的交换机上，反而把已经生效的处置撤掉。所以它需要显式打开。开启后：
+> 校验结论单独写一条 `event=verify` 台账（含 `ok` / `found` / `rule_kinds` / `rolled_back` / 原因），
+> 心跳里的 `verified` / `rollbacks` / `verify_pending` 可在 `python tools/cida.py status` 看到。
 
 ### 3.4 处置动作
 
@@ -370,9 +379,11 @@ ryu-manager integrations/ryu_guard.py --execute --whitelist 10.0.0.1 10.0.0.254 
   **p50 29.8 ms / p95 44.7 ms / p99 45.7 ms**（剔除首批 TensorFlow 计算图构建的约 0.5 s 一次性开销）、
   端到端处置动作全部正确执行，报告见 `results/e2e_controller_report.md`。
 * 另外，「没装 Ryu 就跑不了」**不等于「没法验证」**：`tests/test_ryu_guard.py` 用桩件替代 `ryu` 模块，
-  **真的调用适配层的核心逻辑**，把 33 项接口契约与安全默认值锁死（见下表）。
+  **真的调用适配层的核心逻辑**，把 58 项接口契约与安全默认值锁死（见下表）。
   这个测试在编写过程中就抓出了两处**「账实不符」**的真缺陷并已修复——
   它们恰好是最危险的一类问题：台账显示"已处置"，交换机上其实什么都没发生。
+  本轮又补上「下发后回读校验 + 失败回滚」的 22 项 check（默认关、回读通过、动作不符回滚、
+  超时回滚、限速连 Meter 一起删、回滚后解开幂等窗口、待校验表有界）。
 
   | 已验证项 | 说明 |
   |---|---|
@@ -383,6 +394,7 @@ ryu-manager integrations/ryu_guard.py --execute --whitelist 10.0.0.1 10.0.0.254 
   | **`throttle` 真生效** | 除了 `OFPMeterMod`，还必须下发**引用该 Meter 的流表项**（`OFPInstructionMeter`）——只建 Meter 是不限速的，这也是一个已修缺陷 |
   | `observe` 无副作用 | 只记录，不下发任何规则 |
   | 审计可追溯 | 每条动作落盘，含源 IP / 类别 / 置信度 / 是否执行 / 有效期 |
+  | **回读校验与回滚**（22 项） | 默认关时**不发**任何额外流表请求；开启后：回读确认生效 → 计入 `verified` 且不回滚；**动作不符**（本该丢弃却是限速）或**超时** → `DELETE_STRICT` 回滚、限速连 Meter 一起删、**解开幂等窗口**以便重试、写 `event=verify` 台账；校验回复不得被当成新一轮流量喂给检测器（靠 xid 分流）；待校验表有硬上限 |
 
 * 请按照 3.2 的「先演练、后执行」顺序在你的环境中验证，不要一上来就 `--execute`。
 

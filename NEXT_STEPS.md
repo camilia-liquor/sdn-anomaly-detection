@@ -23,9 +23,9 @@ python tools/cida.py verify      # 三套测试 + 130 项交付自检 —— 改
 | 详细版/附录 | `competition/02_技术报告.md` 与 `_精简稿.md`（**已不再是提交主体**） |
 | 统一入口 | `python tools/cida.py {doctor,status,demo,guard,verify,inventory,config,retrain}` |
 | 工具数 | **40**（新增 `tools/*.py` 会触发约 6 处文档口径级联，优先在**已有文件内**改动） |
-| 测试项数 | 单元 20 / Ryu 34 / pcap 58 / 验收自检 130 |
+| 测试项数 | 单元 20 / Ryu 58 / pcap 58 / 验收自检 130 |
 
-## 2. 体系缺口：② 与 ⑤ 已完成（本轮），剩 ①③④
+## 2. 体系缺口：①②⑤ 已完成，只剩 ③④
 
 > 来源：`competition/06_检测与处置体系.md` §8「仍在的缺口」。**已完成的不要重做**，直接看下一节。
 
@@ -48,17 +48,25 @@ python tools/cida.py verify      # 三套测试 + 130 项交付自检 —— 改
 - 回归测试：`test_autotighten_requires_switch_and_human_verdicts`
 - 用法：`CIDA_AUTOTIGHTEN=1`（门槛见 `deploy/cida-detect.env`）
 
-### ① 下发后回读校验 + 失败回滚　【价值**高** / 成本中高 / 风险中】
-- `integrations/ryu_guard.py`：下发后发 `OFPFlowStatsRequest` 回读确认，失败则回滚
-- 需同步扩 `tests/test_ryu_guard.py` 的 `_FakeDatapath` 桩件
-- ⚠️ 该测试现有 **34 项 check**，改动后要同步文档口径（约 21 处）
+### ✅ ① 下发后回读校验 + 失败回滚（本轮完成）
+- `integrations/ryu_guard.py`：`verify_readback`（**默认关**）/ `verify_timeout`（2.0s）/ `rollback_on_fail`（默认回滚）
+- 下发成功后发 `OFPFlowStatsRequest`，**用 xid 分流**「校验回复」与「周期采集回复」；
+  判定不只看"找到同源规则"，还要看**动作对不对**（该丢弃却限速同样是账实不符）
+- 不一致 / 超时（=未确认）→ `DELETE_STRICT` 回滚 + 限速连 Meter 一起删 + **解开幂等窗口**以便重试 +
+  写 `event=verify` 台账；心跳新增 `verified` / `rollbacks` / `verify_pending`（`cida status` 可见）
+- ⚠️ 设计要点：**不能**在下发路径上同步等待回复——Ryu 一个 App 只有一个事件派发循环，
+  同步等会等不到回复、把正确规则全判成"未生效"再全部回滚。故做成「异步登记 + 回复/超时判定」
+- 回归测试：`tests/test_ryu_guard.py` 新增 22 项 check（34 → **58**，文档口径已同步 ~10 处）
+- ⚠️ 诚实边界：**线路级**只在桩件下验证过；`tools/ryu_live_check.py` 的既有 16 项场景未开启本功能
+  （默认关，故既有 16 项结论不受影响）。若要把这一层也做成实测，需要：让 `FakeSwitch` 变成**有状态**
+  （把收到的 FLOW_MOD 装进流表、并沿用请求 xid 回复）+ 新增一个"交换机静默忽略 FLOW_MOD"的回滚场景
 
-### ③ 漏报代价换算（影响面）　【价值中 / 成本中 / **风险高**】
+### ⏳ ③ 漏报代价换算（影响面）　【价值中 / 成本中 / **风险高**】
 - 改 `src/evaluate.py::online_alarm_evaluation`：记录**被漏掉片段的持续时长**并换算影响面
 - ⚠️ **重跑会改动 `results/summary.json` 与 `artifacts/main_model.json` 的 sha256**
   （项目对这两个有守护，此前全程未变），必须同步更新多处引用与文档
 
-### ④ 多源证据融合（控制面流表 + 数据面 pcap 双路）　【价值**高** / 成本高 / 风险中】
+### ⏳ ④ 多源证据融合（控制面流表 + 数据面 pcap 双路）　【价值**高** / 成本高 / 风险中】
 - 需引入第二数据源与融合层，是剩下几项里最大的一项
 
 ## 3. 必须遵守的纪律（都是踩过坑换来的）
@@ -85,6 +93,6 @@ python tools/cida.py verify      # 三套测试 + 130 项交付自检 —— 改
 
 ## 5. 新会话开场白（可直接复制）
 
-> 读 `NEXT_STEPS.md`，然后按第 2 节继续做**缺口 ① 或 ③**（①价值最高但风险中，③会破产物 sha256 守护）。
+> 读 `NEXT_STEPS.md`，然后按第 2 节继续做**缺口 ③ 或 ④**（③ 会破产物 sha256 守护，④ 是最大的一项）。
 > 改完跑 `python tools/cida.py verify`，并同步受影响的文档口径。
-> 已完成的是 ② 与 ⑤（对抗训练可选化、自动放松），**不要重做**。
+> 已完成的是 ①②⑤（对抗训练可选化、自动放松、下发后回读校验与回滚），**不要重做**。
