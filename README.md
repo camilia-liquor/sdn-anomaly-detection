@@ -1,6 +1,8 @@
-# SDN 流量异常检测：CNN + BiLSTM 混合模型（开源工程版）
+# SDN 流量异常检测：CNN + BiLSTM 混合模型
 
+<!-- CI 徽章待公开仓库后补：push 到 GitHub 后把下面的 OWNER/REPO 换成实际地址再取消注释
 [![CI](https://github.com/OWNER/REPO/actions/workflows/ci.yml/badge.svg)](./.github/workflows/ci.yml)
+-->
 
 > 一个**开箱即跑、结果可复现、并且真的能接进 SDN 控制平面**的入侵/异常检测系统：自带仿真数据集生成器，
 > 训练 CNN+BiLSTM 混合模型，输出多分类 + 二分类 + **在线告警级**三套指标，
