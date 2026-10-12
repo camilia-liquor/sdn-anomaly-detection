@@ -68,6 +68,9 @@ results/summary_backup.json
 # results/live_demo_incident.md）；同目录下的 *.md / *.json 报告才是要交付的产物
 results/audit_alerts*.jsonl
 results/live_demo_audit*.jsonl
+# 适配层心跳（由 ryu_guard 每 10s 原子写入，`tools/cida.py status` 读它判断适配层是否还活着）：
+# 纯运行期状态（含 pid / 已处理数 / 回读校验计数），不该进版本库
+results/guard_heartbeat.json
 logs/
 
 # ---------- 系统杂项 ----------

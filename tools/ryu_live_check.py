@@ -80,6 +80,8 @@ OFPIT_METER = 6
 OFPAT_OUTPUT = 0
 OFPP_CONTROLLER = 0xFFFFFFFD
 OFPFC_ADD = 0
+OFPFC_MODIFY = 1
+OFPFC_DELETE_STRICT = 4         # 回滚用：按 match+priority 精确删除
 OFPMC_ADD = 0
 OFPXMC_OPENFLOW_BASIC = 0x8000
 OFPPF_10GB_FD = 1 << 12         # ofp_port_features：10GB-FD（端口描述里声明链路能力）
@@ -216,33 +218,62 @@ def build_port_desc_reply(xid: int, ports: list[tuple[int, str, str]]) -> bytes:
 
 
 
+def build_instructions(insts: list[tuple]) -> bytes:
+    """把指令列表编码成 ofp_instruction 序列。
+
+    为什么需要：本轮新增的**下发后回读校验**要求控制器能从流表回复里读出"这条规则到底做了什么"——
+    只有 match 没有 instructions 的话，控制器无法区分"丢弃"与"限速"，
+    于是"账实不符"（本该丢弃却变成限速）就查不出来。
+    只编码两种本作品会下发的指令：空动作 apply_actions（= 丢弃）与 meter（= 限速）。
+    """
+    out = b""
+    for item in insts:
+        kind = item[0]
+        if kind == "apply_actions":
+            actions = item[1] if len(item) > 1 and item[1] is not None else []
+            raw = b"".join(struct.pack("!HH4x", int(a[0]), 16) + bytes(a[1]) for a in actions)
+            out += struct.pack("!HH4x", OFPIT_APPLY_ACTIONS, 8 + len(raw)) + raw
+        elif kind == "meter":
+            out += struct.pack("!HHI", OFPIT_METER, 8, int(item[1]))
+    return out
+
+
 def build_flow_stats_reply(xid: int, flows: list[dict]) -> bytes:
     """OFPFlowStatsReply：body = OFPMP_FLOW 头 + 若干 OFPFlowStats。
 
     OFPFlowStats（OF1.3）字段顺序：length(2) table_id(1) pad(1) duration_sec(4) duration_nsec(4)
     priority(2) idle_timeout(2) hard_timeout(2) flags(2) pad(4) cookie(8) packet_count(8)
     byte_count(8) match(变长) instructions(变长) —— 固定头共 48 字节。
+
+    `flows` 有两种形态：
+      * 检测用的流表统计（`flow_for` 产出的行）——按 in_port/proto/五元组自动组 match，priority=1；
+      * **已装规则**（`match_fields` + `priority` + `instructions` 显式给出）——用于回读校验，
+        模拟交换机里真实存在的处置规则（priority=100）。
     """
     stats = b""
     for f in flows:
-        proto = int(f.get("proto", f.get("ip_proto", 6)))
-        entries = [("in_port", f["in_port"]), ("eth_type", 0x0800), ("ip_proto", proto)]
-        if proto == 1:                                       # ICMP：匹配字段换成 icmpv4_*
-            entries += [("icmpv4_type", int(f.get("icmp_type", 0))),
-                        ("icmpv4_code", int(f.get("icmp_code", 0)))]
-        elif proto == 17:                                    # UDP
-            entries += [("udp_src", f["sport"]), ("udp_dst", f["dport"])]
-        else:                                                # TCP（默认）
-            entries += [("tcp_src", f["sport"]), ("tcp_dst", f["dport"])]
-        match = build_match(entries + [("ipv4_src", f["src"]), ("ipv4_dst", f["dst"])])
+        if f.get("match_fields") is not None:
+            entries = list(f["match_fields"])
+        else:
+            proto = int(f.get("proto", f.get("ip_proto", 6)))
+            entries = [("in_port", f["in_port"]), ("eth_type", 0x0800), ("ip_proto", proto)]
+            if proto == 1:                                       # ICMP：匹配字段换成 icmpv4_*
+                entries += [("icmpv4_type", int(f.get("icmp_type", 0))),
+                            ("icmpv4_code", int(f.get("icmp_code", 0)))]
+            elif proto == 17:                                    # UDP
+                entries += [("udp_src", f["sport"]), ("udp_dst", f["dport"])]
+            else:                                                # TCP（默认）
+                entries += [("tcp_src", f["sport"]), ("tcp_dst", f["dport"])]
+            entries += [("ipv4_src", f["src"]), ("ipv4_dst", f["dst"])]
+        match = build_match(entries)
         head = struct.pack("!HBxIIHHHH4xQQQ",
                            0, 0,                                   # length 占位, table_id
-                           int(f["duration_sec"]), int(f["duration_nsec"]),
-                           1,                                      # priority（适配层只取 ==1）
+                           int(f.get("duration_sec", 1)), int(f.get("duration_nsec", 0)),
+                           int(f.get("priority", 1)),              # 适配层检测路径只取 priority==1
                            int(f.get("idle_timeout", 0)), int(f.get("hard_timeout", 0)),
                            int(f.get("flags", 0)), 0,              # flags, pad
-                           int(f["packet_count"]), int(f["byte_count"]))  # cookie, pkts, bytes
-        payload = head + match
+                           int(f.get("packet_count", 0)), int(f.get("byte_count", 0)))
+        payload = head + match + build_instructions(f.get("instructions") or [])
         payload = struct.pack("!H", len(payload)) + payload[2:]     # 回填 length
         stats += payload
     body = struct.pack("!HH4x", OFPMP_FLOW, 8 + len(stats)) + stats
@@ -440,6 +471,13 @@ class FakeSwitch(threading.Thread):
         self.echo_replies_sent = 0
         self.stats_requests = 0
         self.stats_replies_sent = 0
+        # ---- 本轮新增：有状态流表 + 回读校验相关统计 ----
+        # 为什么必须"有状态"：回读校验的本质就是问交换机"这条规则在不在、动作对不对"，
+        # 一个不记规则的假交换机只能把每次回读都判成失败（然后控制器就会去回滚）。
+        self.installed: list[dict] = []
+        self.flow_stats_requests_with_match = 0     # 带 match 过滤的 OFPMP_FLOW 请求（= 回读校验）
+        self.verify_replies_sent = 0                # 针对回读请求发出的回复
+        self.delete_strict_mods = 0                 # 控制器下发的回滚报文数
         self.error: str | None = None
         self.exit_reason = "?"
         self.xid = 100
@@ -456,11 +494,59 @@ class FakeSwitch(threading.Thread):
             buf += chunk
         return buf
 
-    def _send_stats(self, sock: socket.socket, idx: int) -> None:
-        flows = self.flow_rounds[min(idx, len(self.flow_rounds) - 1)]
-        self.xid += 1
-        sock.sendall(build_flow_stats_reply(self.xid, flows))
+    def _send_stats(self, sock: socket.socket, idx: int, xid: int | None = None) -> None:
+        flows = self._current_table(idx)
+        if xid is None:
+            self.xid += 1
+            xid = self.xid
+        sock.sendall(build_flow_stats_reply(xid, flows))
         self.stats_replies_sent += 1
+
+    def _current_table(self, idx: int) -> list[dict]:
+        """当前流表 = 本轮上报的统计行 + **已装的处置规则**（回读校验要能读到后者）。"""
+        rows = list(self.flow_rounds[min(idx, len(self.flow_rounds) - 1)])
+        return rows + list(self.installed)
+
+    def _track_table(self, msg: dict) -> None:
+        """把控制器下发的规则装进本模拟交换机的流表（ADD/MODIFY 装上，DELETE_STRICT 摘掉）。"""
+        if msg.get("type") != "FLOW_MOD":
+            return
+        match = msg.get("match") or {}
+        src = str(match.get("ipv4_src", ""))
+        if not src:
+            return
+        priority = int(msg.get("priority", 0))
+        cmd = int(msg.get("command", OFPFC_ADD))
+        keep = [f for f in self.installed
+                if not (f.get("priority") == priority
+                        and str((f.get("match_fields") or [("ipv4_src", "")])[-1][1]) == src)]
+        if cmd in (OFPFC_ADD, OFPFC_MODIFY):
+            insts = ([("meter", mid) for mid in msg.get("meter_ids") or []]
+                     or ([("apply_actions", [])] if msg.get("is_drop") else []))
+            keep.append({"match_fields": [("eth_type", 0x0800), ("ipv4_src", src)],
+                         "priority": priority, "instructions": insts,
+                         "duration_sec": 1, "duration_nsec": 0,
+                         "idle_timeout": int(msg.get("idle_timeout", 0)),
+                         "hard_timeout": int(msg.get("hard_timeout", 0))})
+            self.installed = keep
+        elif cmd == OFPFC_DELETE_STRICT:
+            self.installed = keep
+            self.delete_strict_mods += 1
+
+    @staticmethod
+    def _request_match(buf: bytes, length: int) -> dict:
+        """解析 OFPMP_FLOW **请求**里带的 match（回读校验按源 IP 过滤，周期采集不带）。
+
+        OF1.3 ofp_flow_stats_request：msg(8) + multipart 头(8) + 固定头 table_id/pad/out_port/
+        out_group/pad/cookie/cookie_mask(32) → match 从第 48 字节开始。
+        """
+        if length < 48:
+            return {}
+        try:
+            match, _ = parse_oxm_match(buf, 48)
+            return match or {}
+        except (struct.error, ValueError):
+            return {}
 
     def run(self) -> None:  # noqa: C901
         self.t0 = time.time()
@@ -528,8 +614,18 @@ class FakeSwitch(threading.Thread):
                                 self.port_desc_replies_sent += 1
                             elif mp == OFPMP_FLOW:
                                 self.stats_requests += 1
-                                if self.reply_on_request and sent < self.rounds:
-                                    self._send_stats(sock, sent)
+                                req_xid = struct.unpack_from("!I", raw, 4)[0]
+                                req_match = self._request_match(raw, ln)
+                                if req_match:
+                                    # **回读校验请求**（带 match 过滤）：必须回复，
+                                    # 且按 OF1.3 规范**沿用请求的 xid**——控制器正是靠它把
+                                    # "校验回复"与"周期采集回复"分流，回错 xid 会被判成校验超时。
+                                    self.flow_stats_requests_with_match += 1
+                                    self.verify_replies_sent += 1
+                                    sock.sendall(build_flow_stats_reply(
+                                        req_xid, self._current_table(sent)))
+                                elif self.reply_on_request and sent < self.rounds:
+                                    self._send_stats(sock, sent, xid=req_xid)
                                     sent += 1
                                     last_sent_t = time.time()
                         elif mtype == OFPT_ECHO_REQUEST:
@@ -545,6 +641,7 @@ class FakeSwitch(threading.Thread):
                                 msg["t"] = round(time.time() - self.t0, 2)
                                 msg["raw_hex"] = raw.hex()
                                 self.received.append(msg)
+                                self._track_table(msg)
                     # 既定的上报轮次已全部发完，再观察 settle 秒没有新报文就收工
                     # （否则要白等满 timeout，联调时很浪费时间）
                     if sent >= self.rounds and last_sent_t and (time.time() - last_sent_t) > self.settle:
@@ -1114,12 +1211,17 @@ def main(argv: list[str] | None = None) -> int:
             "    cfg.IntOpt('block_seconds', default=60),\n"
             "    cfg.ListOpt('whitelist', default=[]),\n"
             "    cfg.StrOpt('audit', default=''),\n"
+            # 本轮新增能力：下发后回读校验（真机上半场是"交换机确实装了规则"的正例）
+            "    cfg.BoolOpt('verify_readback', default=False),\n"
+            "    cfg.FloatOpt('verify_timeout', default=2.0),\n"
+            "    cfg.BoolOpt('rollback_on_fail', default=True),\n"
             "])\n"
             f"CONF.set_override('detect_url', {detect_url!r})\n"
             "CONF.set_override('execute', True)\n"
             "CONF.set_override('block_seconds', 60)\n"
             "CONF.set_override('whitelist', [])\n"
-            f"CONF.set_override('audit', {str(audit_path)!r})\n",
+            f"CONF.set_override('audit', {str(audit_path)!r})\n"
+            "CONF.set_override('verify_readback', True)\n",
             encoding="utf-8")
         ryu_cmd = [str(ryu_python), "-m", "ryu.cmd.manager",
                    "--user-flags", str(flags_py),
@@ -1202,15 +1304,21 @@ def main(argv: list[str] | None = None) -> int:
                   f"针对正常源 IP 的处置规则 {len([m for m in guard_mods if src_of(m).startswith('10.0.0.3')])} 条")
 
         # 台账留痕
-        audit: list[dict] = []
+        # ⚠️ 同一个台账文件里现在有**两类**记录：告警/处置记录（每行一次下发）与
+        #    `event=verify` 的回读校验记录（只描述"校验结果"）。统计处置时必须先按
+        #    "有没有 event 字段"把校验记录排除掉——否则会拿 None 去和字符串排序直接抛错
+        #    （本工具第一次跑带校验的版本就是这样崩的），更糟的是会把校验记录误算成告警。
+        audit_raw: list[dict] = []
         if audit_path.exists():
             for line in audit_path.read_text(encoding="utf-8").splitlines():
                 line = line.strip()
                 if line:
                     try:
-                        audit.append(json.loads(line))
+                        audit_raw.append(json.loads(line))
                     except json.JSONDecodeError:
                         pass
+        audit = [a for a in audit_raw if not a.get("event")]          # 告警/处置记录
+        audit_events = [a for a in audit_raw if a.get("event")]       # 体系事件记录（如回读校验）
         executed = [a for a in audit if a.get("executed")]
         suppressed = [a for a in audit if a.get("suppressed")]
         add_check("审计台账记录了真实执行（executed=true）", bool(executed),
@@ -1230,6 +1338,27 @@ def main(argv: list[str] | None = None) -> int:
                   f"{len(audit)} 条告警里：真实下发 {len(executed)} 次、"
                   f"封禁窗口内幂等抑制 {len(suppressed)} 次，交换机上只增加了 {len(guard_mods)} 条规则")
 
+        # ---------- 下发后回读校验（本轮新增能力，线路级验证）----------
+        verify_recs = [a for a in audit_events if a.get("event") == "verify"]
+        add_check("适配层发起了「带源 IP 匹配」的流表回读请求（OFPMP_FLOW + match）",
+                  sw.flow_stats_requests_with_match >= 1,
+                  f"带 match 的回读请求 {sw.flow_stats_requests_with_match} 次"
+                  f"（周期采集 {sw.stats_requests - sw.flow_stats_requests_with_match} 次不带过滤），"
+                  f"模拟交换机针对回读回了 {sw.verify_replies_sent} 条流表回复")
+        add_check("真实 Ryu 下回读校验判定「规则已生效」（xid 配对正确、未误判超时）",
+                  bool(verify_recs) and any(v.get("ok") for v in verify_recs)
+                  and not any(v.get("reason") == "timeout" for v in verify_recs),
+                  f"event=verify 记录 {len(verify_recs)} 条："
+                  f"ok={sum(1 for v in verify_recs if v.get('ok'))}、"
+                  f"超时={sum(1 for v in verify_recs if v.get('reason') == 'timeout')}、"
+                  f"动作不符={sum(1 for v in verify_recs if v.get('reason') == 'mismatch')}"
+                  + (f"；示例 {verify_recs[-1]}" if verify_recs else ""))
+        add_check("回读校验没有误回滚（交换机确实装了规则时不得撤规则）",
+                  bool(verify_recs) and not any(v.get("rolled_back") for v in verify_recs)
+                  and sw.delete_strict_mods == 0,
+                  f"回滚报文 {sw.delete_strict_mods} 条；"
+                  f"交换机流表里的处置规则 {len(sw.installed)} 条")
+
         payload = {
             "experiment": "ryu_live_check",
             "ryu_version": ryu_version,
@@ -1245,6 +1374,13 @@ def main(argv: list[str] | None = None) -> int:
             "timeline": sw.timeline,
             "stats_requests": sw.stats_requests,
             "stats_replies_sent": sw.stats_replies_sent,
+            "verify_readback": {
+                "readback_requests": sw.flow_stats_requests_with_match,
+                "readback_replies_sent": sw.verify_replies_sent,
+                "delete_strict_mods": sw.delete_strict_mods,
+                "installed_rules": sw.installed,
+                "audit_verify_records": verify_recs,
+            },
             "port_desc_requests": sw.port_desc_requests,
             "port_desc_replies_sent": sw.port_desc_replies_sent,
             "echo_replies_sent": sw.echo_replies_sent,
@@ -1253,6 +1389,8 @@ def main(argv: list[str] | None = None) -> int:
             "messages": sw.received,
             "audit_path": str(audit_path.relative_to(ROOT)),
             "audit": audit,
+            "audit_records_total": len(audit_raw),
+            "audit_events": audit_events,
             "checks": checks,
             "switch_error": sw.error,
             "switch_exit_reason": sw.exit_reason,

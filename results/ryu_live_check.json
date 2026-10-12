@@ -1,8 +1,8 @@
 {
   "experiment": "ryu_live_check",
   "ryu_version": "4.34",
-  "ryu_python": "_tmp\\ryu_venv\\Scripts\\python.exe",
-  "ryu_cmd": "ryu.cmd.manager --user-flags <USER_HOME>\\Desktop\\generate_normal_traffic\\logs\\_ryu_live\\ryu_guard_flags.py --ofp-tcp-listen-port 6700 <USER_HOME>\\Desktop\\generate_normal_traffic\\integrations\\ryu_guard.py",
+  "ryu_python": "C:\\Users\\xc\\Desktop\\generate_normal_traffic\\_tmp\\ryu_venv\\Scripts\\python.exe",
+  "ryu_cmd": "ryu.cmd.manager --user-flags C:\\Users\\xc\\Desktop\\generate_normal_traffic\\logs\\_ryu_live\\ryu_guard_flags.py --ofp-tcp-listen-port 6700 C:\\Users\\xc\\Desktop\\generate_normal_traffic\\integrations\\ryu_guard.py",
   "model_tag": "sdn_ctrl_s0",
   "processed_dir": "data/processed_sdn",
   "detect_port": 5300,
@@ -1187,9 +1187,16 @@
   ],
   "policy": {
     "action": "block",
+    "autotighten": false,
+    "autotighten_max_threshold": 0.9,
+    "autotighten_min_labeled": 10,
+    "autotighten_normal_ratio": 0.8,
+    "autotighten_step": 0.05,
     "confirm_windows": 3,
     "dry_run": false,
+    "observe_margin": 0.5,
     "threshold": 0.5,
+    "unknown_action": "throttle",
     "unknown_threshold": 0.0,
     "whitelist": []
   },
@@ -1225,33 +1232,79 @@
       "subtype": ""
     },
     {
-      "t": 8.92,
+      "t": 8.43,
       "type": "MULTIPART_REQUEST",
       "subtype": "OFPMP_FLOW"
     },
     {
-      "t": 18.92,
+      "t": 18.44,
       "type": "MULTIPART_REQUEST",
       "subtype": "OFPMP_FLOW"
     },
     {
-      "t": 18.96,
+      "t": 18.45,
       "type": "FLOW_MOD",
       "subtype": ""
     },
     {
-      "t": 28.95,
+      "t": 18.45,
       "type": "MULTIPART_REQUEST",
       "subtype": "OFPMP_FLOW"
     },
     {
-      "t": 38.96,
+      "t": 28.46,
       "type": "MULTIPART_REQUEST",
       "subtype": "OFPMP_FLOW"
     }
   ],
   "stats_requests": 4,
   "stats_replies_sent": 2,
+  "verify_readback": {
+    "readback_requests": 1,
+    "readback_replies_sent": 1,
+    "delete_strict_mods": 0,
+    "installed_rules": [
+      {
+        "match_fields": [
+          [
+            "eth_type",
+            2048
+          ],
+          [
+            "ipv4_src",
+            "10.0.0.9"
+          ]
+        ],
+        "priority": 100,
+        "instructions": [
+          [
+            "apply_actions",
+            []
+          ]
+        ],
+        "duration_sec": 1,
+        "duration_nsec": 0,
+        "idle_timeout": 0,
+        "hard_timeout": 60
+      }
+    ],
+    "audit_verify_records": [
+      {
+        "event": "verify",
+        "time": 1791826128.2774155,
+        "src_ip": "10.0.0.9",
+        "expect_action": "block",
+        "ok": true,
+        "found": true,
+        "rule_kinds": [
+          "drop"
+        ],
+        "n_stats": 40,
+        "reason": "ok",
+        "datapath_id": 1
+      }
+    ]
+  },
   "port_desc_requests": 1,
   "port_desc_replies_sent": 1,
   "echo_replies_sent": 0,
@@ -1260,7 +1313,7 @@
   "messages": [
     {
       "type": "FLOW_MOD",
-      "xid": 2576121509,
+      "xid": 2009935244,
       "command": 0,
       "table_id": 0,
       "priority": 0,
@@ -1284,11 +1337,11 @@
       "meter_ids": [],
       "raw_len": 80,
       "t": 0.02,
-      "raw_hex": "040e0050998c7ea5000000000000000000000000000000000000000000000000ffffffff0000000000000000000000000001000400000000000400180000000000000010fffffffdffff000000000000"
+      "raw_hex": "040e005077cd2d8c000000000000000000000000000000000000000000000000ffffffff0000000000000000000000000001000400000000000400180000000000000010fffffffdffff000000000000"
     },
     {
       "type": "FLOW_MOD",
-      "xid": 2576121512,
+      "xid": 2009935247,
       "command": 0,
       "table_id": 0,
       "priority": 100,
@@ -1309,14 +1362,14 @@
       "is_drop": true,
       "meter_ids": [],
       "raw_len": 80,
-      "t": 18.96,
-      "raw_hex": "040e0050998c7ea80000000000000000000000000000000000000000003c0064ffffffff0000000000000000000000000001001280000a020800800016040a0000090000000000000004000800000000"
+      "t": 18.45,
+      "raw_hex": "040e005077cd2d8f0000000000000000000000000000000000000000003c0064ffffffff0000000000000000000000000001001280000a020800800016040a0000090000000000000004000800000000"
     }
   ],
   "audit_path": "logs\\_ryu_live\\audit_alerts.jsonl",
   "audit": [
     {
-      "time": 1789232601.7648633,
+      "time": 1791826128.2722461,
       "src_ip": "10.0.0.9",
       "dst_ip": "10.0.0.4",
       "dst_port": 53,
@@ -1326,11 +1379,16 @@
       "executed": true,
       "dry_run": false,
       "suppressed": false,
+      "verify": {
+        "checked": true,
+        "state": "pending",
+        "xid": 2009935248
+      },
       "block_seconds": 60,
       "datapath_id": 1
     },
     {
-      "time": 1789232601.765863,
+      "time": 1791826128.2722461,
       "src_ip": "10.0.0.9",
       "dst_ip": "10.0.0.4",
       "dst_port": 87,
@@ -1340,11 +1398,14 @@
       "executed": false,
       "dry_run": false,
       "suppressed": true,
+      "verify": {
+        "checked": false
+      },
       "block_seconds": 60,
       "datapath_id": 1
     },
     {
-      "time": 1789232601.765863,
+      "time": 1791826128.2722461,
       "src_ip": "10.0.0.9",
       "dst_ip": "10.0.0.4",
       "dst_port": 80,
@@ -1354,11 +1415,14 @@
       "executed": false,
       "dry_run": false,
       "suppressed": true,
+      "verify": {
+        "checked": false
+      },
       "block_seconds": 60,
       "datapath_id": 1
     },
     {
-      "time": 1789232601.7744076,
+      "time": 1791826128.274422,
       "src_ip": "10.0.0.9",
       "dst_ip": "10.0.0.4",
       "dst_port": 67,
@@ -1368,11 +1432,14 @@
       "executed": false,
       "dry_run": false,
       "suppressed": true,
+      "verify": {
+        "checked": false
+      },
       "block_seconds": 60,
       "datapath_id": 1
     },
     {
-      "time": 1789232601.7744076,
+      "time": 1791826128.274422,
       "src_ip": "10.0.0.9",
       "dst_ip": "10.0.0.4",
       "dst_port": 76,
@@ -1382,11 +1449,14 @@
       "executed": false,
       "dry_run": false,
       "suppressed": true,
+      "verify": {
+        "checked": false
+      },
       "block_seconds": 60,
       "datapath_id": 1
     },
     {
-      "time": 1789232601.7754076,
+      "time": 1791826128.274422,
       "src_ip": "10.0.0.9",
       "dst_ip": "10.0.0.4",
       "dst_port": 89,
@@ -1396,11 +1466,14 @@
       "executed": false,
       "dry_run": false,
       "suppressed": true,
+      "verify": {
+        "checked": false
+      },
       "block_seconds": 60,
       "datapath_id": 1
     },
     {
-      "time": 1789232601.7754076,
+      "time": 1791826128.274422,
       "src_ip": "10.0.0.9",
       "dst_ip": "10.0.0.4",
       "dst_port": 71,
@@ -1410,11 +1483,14 @@
       "executed": false,
       "dry_run": false,
       "suppressed": true,
+      "verify": {
+        "checked": false
+      },
       "block_seconds": 60,
       "datapath_id": 1
     },
     {
-      "time": 1789232601.7754076,
+      "time": 1791826128.2754304,
       "src_ip": "10.0.0.9",
       "dst_ip": "10.0.0.4",
       "dst_port": 82,
@@ -1424,11 +1500,14 @@
       "executed": false,
       "dry_run": false,
       "suppressed": true,
+      "verify": {
+        "checked": false
+      },
       "block_seconds": 60,
       "datapath_id": 1
     },
     {
-      "time": 1789232601.7764075,
+      "time": 1791826128.2754304,
       "src_ip": "10.0.0.9",
       "dst_ip": "10.0.0.4",
       "dst_port": 81,
@@ -1438,11 +1517,14 @@
       "executed": false,
       "dry_run": false,
       "suppressed": true,
+      "verify": {
+        "checked": false
+      },
       "block_seconds": 60,
       "datapath_id": 1
     },
     {
-      "time": 1789232601.7764075,
+      "time": 1791826128.2754304,
       "src_ip": "10.0.0.9",
       "dst_ip": "10.0.0.4",
       "dst_port": 90,
@@ -1452,7 +1534,27 @@
       "executed": false,
       "dry_run": false,
       "suppressed": true,
+      "verify": {
+        "checked": false
+      },
       "block_seconds": 60,
+      "datapath_id": 1
+    }
+  ],
+  "audit_records_total": 11,
+  "audit_events": [
+    {
+      "event": "verify",
+      "time": 1791826128.2774155,
+      "src_ip": "10.0.0.9",
+      "expect_action": "block",
+      "ok": true,
+      "found": true,
+      "rule_kinds": [
+        "drop"
+      ],
+      "n_stats": 40,
+      "reason": "ok",
       "datapath_id": 1
     }
   ],
@@ -1520,9 +1622,21 @@
     "同一源 IP 的连续告警不重复下发规则（处置幂等）": {
       "pass": true,
       "detail": "10 条告警里：真实下发 1 次、封禁窗口内幂等抑制 9 次，交换机上只增加了 1 条规则"
+    },
+    "适配层发起了「带源 IP 匹配」的流表回读请求（OFPMP_FLOW + match）": {
+      "pass": true,
+      "detail": "带 match 的回读请求 1 次（周期采集 3 次不带过滤），模拟交换机针对回读回了 1 条流表回复"
+    },
+    "真实 Ryu 下回读校验判定「规则已生效」（xid 配对正确、未误判超时）": {
+      "pass": true,
+      "detail": "event=verify 记录 1 条：ok=1、超时=0、动作不符=0；示例 {'event': 'verify', 'time': 1791826128.2774155, 'src_ip': '10.0.0.9', 'expect_action': 'block', 'ok': True, 'found': True, 'rule_kinds': ['drop'], 'n_stats': 40, 'reason': 'ok', 'datapath_id': 1}"
+    },
+    "回读校验没有误回滚（交换机确实装了规则时不得撤规则）": {
+      "pass": true,
+      "detail": "回滚报文 0 条；交换机流表里的处置规则 1 条"
     }
   },
   "switch_error": null,
-  "switch_exit_reason": "已完成 2 轮上报并静默观察 15s",
+  "switch_exit_reason": "已完成 2 轮上报并静默观察 10s",
   "passed": true
 }

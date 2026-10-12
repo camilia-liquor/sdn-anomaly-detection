@@ -4,7 +4,7 @@
 
 ## 0. 结论
 
-- **16/16 项检查通过**：链路端到端可用。
+- **19/19 项检查通过**：链路端到端可用。
 - 控制器下发的报文：FLOW_MOD **2** 条，其中**带源 IP 匹配的处置规则 1** 条（匹配 `10.0.0.9`，priority=100，是否丢弃=True）；审计台账 **10** 条。
 
 > 这条实验把原来的边界「Ryu 适配层**未在真实交换机上实跑**」改写成：
@@ -30,6 +30,9 @@
 | 审计台账记录了真实执行（executed=true） | ✅ | 台账 10 条，其中真正执行 1 条、幂等抑制 9 条（示例 action=block src=10.0.0.9 类别=DoS p_attack=0.9986） |
 | 处置动作与台账一致（action=block → 下发 DROP 或 METER 流表项） | ✅ | 台账动作：['block']；实际报文：处置 FLOW_MOD 1、METER_MOD 0、限速流表项 0 |
 | 同一源 IP 的连续告警不重复下发规则（处置幂等） | ✅ | 10 条告警里：真实下发 1 次、封禁窗口内幂等抑制 9 次，交换机上只增加了 1 条规则 |
+| 适配层发起了「带源 IP 匹配」的流表回读请求（OFPMP_FLOW + match） | ✅ | 带 match 的回读请求 1 次（周期采集 3 次不带过滤），模拟交换机针对回读回了 1 条流表回复 |
+| 真实 Ryu 下回读校验判定「规则已生效」（xid 配对正确、未误判超时） | ✅ | event=verify 记录 1 条：ok=1、超时=0、动作不符=0；示例 {'event': 'verify', 'time': 1791826128.2774155, 'src_ip': '10.0.0.9', 'expect_action': 'block', 'ok': True, 'found': True, 'rule_kinds': ['drop'], 'n_stats': 40, 'reason': 'ok', 'datapath_id': 1} |
+| 回读校验没有误回滚（交换机确实装了规则时不得撤规则） | ✅ | 回滚报文 0 条；交换机流表里的处置规则 1 条 |
 
 ## 2. 握手时间线（控制器 → 模拟交换机，逐条实收）
 
@@ -39,11 +42,11 @@
 | 0.02 | FEATURES_REQUEST | — | 控制器询问交换机能力 → 交换机回 FEATURES_REPLY |
 | 0.02 | MULTIPART_REQUEST | OFPMP_PORT_DESC | OFPMP_PORT_DESC：OF1.3 握手的**必经一步**（交换机回 PORT_DESC_REPLY 后控制器才进 MAIN_DISPATCHER） |
 | 0.02 | FLOW_MOD | — | 控制器下发流表项 |
-| 8.92 | MULTIPART_REQUEST | OFPMP_FLOW | OFPMP_FLOW：周期性拉取流表统计（检测的数据来源） |
-| 18.92 | MULTIPART_REQUEST | OFPMP_FLOW | OFPMP_FLOW：周期性拉取流表统计（检测的数据来源） |
-| 18.96 | FLOW_MOD | — | 控制器下发流表项 |
-| 28.95 | MULTIPART_REQUEST | OFPMP_FLOW | OFPMP_FLOW：周期性拉取流表统计（检测的数据来源） |
-| 38.96 | MULTIPART_REQUEST | OFPMP_FLOW | OFPMP_FLOW：周期性拉取流表统计（检测的数据来源） |
+| 8.43 | MULTIPART_REQUEST | OFPMP_FLOW | OFPMP_FLOW：周期性拉取流表统计（检测的数据来源） |
+| 18.44 | MULTIPART_REQUEST | OFPMP_FLOW | OFPMP_FLOW：周期性拉取流表统计（检测的数据来源） |
+| 18.45 | FLOW_MOD | — | 控制器下发流表项 |
+| 18.45 | MULTIPART_REQUEST | OFPMP_FLOW | OFPMP_FLOW：周期性拉取流表统计（检测的数据来源） |
+| 28.46 | MULTIPART_REQUEST | OFPMP_FLOW | OFPMP_FLOW：周期性拉取流表统计（检测的数据来源） |
 
 > ⚠️ 这一步是本工具**真实踩到的坑**，也是最值得记录的一条：OF1.3 握手里，Ryu 收到 `FEATURES_REPLY` 后**不会**直接进 `MAIN_DISPATCHER`，而是先发一条 `OFPPortDescStatsRequest`（`OFPMP_PORT_DESC`），只有等交换机回了 `OFPPortDescStatsReply` 才 `set_state(MAIN_DISPATCHER)`（`ryu/controller/ofp_handler.py:216-232`）。在那之前，App 注册的所有 `MAIN_DISPATCHER` 事件都不会触发——包括适配层记录 datapath 上线、以及周期性拉流表。于是链路上**看不出任何错误**（TCP 通、HELLO 通、FEATURES 通），但控制器永远不会进入检测与处置流程。
 
@@ -52,7 +55,7 @@
 | 序号 | t (s) | 类型 | 关键字段 |
 |---|---|---|---|
 | 1 | 0.02 | FLOW_MOD | command=0 priority=0 match={} 指令=[{'type': 4, 'length': 24, 'actions': [{'type': 'OUTPUT', 'port': 4294967293}]}] 是否 DROP=False |
-| 2 | 18.96 | FLOW_MOD | command=0 priority=100 match={'eth_type': 2048, 'ipv4_src': '10.0.0.9'} 指令=[{'type': 4, 'length': 8, 'actions': []}] 是否 DROP=True |
+| 2 | 18.45 | FLOW_MOD | command=0 priority=100 match={'eth_type': 2048, 'ipv4_src': '10.0.0.9'} 指令=[{'type': 4, 'length': 8, 'actions': []}] 是否 DROP=True |
 
 ## 4. 上报了哪些流量（真实数据集的流记录 → OF 流表统计）
 
@@ -71,16 +74,16 @@
 
 | 时间 | 判定类别 | p_attack | 源 IP | 动作 | 真正执行 | 幂等抑制 | 演练 |
 |---|---|---|---|---|---|---|---|
-| 01:03:21 | DoS | 0.9986 | 10.0.0.9 | block | True | False | False |
-| 01:03:21 | DDoS | 0.9999 | 10.0.0.9 | block | False | True | False |
-| 01:03:21 | DDoS | 1.0 | 10.0.0.9 | block | False | True | False |
-| 01:03:21 | DDoS | 1.0 | 10.0.0.9 | block | False | True | False |
-| 01:03:21 | DDoS | 0.9999 | 10.0.0.9 | block | False | True | False |
-| 01:03:21 | DDoS | 0.999 | 10.0.0.9 | block | False | True | False |
-| 01:03:21 | DDoS | 0.9984 | 10.0.0.9 | block | False | True | False |
-| 01:03:21 | DDoS | 0.996 | 10.0.0.9 | block | False | True | False |
-| 01:03:21 | DDoS | 0.9998 | 10.0.0.9 | block | False | True | False |
-| 01:03:21 | DDoS | 0.9987 | 10.0.0.9 | block | False | True | False |
+| 01:28:48 | DoS | 0.9986 | 10.0.0.9 | block | True | False | False |
+| 01:28:48 | DDoS | 0.9999 | 10.0.0.9 | block | False | True | False |
+| 01:28:48 | DDoS | 1.0 | 10.0.0.9 | block | False | True | False |
+| 01:28:48 | DDoS | 1.0 | 10.0.0.9 | block | False | True | False |
+| 01:28:48 | DDoS | 0.9999 | 10.0.0.9 | block | False | True | False |
+| 01:28:48 | DDoS | 0.999 | 10.0.0.9 | block | False | True | False |
+| 01:28:48 | DDoS | 0.9984 | 10.0.0.9 | block | False | True | False |
+| 01:28:48 | DDoS | 0.996 | 10.0.0.9 | block | False | True | False |
+| 01:28:48 | DDoS | 0.9998 | 10.0.0.9 | block | False | True | False |
+| 01:28:48 | DDoS | 0.9987 | 10.0.0.9 | block | False | True | False |
 
 > 一次攻击会产生**连续多个**告警窗口（在线检测是滑动窗口，60 s 的攻击会连报十几个窗口）。适配层按「同一源 IP 在封禁窗口内只下发一次」做**幂等**，所以交换机上只多出 1 条规则，其余 9 条告警只留痕、不重复下发——既避免流表抖动，也让「处置次数」这个指标可信。
 
@@ -116,4 +119,4 @@ python tools/ryu_live_check.py --model-tag sdn_ctrl_s0 --processed-dir data/proc
     --ryu-python _tmp/ryu_venv/Scripts/python.exe
 ```
 
-> 本次运行结束原因：已完成 2 轮上报并静默观察 15s；模拟交换机错误：无。
+> 本次运行结束原因：已完成 2 轮上报并静默观察 10s；模拟交换机错误：无。
