@@ -4,6 +4,10 @@
 [![CI](https://github.com/OWNER/REPO/actions/workflows/ci.yml/badge.svg)](./.github/workflows/ci.yml)
 -->
 
+> **接手/续做的起点：[`NEXT_STEPS.md`](NEXT_STEPS.md)**
+> —— 项目当前状态、待做的体系缺口（含代价与风险排序）、必须遵守的纪律、提交材料剩余项，
+> 都在这一个文件里。**它不依赖记忆系统**（记忆需要主动读取或人工确认），只看它就能接着干。
+
 > 一个**开箱即跑、结果可复现、并且真的能接进 SDN 控制平面**的入侵/异常检测系统：自带仿真数据集生成器，
 > 训练 CNN+BiLSTM 混合模型，输出多分类 + 二分类 + **在线告警级**三套指标，
 > 提供**误报可控的部署工作点选择**，附带**在线检测服务（/api/detect）+ Ryu 控制器对接 + 告警审计台账 + Prometheus 指标**，
