@@ -1012,7 +1012,7 @@ generate_normal_traffic/
 │  ├─ test_core.py             单元测试（生成器/管线/滑窗/评估口径，10 项，无需 pytest）
 │  ├─ test_ryu_guard.py        Ryu 适配层行为测试（桩件替代 Ryu，34 项）
 │  └─ test_pcap_tools.py       pcap 往返一致性测试（58 项）
-├─ competition/                AIC「AI+开源」参赛材料（技术报告/资源清单/视频脚本/合规自查）
+├─ competition/                AIC「AI+学科交叉」参赛材料（技术报告/资源清单/视频脚本/合规自查）
 ├─ DEPLOYMENT.md               ★ 部署与对接指南（环境/服务/控制器/安全清单/排障）
 ├─ configs/{fast,full}.json    两套现成配置
 ├─ docs/
