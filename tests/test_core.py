@@ -271,8 +271,87 @@ def test_adversarial_augment_default_off_and_bounded():
 
 
 # ---------------------------------------------------------------------------
-# 漏报兜底与「未知 → 已知」复核闭环（观察池 / 回看缓冲 / 待研判队列 / 人工回流）
+# 多源证据融合（控制面流表 + 数据面 pcap 双路）
 # ---------------------------------------------------------------------------
+def test_multisource_fusion_policy():
+    """双源融合：一路静默否掉另一路是**不允许**的；单路/无路必须如实标注而不是编造。
+
+    这一项守的是融合层最容易犯的错：把"两个视角的矛盾"用平均/投票悄悄抹平
+    （看起来指标很好看，实际上单点风险被藏进了融合层）。
+    """
+    from src.fusion import (SOURCE_CONTROL, SOURCE_DATA, SourceEvidence, align_by_key,
+                            flow_key, fuse_evidence, fusion_metrics)
+
+    # ① 两种 schema 的字段名必须归一到同一个键（否则两路永远配不上对）
+    ctrl = {"Src IP": "10.0.0.9", "Dst IP": "10.0.0.1", "tp_src": 1234, "tp_dst": 80, "ip_proto": 6}
+    data = {"Source IP": "10.0.0.9", "Destination IP": "10.0.0.1", "Source Port": 1234,
+            "Destination Port": 80, "Protocol": 6}
+    assert flow_key(ctrl) == flow_key(data), (flow_key(ctrl), flow_key(data))
+    assert flow_key({"Src IP": "10.0.0.9"}) is None, "缺目的 IP 时不得猜一个键"
+
+    # ② 对齐：只在一路出现的流必须被单独列出（它们正是融合要补的那部分）
+    alone = {"Src IP": "10.0.0.77", "Dst IP": "10.0.0.1", "tp_src": 5, "tp_dst": 443, "ip_proto": 6}
+    al = align_by_key([ctrl, alone], [data])
+    assert len(al["matched"]) == 1 and len(al["control_only"]) == 1 and not al["data_only"], al
+    assert al["unkeyed"] == {"control": 0, "data": 0}
+
+    def fuse(c=None, d=None, **kw):
+        ev_c = SourceEvidence(SOURCE_CONTROL, p_attack=c, available=c is not None)
+        ev_d = SourceEvidence(SOURCE_DATA, p_attack=d, available=d is not None)
+        return fuse_evidence(ev_c, ev_d, threshold=0.5, **kw)
+
+    # ③ 两路一致：不冲突、不需要额外人工研判
+    v = fuse(0.9, 0.8)
+    assert v.alarm and not v.conflict and not v.review_required and not v.degraded, v.to_dict()
+
+    # ④ 两路对立：取更保守（更高风险）的一侧，且**必须**标记冲突并交人看
+    v = fuse(0.9, 0.1)
+    assert v.p_attack == 0.9 and v.alarm is True, v.to_dict()
+    assert v.conflict is True and v.review_required is True, v.to_dict()
+    assert "不允许" in v.reason or "对立" in v.reason, v.reason
+
+    # ⑤ 阈值附近的分差算"两路都不确定"，不算冲突（否则冲突标记会被噪声淹没）
+    v = fuse(0.51, 0.45)
+    assert v.conflict is False, v.to_dict()
+
+    # ⑥ 只有一路可用：用它的分数，但必须标 degraded（如实说明这次只有一只眼睛）
+    v = fuse(0.95, None)
+    assert v.p_attack == 0.95 and v.degraded is True and v.review_required is True, v.to_dict()
+    v = fuse(None, 0.2)
+    assert v.p_attack == 0.2 and v.alarm is False and v.degraded is True, v.to_dict()
+
+    # ⑦ 两路都没有：不给分数（**不编造**），也不假装报过警
+    v = fuse(None, None)
+    assert v.p_attack is None and v.alarm is False and v.degraded is True, v.to_dict()
+
+    # ⑧ 互补增益必须能单独数出来，且"融合反而漏掉某一路抓到的攻击"必须为 0
+    def rec(c, d):
+        v = fuse(c, d)
+        return {"verdict": v.to_dict()}
+
+    records = [
+        rec(0.9, 0.9),      # 两路都抓到
+        rec(0.1, 0.8),      # 控制面漏、数据面抓到 → 互补覆盖
+        rec(0.05, None),    # 只有控制面、且漏（数据面没覆盖到）→ degraded
+        rec(0.1, 0.1),      # 两路都判正常（真·漏报）
+        rec(0.9, 0.1),      # 冲突样本（一路报警、一路判正常）
+        rec(0.30, 0.32),    # 两路都差一点但一致 → 融合独有的一种报警（弱证据一致）
+        rec(0.30, 0.05),    # 只有一路弱 → 不报
+    ]
+    y = [1, 1, 1, 1, 0, 1, 1]
+    m = fusion_metrics(records, y, threshold=0.5)
+    assert m["recall_control"] == round(1 / 6, 4) and m["recall_data"] == round(2 / 6, 4), m
+    assert m["recall_fused"] == round(3 / 6, 4), m          # 融合把第 6 条（两路都差一点）也抓到了
+    assert m["rescued_by_pair"] == 1, m                     # 控制面漏的那条被数据面保住
+    assert m["recovered_by_fusion"] == 1, m                 # 两路单看都漏、融合抓到（弱证据一致）
+    assert m["weak_agreement"] == 1, m
+    assert m["lost_by_fusion"] == 0, "融合不得丢掉任何一路抓到的攻击"
+    assert m["conflicts"] == 2 and m["degraded"] == 1, m
+    assert m["fused_fp"] >= 1, m                            # 冲突样本被保守判成攻击（代价如实计入）
+    assert m["rule"] and m["threshold"] == 0.5
+
+
+
 def _review_service(tmpdir):
     """构造可确定复现的检测服务，并把落盘重定向到临时目录。
 

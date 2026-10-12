@@ -23,9 +23,9 @@ python tools/cida.py verify      # 三套测试 + 130 项交付自检 —— 改
 | 详细版/附录 | `competition/02_技术报告.md` 与 `_精简稿.md`（**已不再是提交主体**） |
 | 统一入口 | `python tools/cida.py {doctor,status,demo,guard,verify,inventory,config,retrain}` |
 | 工具数 | **40**（新增 `tools/*.py` 会触发约 6 处文档口径级联，优先在**已有文件内**改动） |
-| 测试项数 | 单元 20 / Ryu 58 / pcap 58 / 验收自检 130 |
+| 测试项数 | 单元 21 / Ryu 58 / pcap 58 / 验收自检 130 |
 
-## 2. 体系缺口：①②⑤ 已完成，只剩 ③④
+## 2. 体系缺口：①②⑤ 已完成；④ 机制已落地（实测数据待产）；③ 未做
 
 > 来源：`competition/06_检测与处置体系.md` §8「仍在的缺口」。**已完成的不要重做**，直接看下一节。
 
@@ -63,13 +63,33 @@ python tools/cida.py verify      # 三套测试 + 130 项交付自检 —— 改
   ⚠️ 仍未覆盖：**回滚路径**在真机上没有演练（需要一个"收下 FLOW_MOD 却静默不装表"的场景）；
   想补的话，给 FakeSwitch 加一个"忽略 FLOW_MOD"开关 + 跑第二个短场景即可
 
-### ⏳ ③ 漏报代价换算（影响面）　【价值中 / 成本中 / **风险高**】
+### 🟡 ④ 多源证据融合（控制面流表 + 数据面 pcap 双路）——**机制已落地，实测数据待产**
+- 已完成（本轮）：`src/fusion.py` —— 两路证据的**归一/对齐 + 融合策略 + 护栏**，配
+  `tests/test_core.py::test_multisource_fusion_policy`
+  - `flow_key()` 把两种 schema（控制面 `tp_dst` vs 数据面 `Destination Port`）归一到同一个键；缺 IP **宁可不融合**也不硬配
+  - `align_by_key()` 同时给出 `control_only` / `data_only`（只在一路出现的流 = 融合要补的那部分），**不丢证据**
+  - `fuse_evidence()`：**冲突不容许被平均抹平**（一路报警 + 一路判正常 → 取保守侧 + `conflict`/`review_required`）；
+    只有一路可用 → `degraded`（不假装两路都在）；两路都没有 → **不给分数**（不编造）；
+    另有一条"弱证据一致"规则（两路均 ≥ 阈值×0.5）——**这是融合唯一能超过单路的场景**
+  - `fusion_metrics()`：把 `rescued_by_pair`（互补覆盖）、`recovered_by_fusion`（两路都漏、融合抓到）、
+    `lost_by_fusion`（**必须为 0**，将来改规则时的哨兵）分开数；冲突/降级/误报代价一并如实计入
+- **还没做（下一步就做这个）**：把双视角**实测数据**跑出来，写成 `results/multisource_fusion.{md,json}`。可行路径（已勘察）：
+  1. 控制面视角：`data/raw_ctrl/sdn_stream.csv` → 用 `data/processed_sdn` 的模型打分（产物已在）
+  2. 数据面视角：`python tools/pcap_to_flows.py --write-sample <pcap>`（从同一条仿真流合成抓包 + 写 manifest）
+     → `--input <pcap> --output flows.csv` → 用主模型打分（`results/pcap_roundtrip.json` 已有往返校验）
+  3. 用 `src/fusion.py` 对齐 + 融合 + `fusion_metrics` 出数
+  - 建议做成**已有入口**的子命令（`python tools/cida.py fuse`）而不是新增 `tools/*.py`：
+    否则工具数 40→41，又要同步约 6 处文档口径
+  - ⚠️ 结论口径：双视角来自**同一条仿真流的两种投影**，只能证明"机制可用、互补与冲突会被如实标出"，
+    **不能当真实环境数字**；报告里必须写清这一点
+
+### ⏳ ③ 漏报代价换算（影响面）　【价值中 / 成本中 / **风险高**（若改主流程）】
 - 改 `src/evaluate.py::online_alarm_evaluation`：记录**被漏掉片段的持续时长**并换算影响面
 - ⚠️ **重跑会改动 `results/summary.json` 与 `artifacts/main_model.json` 的 sha256**
   （项目对这两个有守护，此前全程未变），必须同步更新多处引用与文档
-
-### ⏳ ④ 多源证据融合（控制面流表 + 数据面 pcap 双路）　【价值**高** / 成本高 / 风险中】
-- 需引入第二数据源与融合层，是剩下几项里最大的一项
+- 💡 若只为**答辩材料**要做这一项：**不必**改主流程——`results/predictions_cli.csv` 已缓存逐窗口预测，
+  完全可以写一个**只读**的派生分析（读缓存 → 数漏片段时长 × 放大倍数 → 写新产物），
+  一个守卫产物都不用动。动手前先确认缓存里的窗口与测试流标签能对齐
 
 ## 3. 必须遵守的纪律（都是踩过坑换来的）
 
@@ -95,6 +115,6 @@ python tools/cida.py verify      # 三套测试 + 130 项交付自检 —— 改
 
 ## 5. 新会话开场白（可直接复制）
 
-> 读 `NEXT_STEPS.md`，然后按第 2 节继续做**缺口 ③ 或 ④**（③ 会破产物 sha256 守护，④ 是最大的一项）。
+> 读 `NEXT_STEPS.md`，然后按第 2 节：先把 **④ 的双视角实测数据**跑出来（机制已在 `src/fusion.py`，只差实验入口），
 > 改完跑 `python tools/cida.py verify`，并同步受影响的文档口径。
-> 已完成的是 ①②⑤（对抗训练可选化、自动放松、下发后回读校验与回滚），**不要重做**。
+> 再决定 ③（若要动主流程会破产物 sha256 守护；只做派生分析则不用）。已完成的是 ①②⑤ 与 ④ 的机制部分，**不要重做**。
