@@ -1,0 +1,928 @@
+{
+  "experiment": "multisource_fusion",
+  "views": {
+    "control": "交换机组装的流表统计（OpenFlow flow stats 口径）",
+    "data": "由合成 pcap 重建的流特征（独立测量路径）"
+  },
+  "config": {
+    "window": 16,
+    "stride": 16,
+    "threshold": 0.5,
+    "flows": 400,
+    "processed_dir": "data\\processed_sdn",
+    "model": "artifacts/sdn_ctrl/model.keras",
+    "rule": "conservative_max_with_explicit_conflict"
+  },
+  "source": {
+    "manifest": "_tmp\\fusion\\fusion_sample.pcap",
+    "raw_stream": "C:\\Users\\xc\\Desktop\\generate_normal_traffic\\data\\raw\\sdn_stream.csv",
+    "n_flows": 400,
+    "class_counts": {
+      "Botnet": 25,
+      "BruteForce": 25,
+      "DDoS": 25,
+      "DoS": 25,
+      "Normal": 77,
+      "Probe": 173,
+      "U2R": 25,
+      "WebAttack": 25
+    }
+  },
+  "feature_mismatch": {
+    "tp_src": 44,
+    "flow_duration_nsec": 400,
+    "idle_timeout": 400,
+    "flags": 299,
+    "byte_count": 400,
+    "packet_count_per_nsecond": 400,
+    "byte_count_per_second": 400,
+    "byte_count_per_nsecond": 400,
+    "tp_dst": 27,
+    "hard_timeout": 332,
+    "packet_count_per_second": 6
+  },
+  "manifest_vs_raw_csv_diff": {
+    "tp_src": 44,
+    "flow_duration_nsec": 400,
+    "idle_timeout": 400,
+    "flags": 299,
+    "byte_count": 400,
+    "packet_count_per_nsecond": 400,
+    "byte_count_per_second": 400,
+    "byte_count_per_nsecond": 400,
+    "tp_dst": 27,
+    "hard_timeout": 332,
+    "packet_count_per_second": 6
+  },
+  "alignment": {
+    "matched": 400,
+    "control_only": 0,
+    "data_only": 0,
+    "unkeyed": {
+      "control": 0,
+      "data": 0
+    }
+  },
+  "metrics": {
+    "n": 25,
+    "pos": 20,
+    "control_hit": 16,
+    "data_hit": 16,
+    "fused_hit": 17,
+    "rescued_by_pair": 0,
+    "recovered_by_fusion": 1,
+    "lost_by_fusion": 0,
+    "conflicts": 0,
+    "degraded": 0,
+    "weak_agreement": 1,
+    "fused_fp": 5,
+    "control_fp": 5,
+    "data_fp": 5,
+    "recall_control": 0.8,
+    "recall_data": 0.8,
+    "recall_fused": 0.85,
+    "fnr_control": 0.2,
+    "fnr_data": 0.2,
+    "fnr_fused": 0.15,
+    "fpr_control": 1.0,
+    "fpr_data": 1.0,
+    "fpr_fused": 1.0,
+    "threshold": 0.5,
+    "rule": "conservative_max_with_explicit_conflict"
+  },
+  "single_source_outage": {
+    "n": 25,
+    "pos": 20,
+    "control_hit": 16,
+    "data_hit": 0,
+    "fused_hit": 16,
+    "rescued_by_pair": 16,
+    "recovered_by_fusion": 0,
+    "lost_by_fusion": 0,
+    "conflicts": 0,
+    "degraded": 25,
+    "weak_agreement": 0,
+    "fused_fp": 5,
+    "control_fp": 5,
+    "data_fp": 0,
+    "recall_control": 0.8,
+    "recall_data": 0.0,
+    "recall_fused": 0.8,
+    "fnr_control": 0.2,
+    "fnr_data": 1.0,
+    "fnr_fused": 0.2,
+    "fpr_control": 1.0,
+    "fpr_data": 0.0,
+    "fpr_fused": 1.0,
+    "threshold": 0.5,
+    "rule": "conservative_max_with_explicit_conflict"
+  },
+  "conflicts": [],
+  "windows": [
+    {
+      "window": 0,
+      "start_row": 0,
+      "p_control": 0.0101,
+      "p_data": 0.0249,
+      "label": 1,
+      "verdict": {
+        "p_attack": 0.0249,
+        "alarm": false,
+        "conflict": false,
+        "review_required": false,
+        "degraded": false,
+        "weak_agreement": false,
+        "reason": "两路一致（0.010 / 0.025，阈值 0.50）",
+        "sources": [
+          {
+            "source": "control",
+            "p_attack": 0.0101,
+            "pred_class": "",
+            "available": true,
+            "note": ""
+          },
+          {
+            "source": "data",
+            "p_attack": 0.0249,
+            "pred_class": "",
+            "available": true,
+            "note": ""
+          }
+        ]
+      }
+    },
+    {
+      "window": 1,
+      "start_row": 16,
+      "p_control": 0.0167,
+      "p_data": 0.0592,
+      "label": 1,
+      "verdict": {
+        "p_attack": 0.0592,
+        "alarm": false,
+        "conflict": false,
+        "review_required": false,
+        "degraded": false,
+        "weak_agreement": false,
+        "reason": "两路一致（0.017 / 0.059，阈值 0.50）",
+        "sources": [
+          {
+            "source": "control",
+            "p_attack": 0.0167,
+            "pred_class": "",
+            "available": true,
+            "note": ""
+          },
+          {
+            "source": "data",
+            "p_attack": 0.0592,
+            "pred_class": "",
+            "available": true,
+            "note": ""
+          }
+        ]
+      }
+    },
+    {
+      "window": 2,
+      "start_row": 32,
+      "p_control": 0.8029,
+      "p_data": 0.8903,
+      "label": 1,
+      "verdict": {
+        "p_attack": 0.8903,
+        "alarm": true,
+        "conflict": false,
+        "review_required": false,
+        "degraded": false,
+        "weak_agreement": false,
+        "reason": "两路一致（0.803 / 0.890，阈值 0.50）",
+        "sources": [
+          {
+            "source": "control",
+            "p_attack": 0.8029,
+            "pred_class": "",
+            "available": true,
+            "note": ""
+          },
+          {
+            "source": "data",
+            "p_attack": 0.8903,
+            "pred_class": "",
+            "available": true,
+            "note": ""
+          }
+        ]
+      }
+    },
+    {
+      "window": 3,
+      "start_row": 48,
+      "p_control": 0.8299,
+      "p_data": 0.8234,
+      "label": 1,
+      "verdict": {
+        "p_attack": 0.8299,
+        "alarm": true,
+        "conflict": false,
+        "review_required": false,
+        "degraded": false,
+        "weak_agreement": false,
+        "reason": "两路一致（0.830 / 0.823，阈值 0.50）",
+        "sources": [
+          {
+            "source": "control",
+            "p_attack": 0.8299,
+            "pred_class": "",
+            "available": true,
+            "note": ""
+          },
+          {
+            "source": "data",
+            "p_attack": 0.8234,
+            "pred_class": "",
+            "available": true,
+            "note": ""
+          }
+        ]
+      }
+    },
+    {
+      "window": 4,
+      "start_row": 64,
+      "p_control": 0.7446,
+      "p_data": 0.8698,
+      "label": 1,
+      "verdict": {
+        "p_attack": 0.8698,
+        "alarm": true,
+        "conflict": false,
+        "review_required": false,
+        "degraded": false,
+        "weak_agreement": false,
+        "reason": "两路一致（0.745 / 0.870，阈值 0.50）",
+        "sources": [
+          {
+            "source": "control",
+            "p_attack": 0.7446,
+            "pred_class": "",
+            "available": true,
+            "note": ""
+          },
+          {
+            "source": "data",
+            "p_attack": 0.8698,
+            "pred_class": "",
+            "available": true,
+            "note": ""
+          }
+        ]
+      }
+    },
+    {
+      "window": 5,
+      "start_row": 80,
+      "p_control": 0.4741,
+      "p_data": 0.3143,
+      "label": 1,
+      "verdict": {
+        "p_attack": 0.4741,
+        "alarm": true,
+        "conflict": false,
+        "review_required": false,
+        "degraded": false,
+        "weak_agreement": true,
+        "reason": "两路弱证据一致（0.474 / 0.314，均 ≥ 0.25 但均未达阈值 0.50）→ 报警并标注弱证据",
+        "sources": [
+          {
+            "source": "control",
+            "p_attack": 0.4741,
+            "pred_class": "",
+            "available": true,
+            "note": ""
+          },
+          {
+            "source": "data",
+            "p_attack": 0.3143,
+            "pred_class": "",
+            "available": true,
+            "note": ""
+          }
+        ]
+      }
+    },
+    {
+      "window": 6,
+      "start_row": 96,
+      "p_control": 0.9898,
+      "p_data": 0.9853,
+      "label": 0,
+      "verdict": {
+        "p_attack": 0.9898,
+        "alarm": true,
+        "conflict": false,
+        "review_required": false,
+        "degraded": false,
+        "weak_agreement": false,
+        "reason": "两路一致（0.990 / 0.985，阈值 0.50）",
+        "sources": [
+          {
+            "source": "control",
+            "p_attack": 0.9898,
+            "pred_class": "",
+            "available": true,
+            "note": ""
+          },
+          {
+            "source": "data",
+            "p_attack": 0.9853,
+            "pred_class": "",
+            "available": true,
+            "note": ""
+          }
+        ]
+      }
+    },
+    {
+      "window": 7,
+      "start_row": 112,
+      "p_control": 0.9975,
+      "p_data": 0.997,
+      "label": 0,
+      "verdict": {
+        "p_attack": 0.9975,
+        "alarm": true,
+        "conflict": false,
+        "review_required": false,
+        "degraded": false,
+        "weak_agreement": false,
+        "reason": "两路一致（0.997 / 0.997，阈值 0.50）",
+        "sources": [
+          {
+            "source": "control",
+            "p_attack": 0.9975,
+            "pred_class": "",
+            "available": true,
+            "note": ""
+          },
+          {
+            "source": "data",
+            "p_attack": 0.997,
+            "pred_class": "",
+            "available": true,
+            "note": ""
+          }
+        ]
+      }
+    },
+    {
+      "window": 8,
+      "start_row": 128,
+      "p_control": 0.9933,
+      "p_data": 0.9892,
+      "label": 0,
+      "verdict": {
+        "p_attack": 0.9933,
+        "alarm": true,
+        "conflict": false,
+        "review_required": false,
+        "degraded": false,
+        "weak_agreement": false,
+        "reason": "两路一致（0.993 / 0.989，阈值 0.50）",
+        "sources": [
+          {
+            "source": "control",
+            "p_attack": 0.9933,
+            "pred_class": "",
+            "available": true,
+            "note": ""
+          },
+          {
+            "source": "data",
+            "p_attack": 0.9892,
+            "pred_class": "",
+            "available": true,
+            "note": ""
+          }
+        ]
+      }
+    },
+    {
+      "window": 9,
+      "start_row": 144,
+      "p_control": 0.9925,
+      "p_data": 0.9924,
+      "label": 0,
+      "verdict": {
+        "p_attack": 0.9925,
+        "alarm": true,
+        "conflict": false,
+        "review_required": false,
+        "degraded": false,
+        "weak_agreement": false,
+        "reason": "两路一致（0.993 / 0.992，阈值 0.50）",
+        "sources": [
+          {
+            "source": "control",
+            "p_attack": 0.9925,
+            "pred_class": "",
+            "available": true,
+            "note": ""
+          },
+          {
+            "source": "data",
+            "p_attack": 0.9924,
+            "pred_class": "",
+            "available": true,
+            "note": ""
+          }
+        ]
+      }
+    },
+    {
+      "window": 10,
+      "start_row": 160,
+      "p_control": 0.9988,
+      "p_data": 0.9968,
+      "label": 0,
+      "verdict": {
+        "p_attack": 0.9988,
+        "alarm": true,
+        "conflict": false,
+        "review_required": false,
+        "degraded": false,
+        "weak_agreement": false,
+        "reason": "两路一致（0.999 / 0.997，阈值 0.50）",
+        "sources": [
+          {
+            "source": "control",
+            "p_attack": 0.9988,
+            "pred_class": "",
+            "available": true,
+            "note": ""
+          },
+          {
+            "source": "data",
+            "p_attack": 0.9968,
+            "pred_class": "",
+            "available": true,
+            "note": ""
+          }
+        ]
+      }
+    },
+    {
+      "window": 11,
+      "start_row": 176,
+      "p_control": 1.0,
+      "p_data": 1.0,
+      "label": 1,
+      "verdict": {
+        "p_attack": 1.0,
+        "alarm": true,
+        "conflict": false,
+        "review_required": false,
+        "degraded": false,
+        "weak_agreement": false,
+        "reason": "两路一致（1.000 / 1.000，阈值 0.50）",
+        "sources": [
+          {
+            "source": "control",
+            "p_attack": 1.0,
+            "pred_class": "",
+            "available": true,
+            "note": ""
+          },
+          {
+            "source": "data",
+            "p_attack": 1.0,
+            "pred_class": "",
+            "available": true,
+            "note": ""
+          }
+        ]
+      }
+    },
+    {
+      "window": 12,
+      "start_row": 192,
+      "p_control": 1.0,
+      "p_data": 1.0,
+      "label": 1,
+      "verdict": {
+        "p_attack": 1.0,
+        "alarm": true,
+        "conflict": false,
+        "review_required": false,
+        "degraded": false,
+        "weak_agreement": false,
+        "reason": "两路一致（1.000 / 1.000，阈值 0.50）",
+        "sources": [
+          {
+            "source": "control",
+            "p_attack": 1.0,
+            "pred_class": "",
+            "available": true,
+            "note": ""
+          },
+          {
+            "source": "data",
+            "p_attack": 1.0,
+            "pred_class": "",
+            "available": true,
+            "note": ""
+          }
+        ]
+      }
+    },
+    {
+      "window": 13,
+      "start_row": 208,
+      "p_control": 1.0,
+      "p_data": 1.0,
+      "label": 1,
+      "verdict": {
+        "p_attack": 1.0,
+        "alarm": true,
+        "conflict": false,
+        "review_required": false,
+        "degraded": false,
+        "weak_agreement": false,
+        "reason": "两路一致（1.000 / 1.000，阈值 0.50）",
+        "sources": [
+          {
+            "source": "control",
+            "p_attack": 1.0,
+            "pred_class": "",
+            "available": true,
+            "note": ""
+          },
+          {
+            "source": "data",
+            "p_attack": 1.0,
+            "pred_class": "",
+            "available": true,
+            "note": ""
+          }
+        ]
+      }
+    },
+    {
+      "window": 14,
+      "start_row": 224,
+      "p_control": 1.0,
+      "p_data": 1.0,
+      "label": 1,
+      "verdict": {
+        "p_attack": 1.0,
+        "alarm": true,
+        "conflict": false,
+        "review_required": false,
+        "degraded": false,
+        "weak_agreement": false,
+        "reason": "两路一致（1.000 / 1.000，阈值 0.50）",
+        "sources": [
+          {
+            "source": "control",
+            "p_attack": 1.0,
+            "pred_class": "",
+            "available": true,
+            "note": ""
+          },
+          {
+            "source": "data",
+            "p_attack": 1.0,
+            "pred_class": "",
+            "available": true,
+            "note": ""
+          }
+        ]
+      }
+    },
+    {
+      "window": 15,
+      "start_row": 240,
+      "p_control": 1.0,
+      "p_data": 1.0,
+      "label": 1,
+      "verdict": {
+        "p_attack": 1.0,
+        "alarm": true,
+        "conflict": false,
+        "review_required": false,
+        "degraded": false,
+        "weak_agreement": false,
+        "reason": "两路一致（1.000 / 1.000，阈值 0.50）",
+        "sources": [
+          {
+            "source": "control",
+            "p_attack": 1.0,
+            "pred_class": "",
+            "available": true,
+            "note": ""
+          },
+          {
+            "source": "data",
+            "p_attack": 1.0,
+            "pred_class": "",
+            "available": true,
+            "note": ""
+          }
+        ]
+      }
+    },
+    {
+      "window": 16,
+      "start_row": 256,
+      "p_control": 1.0,
+      "p_data": 1.0,
+      "label": 1,
+      "verdict": {
+        "p_attack": 1.0,
+        "alarm": true,
+        "conflict": false,
+        "review_required": false,
+        "degraded": false,
+        "weak_agreement": false,
+        "reason": "两路一致（1.000 / 1.000，阈值 0.50）",
+        "sources": [
+          {
+            "source": "control",
+            "p_attack": 1.0,
+            "pred_class": "",
+            "available": true,
+            "note": ""
+          },
+          {
+            "source": "data",
+            "p_attack": 1.0,
+            "pred_class": "",
+            "available": true,
+            "note": ""
+          }
+        ]
+      }
+    },
+    {
+      "window": 17,
+      "start_row": 272,
+      "p_control": 1.0,
+      "p_data": 1.0,
+      "label": 1,
+      "verdict": {
+        "p_attack": 1.0,
+        "alarm": true,
+        "conflict": false,
+        "review_required": false,
+        "degraded": false,
+        "weak_agreement": false,
+        "reason": "两路一致（1.000 / 1.000，阈值 0.50）",
+        "sources": [
+          {
+            "source": "control",
+            "p_attack": 1.0,
+            "pred_class": "",
+            "available": true,
+            "note": ""
+          },
+          {
+            "source": "data",
+            "p_attack": 1.0,
+            "pred_class": "",
+            "available": true,
+            "note": ""
+          }
+        ]
+      }
+    },
+    {
+      "window": 18,
+      "start_row": 288,
+      "p_control": 1.0,
+      "p_data": 1.0,
+      "label": 1,
+      "verdict": {
+        "p_attack": 1.0,
+        "alarm": true,
+        "conflict": false,
+        "review_required": false,
+        "degraded": false,
+        "weak_agreement": false,
+        "reason": "两路一致（1.000 / 1.000，阈值 0.50）",
+        "sources": [
+          {
+            "source": "control",
+            "p_attack": 1.0,
+            "pred_class": "",
+            "available": true,
+            "note": ""
+          },
+          {
+            "source": "data",
+            "p_attack": 1.0,
+            "pred_class": "",
+            "available": true,
+            "note": ""
+          }
+        ]
+      }
+    },
+    {
+      "window": 19,
+      "start_row": 304,
+      "p_control": 0.9988,
+      "p_data": 0.9983,
+      "label": 1,
+      "verdict": {
+        "p_attack": 0.9988,
+        "alarm": true,
+        "conflict": false,
+        "review_required": false,
+        "degraded": false,
+        "weak_agreement": false,
+        "reason": "两路一致（0.999 / 0.998，阈值 0.50）",
+        "sources": [
+          {
+            "source": "control",
+            "p_attack": 0.9988,
+            "pred_class": "",
+            "available": true,
+            "note": ""
+          },
+          {
+            "source": "data",
+            "p_attack": 0.9983,
+            "pred_class": "",
+            "available": true,
+            "note": ""
+          }
+        ]
+      }
+    },
+    {
+      "window": 20,
+      "start_row": 320,
+      "p_control": 0.9994,
+      "p_data": 0.9998,
+      "label": 1,
+      "verdict": {
+        "p_attack": 0.9998,
+        "alarm": true,
+        "conflict": false,
+        "review_required": false,
+        "degraded": false,
+        "weak_agreement": false,
+        "reason": "两路一致（0.999 / 1.000，阈值 0.50）",
+        "sources": [
+          {
+            "source": "control",
+            "p_attack": 0.9994,
+            "pred_class": "",
+            "available": true,
+            "note": ""
+          },
+          {
+            "source": "data",
+            "p_attack": 0.9998,
+            "pred_class": "",
+            "available": true,
+            "note": ""
+          }
+        ]
+      }
+    },
+    {
+      "window": 21,
+      "start_row": 336,
+      "p_control": 0.9994,
+      "p_data": 0.9992,
+      "label": 1,
+      "verdict": {
+        "p_attack": 0.9994,
+        "alarm": true,
+        "conflict": false,
+        "review_required": false,
+        "degraded": false,
+        "weak_agreement": false,
+        "reason": "两路一致（0.999 / 0.999，阈值 0.50）",
+        "sources": [
+          {
+            "source": "control",
+            "p_attack": 0.9994,
+            "pred_class": "",
+            "available": true,
+            "note": ""
+          },
+          {
+            "source": "data",
+            "p_attack": 0.9992,
+            "pred_class": "",
+            "available": true,
+            "note": ""
+          }
+        ]
+      }
+    },
+    {
+      "window": 22,
+      "start_row": 352,
+      "p_control": 0.9791,
+      "p_data": 0.9578,
+      "label": 1,
+      "verdict": {
+        "p_attack": 0.9791,
+        "alarm": true,
+        "conflict": false,
+        "review_required": false,
+        "degraded": false,
+        "weak_agreement": false,
+        "reason": "两路一致（0.979 / 0.958，阈值 0.50）",
+        "sources": [
+          {
+            "source": "control",
+            "p_attack": 0.9791,
+            "pred_class": "",
+            "available": true,
+            "note": ""
+          },
+          {
+            "source": "data",
+            "p_attack": 0.9578,
+            "pred_class": "",
+            "available": true,
+            "note": ""
+          }
+        ]
+      }
+    },
+    {
+      "window": 23,
+      "start_row": 368,
+      "p_control": 0.6362,
+      "p_data": 0.747,
+      "label": 1,
+      "verdict": {
+        "p_attack": 0.747,
+        "alarm": true,
+        "conflict": false,
+        "review_required": false,
+        "degraded": false,
+        "weak_agreement": false,
+        "reason": "两路一致（0.636 / 0.747，阈值 0.50）",
+        "sources": [
+          {
+            "source": "control",
+            "p_attack": 0.6362,
+            "pred_class": "",
+            "available": true,
+            "note": ""
+          },
+          {
+            "source": "data",
+            "p_attack": 0.747,
+            "pred_class": "",
+            "available": true,
+            "note": ""
+          }
+        ]
+      }
+    },
+    {
+      "window": 24,
+      "start_row": 384,
+      "p_control": 0.4927,
+      "p_data": 0.0594,
+      "label": 1,
+      "verdict": {
+        "p_attack": 0.4927,
+        "alarm": false,
+        "conflict": false,
+        "review_required": false,
+        "degraded": false,
+        "weak_agreement": false,
+        "reason": "两路一致（0.493 / 0.059，阈值 0.50）",
+        "sources": [
+          {
+            "source": "control",
+            "p_attack": 0.4927,
+            "pred_class": "",
+            "available": true,
+            "note": ""
+          },
+          {
+            "source": "data",
+            "p_attack": 0.0594,
+            "pred_class": "",
+            "available": true,
+            "note": ""
+          }
+        ]
+      }
+    }
+  ],
+  "caveats": [
+    "两个视角来自**同一条仿真流的两种投影**：互补/冲突来自「流表计数 vs 报文重建」的测量差异，不是真实环境的覆盖差异（镜像口丢包、采集点之外等需要现场部署才能量化）",
+    "样本按类均衡选取 + 阈值 0.5 是在**不均衡**的真实分布上标定的 → 这里的误报率会偏得很难看（两路都接近 1.0），**不代表真实基率**，只能用于两路之间的相对比较",
+    "本实验只读既有产物，未重跑主流程、未改动任何受守护的产物"
+  ]
+}

@@ -287,6 +287,10 @@ def test_multisource_fusion_policy():
     data = {"Source IP": "10.0.0.9", "Destination IP": "10.0.0.1", "Source Port": 1234,
             "Destination Port": 80, "Protocol": 6}
     assert flow_key(ctrl) == flow_key(data), (flow_key(ctrl), flow_key(data))
+    # 磁盘上的 sdn 流表口径用的是 ip_src/ip_dst（不是 Src IP）——别名表漏一个，
+    # 那一侧就会"全取不到键"→ 对齐变成零匹配，而且**不会报错**（本工程踩过一次）
+    assert flow_key({"ip_src": "10.0.0.9", "ip_dst": "10.0.0.1", "tp_src": 1234,
+                     "tp_dst": 80, "ip_proto": 6}) == flow_key(ctrl)
     assert flow_key({"Src IP": "10.0.0.9"}) is None, "缺目的 IP 时不得猜一个键"
 
     # ② 对齐：只在一路出现的流必须被单独列出（它们正是融合要补的那部分）

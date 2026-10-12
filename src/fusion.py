@@ -36,8 +36,12 @@ SOURCES = (SOURCE_CONTROL, SOURCE_DATA)
 
 # 从两种 schema 里取四元组的字段名（控制面用 tp_src/tp_dst/ip_proto，数据面用 CICFlowMeter 列名）
 _KEY_ALIASES: dict[str, tuple[str, ...]] = {
-    "src_ip": ("Src IP", "Source IP", "src_ip", "ipv4_src"),
-    "dst_ip": ("Dst IP", "Destination IP", "dst_ip", "ipv4_dst"),
+    # ⚠️ 别名表必须覆盖**磁盘上真实存在的列名**：`data/raw/sdn_stream.csv` 用的是
+    #    `ip_src/ip_dst/tp_src/tp_dst/ip_proto`，服务接口用的是 `Src IP/Dst IP`，
+    #    CICFlowMeter 口径用 `Source IP/Destination Port`。少一个别名，那一侧的流就全都
+    #    "取不到键"→ 对齐结果变成"两路零匹配"，而**不会报错**（本工具第一版就踩了这个）。
+    "src_ip": ("Src IP", "Source IP", "src_ip", "ip_src", "ipv4_src"),
+    "dst_ip": ("Dst IP", "Destination IP", "dst_ip", "ip_dst", "ipv4_dst"),
     "src_port": ("tp_src", "Source Port", "src_port", "tcp_src", "udp_src"),
     "dst_port": ("tp_dst", "Destination Port", "dst_port", "Dst Port", "tcp_dst", "udp_dst"),
     "ip_proto": ("ip_proto", "Protocol", "proto"),

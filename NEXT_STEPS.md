@@ -63,7 +63,7 @@ python tools/cida.py verify      # 三套测试 + 130 项交付自检 —— 改
   ⚠️ 仍未覆盖：**回滚路径**在真机上没有演练（需要一个"收下 FLOW_MOD 却静默不装表"的场景）；
   想补的话，给 FakeSwitch 加一个"忽略 FLOW_MOD"开关 + 跑第二个短场景即可
 
-### 🟡 ④ 多源证据融合（控制面流表 + 数据面 pcap 双路）——**机制已落地，实测数据待产**
+### ✅ ④ 多源证据融合（控制面流表 + 数据面 pcap 双路）（本轮完成）
 - 已完成（本轮）：`src/fusion.py` —— 两路证据的**归一/对齐 + 融合策略 + 护栏**，配
   `tests/test_core.py::test_multisource_fusion_policy`
   - `flow_key()` 把两种 schema（控制面 `tp_dst` vs 数据面 `Destination Port`）归一到同一个键；缺 IP **宁可不融合**也不硬配
