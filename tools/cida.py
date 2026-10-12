@@ -12,6 +12,7 @@
     python tools/cida.py verify      三套测试 + 130 项交付自检
     python tools/cida.py inventory   产物与数据清单（当前有效 / 可清候选，按体积）
     python tools/cida.py config      生效配置单一视图 + 抓出"设了但没人读"的环境变量
+    python tools/cida.py retrain     回流触发：人工研判样本够了才重训出隔离的候选模型
 
 设计取舍：
   · doctor/verify **不重写逻辑**，直接调用既有工具（避免出现"两份实现、只改一处"——
@@ -246,7 +247,12 @@ _DOC_CACHE: dict = {}
 
 
 def _doc_blob() -> str:
-    """把全部文档读成一个大字符串（只读一次），用于判断某个目录名是否被引用。"""
+    """把文档**与代码**读成一个大字符串（只读一次），用于判断某个目录名是否被引用。
+
+    ⚠️ 必须同时扫代码：上一版只扫文档，于是 `pktseq16`、`_featsel` 这类
+    **由代码按路径直接读写**的目录会被标成"未被引用（可清候选）"——那是个危险的误导，
+    删了会让某个工具失效。把代码纳入后判据偏保守（宁可漏报可清项，不可误报可删项）。
+    """
     if "blob" not in _DOC_CACHE:
         parts = []
         for name in ("README.md", "DEPLOYMENT.md", "CONTRIBUTING.md", "run_all.py"):
@@ -255,6 +261,10 @@ def _doc_blob() -> str:
                 parts.append(p.read_text(encoding="utf-8", errors="replace"))
         for sub in ("docs", "competition"):
             for p in (ROOT / sub).rglob("*.md"):
+                parts.append(p.read_text(encoding="utf-8", errors="replace"))
+        # 代码侧的路径引用（工具/核心库/应用/适配层）
+        for sub in ("tools", "src", "app", "integrations"):
+            for p in (ROOT / sub).rglob("*.py"):
                 parts.append(p.read_text(encoding="utf-8", errors="replace"))
         _DOC_CACHE["blob"] = "\n".join(parts)
     return _DOC_CACHE["blob"]
@@ -368,6 +378,61 @@ def cmd_config(args) -> int:
     return 0
 
 
+def cmd_retrain(args) -> int:
+    """回流触发：人工研判样本攒够了就一键重训出**隔离的候选模型**。
+
+    这是"未知 → 已知"闭环原本缺的那一步——数据链路早已闭合（证据 + 结论可按 review_id
+    拼成训练样本），但"什么时候该重训"一直靠人记。这里把它变成一条可判断的命令。
+
+    刻意**不自动跑**、也**不静默降级**：
+      · 样本不足 `--min-labels` 直接拒绝——在 1~2 条样本上重训没有统计意义，只会污染模型；
+      · 候选模型落在 artifacts/feedback/ 下，**绝不覆盖主模型**，是否替换由人决定。
+    """
+    fb = RESULT_DIR / "review_feedback.jsonl"
+    ev = RESULT_DIR / "review_evidence.jsonl"
+
+    def _count(p: Path) -> int:
+        if not p.exists():
+            return 0
+        return sum(1 for line in p.read_text(encoding="utf-8", errors="replace").splitlines()
+                   if line.strip())
+
+    n_fb, n_ev = _count(fb), _count(ev)
+    print("=" * 74)
+    print("回流触发检查（未知 → 已知 闭环的最后一步）")
+    print("=" * 74)
+    print(f"\n人工研判结论 {n_fb} 条（{fb.name}）")
+    print(f"研判证据     {n_ev} 条（{ev.name}）")
+    print(f"重训门槛     {args.min_labels} 条")
+
+    if n_fb < args.min_labels:
+        print(f"\n✗ **样本不足，拒绝重训**（{n_fb} < {args.min_labels}）")
+        print("  在这么少的样本上重训没有统计意义，只会让模型被个别样本带偏。")
+        print("  怎么办：")
+        print("   1. 起大屏并开启未知标记：python tools/cida.py demo"
+              "（页面里把「未知形态阈值」从 0 拉到 0.30）")
+        print("   2. 在「复核台」给待研判项下结论（确认为攻击 / 判为正常），结论会自动回流")
+        print(f"   3. 攒到 {args.min_labels} 条以上再跑本命令")
+        return 2
+
+    if not (ROOT / "tools" / "retrain_from_feedback.py").exists():
+        print("\n✗ 缺少 tools/retrain_from_feedback.py，无法重训")
+        return 2
+
+    argv = _py("tools/retrain_from_feedback.py")
+    if not args.no_train:
+        argv.append("--retrain")
+    print(f"\n✓ 样本充足（{n_fb} ≥ {args.min_labels}），开始"
+          f"{'训练候选模型' if not args.no_train else '只构建数据集（--no-train）'}…\n")
+    rc = _run("回流重训", argv)
+    if rc == 0 and not args.no_train:
+        print("\n候选模型已产出在 artifacts/feedback/ —— **主模型未被改动**。")
+        print("下一步：用同一套口径评测候选模型，通过后再决定是否替换：")
+        print("   python tools/real_eval.py --dataset insdn --protocol block")
+        print("   python tools/cida.py verify")
+    return rc
+
+
 # --------------------------------------------------------------------------- CLI
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(
@@ -385,11 +450,15 @@ def main(argv=None) -> int:
     sub.add_parser("inventory", help="产物与数据清单（当前有效 / 可清候选）")
     c = sub.add_parser("config", help="生效配置单一视图 + 抓出没人读的环境变量")
     c.add_argument("--keys", default="", help="要额外打印的 Config 字段，逗号分隔")
+    r = sub.add_parser("retrain", help="回流触发：样本够了才重训出隔离的候选模型")
+    r.add_argument("--min-labels", type=int, default=20,
+                   help="重训门槛：人工研判结论少于该数量则拒绝（默认 20）")
+    r.add_argument("--no-train", action="store_true", help="只构建回流数据集，不训练")
 
     args = p.parse_args(argv)
     return {"doctor": cmd_doctor, "status": cmd_status, "demo": cmd_demo,
             "guard": cmd_guard, "verify": cmd_verify, "inventory": cmd_inventory,
-            "config": cmd_config}[args.cmd](args)
+            "config": cmd_config, "retrain": cmd_retrain}[args.cmd](args)
 
 
 if __name__ == "__main__":
