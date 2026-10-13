@@ -58,6 +58,22 @@ def _require_tf() -> None:
         raise SkipTest(f"未安装 TensorFlow（{type(exc).__name__}）：跳过")
 
 
+def _require_service() -> None:
+    """在线检测服务类用例的前置条件：**既要有 TensorFlow，也要有训练好的产物**。
+
+    为什么两样都要查：仓库**不跟踪模型权重与 scaler**（大文件，只跟踪 meta.json 与
+    main_model.json 指针），所以 CI 上即便装了 TensorFlow，`DetectionService` 依然加载不到模型。
+    缺任一项就**跳过并计数**，而不是失败——本机（有 TF、有产物）跑同一份文件时跳过数为 0。
+    """
+    _require_tf()
+    from src.utils import ARTIFACT_DIR, PROCESSED_DIR
+
+    has_scaler = (PROCESSED_DIR / "scaler.joblib").exists()
+    has_model = bool(list(ARTIFACT_DIR.glob("*/model.keras"))) or (ARTIFACT_DIR / "main_model.keras").exists()
+    if not (has_scaler and has_model):
+        raise SkipTest(f"缺少训练产物（scaler={has_scaler} model={has_model}；仓库不跟踪这些大文件）：跳过")
+
+
 
 def test_schema_headers():
     """两种 schema 的列名与列数必须与对齐的数据集一致（否则"逐字一致"的说法不成立）。"""
@@ -474,7 +490,7 @@ def _review_service(tmpdir):
     为什么必须重定向 `audit_path` / `feedback_path`：这两个文件在正式运行时写进 `results/`，
     测试若照写会把测试数据混进真实审计台账与回流文件里。
     """
-    _require_tf()          # 在线检测服务需要 TensorFlow；CI 的 core 作业没有它 → 跳过并计数
+    _require_service()     # 需要 TensorFlow + 训练产物；CI 两者都缺 → 跳过并计数（不误报失败）
     from src.service import DetectionService
 
     svc = DetectionService()
