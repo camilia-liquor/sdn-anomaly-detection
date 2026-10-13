@@ -372,5 +372,5 @@
     "n_raw_alarmed_windows": 2971,
     "alarm_rate": 0.3438155136268344
   },
-  "attention_file": "<USER_HOME>\\Desktop\\generate_normal_traffic\\artifacts\\ctrl17\\attention_ctrl17_s2.npy"
+  "attention_file": "<PROJECT_ROOT>\\artifacts\\ctrl17\\attention_ctrl17_s2.npy"
 }

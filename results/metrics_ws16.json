@@ -370,5 +370,5 @@
     "n_alarmed_windows": 2180,
     "alarm_rate": 0.30468204053109715
   },
-  "attention_file": "<USER_HOME>\\Desktop\\generate_normal_traffic\\artifacts\\attention_ws16.npy"
+  "attention_file": "<PROJECT_ROOT>\\artifacts\\attention_ws16.npy"
 }

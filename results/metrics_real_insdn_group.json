@@ -172,5 +172,5 @@
     "n_alarmed_windows": 10051,
     "alarm_rate": 0.6529167208003118
   },
-  "attention_file": "<USER_HOME>\\Desktop\\generate_normal_traffic\\artifacts\\attention_real_insdn_group.npy"
+  "attention_file": "<PROJECT_ROOT>\\artifacts\\attention_real_insdn_group.npy"
 }

@@ -14196,6 +14196,6 @@
   "raw_meta": {
     "source": "synthetic",
     "schema": "insdn",
-    "path": "C:\\Users\\xc\\Desktop\\generate_normal_traffic\\data\\raw\\insdn_stream.csv"
+    "path": "<PROJECT_ROOT>\\data\\raw\\insdn_stream.csv"
   }
 }

@@ -1,8 +1,9 @@
 # SDN 流量异常检测：CNN + BiLSTM 混合模型
 
-<!-- CI 徽章待公开仓库后补：push 到 GitHub 后把下面的 OWNER/REPO 换成实际地址再取消注释
-[![CI](https://github.com/OWNER/REPO/actions/workflows/ci.yml/badge.svg)](./.github/workflows/ci.yml)
--->
+[![CI](https://github.com/camilia-liquor/sdn-anomaly-detection/actions/workflows/ci.yml/badge.svg)](https://github.com/camilia-liquor/sdn-anomaly-detection/actions/workflows/ci.yml)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+
+> 代码仓库：<https://github.com/camilia-liquor/sdn-anomaly-detection>（Apache-2.0）
 
 > **接手/续做的起点：[`NEXT_STEPS.md`](NEXT_STEPS.md)**
 > —— 项目当前状态、待做的体系缺口（含代价与风险排序）、必须遵守的纪律、提交材料剩余项，

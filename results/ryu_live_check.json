@@ -1,8 +1,8 @@
 {
   "experiment": "ryu_live_check",
   "ryu_version": "4.34",
-  "ryu_python": "C:\\Users\\xc\\Desktop\\generate_normal_traffic\\_tmp\\ryu_venv\\Scripts\\python.exe",
-  "ryu_cmd": "ryu.cmd.manager --user-flags C:\\Users\\xc\\Desktop\\generate_normal_traffic\\logs\\_ryu_live\\ryu_guard_flags.py --ofp-tcp-listen-port 6700 C:\\Users\\xc\\Desktop\\generate_normal_traffic\\integrations\\ryu_guard.py",
+  "ryu_python": "<PROJECT_ROOT>\\_tmp\\ryu_venv\\Scripts\\python.exe",
+  "ryu_cmd": "ryu.cmd.manager --user-flags <PROJECT_ROOT>\\logs\\_ryu_live\\ryu_guard_flags.py --ofp-tcp-listen-port 6700 <PROJECT_ROOT>\\integrations\\ryu_guard.py",
   "model_tag": "sdn_ctrl_s0",
   "processed_dir": "data/processed_sdn",
   "detect_port": 5300,

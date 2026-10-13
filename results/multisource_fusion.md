@@ -8,7 +8,7 @@
 
 | 视角 | 怎么来的 |
 |---|---|
-| 控制面（control） | 交换机组装的流表统计（OpenFlow flow stats 口径） —— `C:\Users\xc\Desktop\generate_normal_traffic\data\raw\sdn_stream.csv` |
+| 控制面（control） | 交换机组装的流表统计（OpenFlow flow stats 口径） —— `<PROJECT_ROOT>\data\raw\sdn_stream.csv` |
 | 数据面（data） | 由合成 pcap 重建的流特征（独立测量路径） —— `_tmp\fusion\fusion_sample.pcap` |
 
 - 流数 **400**（类别分布：{'Botnet': 25, 'BruteForce': 25, 'DDoS': 25, 'DoS': 25, 'Normal': 77, 'Probe': 173, 'U2R': 25, 'WebAttack': 25}）

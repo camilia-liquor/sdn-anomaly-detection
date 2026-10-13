@@ -372,5 +372,5 @@
     "n_raw_alarmed_windows": 2148,
     "alarm_rate": 0.2858336815712495
   },
-  "attention_file": "<USER_HOME>\\Desktop\\generate_normal_traffic\\artifacts\\attention_hard24_bilstm.npy"
+  "attention_file": "<PROJECT_ROOT>\\artifacts\\attention_hard24_bilstm.npy"
 }

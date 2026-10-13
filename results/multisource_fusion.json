@@ -15,7 +15,7 @@
   },
   "source": {
     "manifest": "_tmp\\fusion\\fusion_sample.pcap",
-    "raw_stream": "C:\\Users\\xc\\Desktop\\generate_normal_traffic\\data\\raw\\sdn_stream.csv",
+    "raw_stream": "<PROJECT_ROOT>\\data\\raw\\sdn_stream.csv",
     "n_flows": 400,
     "class_counts": {
       "Botnet": 25,

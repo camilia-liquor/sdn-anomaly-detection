@@ -14155,6 +14155,6 @@
   "raw_meta": {
     "source": "synthetic",
     "schema": "sdn",
-    "path": "C:\\Users\\xc\\Desktop\\generate_normal_traffic\\data\\raw_ctrl_ext\\sdn_stream.csv"
+    "path": "<PROJECT_ROOT>\\data\\raw_ctrl_ext\\sdn_stream.csv"
   }
 }

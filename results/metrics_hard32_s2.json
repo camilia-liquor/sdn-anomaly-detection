@@ -372,5 +372,5 @@
     "n_raw_alarmed_windows": 2194,
     "alarm_rate": 0.29242783433272906
   },
-  "attention_file": "<USER_HOME>\\Desktop\\generate_normal_traffic\\artifacts\\attention_hard32_s2.npy"
+  "attention_file": "<PROJECT_ROOT>\\artifacts\\attention_hard32_s2.npy"
 }

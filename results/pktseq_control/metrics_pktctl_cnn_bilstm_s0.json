@@ -372,5 +372,5 @@
     "n_raw_alarmed_windows": 726,
     "alarm_rate": 0.3017632241813602
   },
-  "attention_file": "<USER_HOME>\\Desktop\\generate_normal_traffic\\artifacts\\pktseq_control\\attention_pktctl_cnn_bilstm_s0.npy"
+  "attention_file": "<PROJECT_ROOT>\\artifacts\\pktseq_control\\attention_pktctl_cnn_bilstm_s0.npy"
 }

@@ -370,5 +370,5 @@
     "n_alarmed_windows": 2147,
     "alarm_rate": 0.2998184611087837
   },
-  "attention_file": "<USER_HOME>\\Desktop\\generate_normal_traffic\\artifacts\\attention_ws10_bilstm.npy"
+  "attention_file": "<PROJECT_ROOT>\\artifacts\\attention_ws10_bilstm.npy"
 }

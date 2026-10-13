@@ -110,7 +110,7 @@ python tools/cida.py verify      # 三套测试 + 130 项交付自检 —— 改
 
 1. **改 docx 一律用 `office_edit` 原子批处理**（`{atomic:true, ops:[…]}`）；
    **绝不碰 `.univer` 容器**——它会被 GUI 复核面板加载并把界面卡死（已复现两次）。
-   容器已移出到 `Desktop\_cida_univer_backup\`。
+   容器已移出到 `<BACKUP_DIR>\`。
 2. **提交信息含引号时，必须写文件 + `git commit -F`**。用 `git commit -m "…引号…"`
    会被 PowerShell 截断（本项目踩过三次）。
 3. **改完必须跑 `python tools/cida.py verify`**，它带三套测试 + 130 项自检。
