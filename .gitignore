@@ -98,3 +98,6 @@ results/review_evidence*.jsonl
 results/review_feedback*.jsonl
 # 由 tools/retrain_from_feedback.py 从上面的运行期数据派生，属可再生成产物
 results/feedback_dataset.*
+
+# Word/Office 打开文档时产生的临时锁文件（形如 ~$xxx.docx）
+~\$*
