@@ -1,8 +1,12 @@
-"""单元测试（不依赖 TensorFlow 也能跑）：覆盖生成器、数据管线、窗口构建、评估口径。
+"""单元测试：覆盖生成器、数据管线、窗口构建、评估口径、复核闭环与融合/触发策略。
 
 运行：
     python -m pytest tests -q          # 有 pytest 时
     python tests/test_core.py          # 没装 pytest 也可直接跑（内置简易断言）
+
+关于 TensorFlow：**多数用例不需要它**；只有涉及在线检测服务与对抗增广的用例需要。
+CI 的 core 作业刻意不安装 TensorFlow（约 200MB，只为换取 1~2 分钟的快反馈），
+这些用例在那里会**跳过并计入"跳过"**（见 `_require_tf`），而不是失败、更不是假装通过。
 """
 from __future__ import annotations
 
@@ -31,6 +35,28 @@ from src.traffic_generator import (  # noqa: E402
     SDN_EXTRA_HEADER,
     TrafficSimulator,
 )
+
+
+class SkipTest(Exception):
+    """前置条件不满足（例如当前环境没有 TensorFlow）——**跳过**，并在汇总里如实计数。"""
+
+
+def _require_tf() -> None:
+    """需要 TensorFlow 的用例统一走这里（在线检测服务、对抗增广）。
+
+    CI 的 core 作业刻意不装 TensorFlow，这些用例在那里会跳过并计入"跳过"——
+    既不失败，也不假装通过：汇总行会打印「通过 X / 跳过 Y / 失败 Z」。
+    本机（已装 TF）跑同一个文件时跳过数为 0。
+    """
+    import os
+
+    if str(os.environ.get("CIDA_NO_TF", "")).strip().lower() in ("1", "true", "yes"):
+        raise SkipTest("已设置 CIDA_NO_TF：跳过需要 TensorFlow 的用例")
+    try:
+        import tensorflow  # noqa: F401
+    except Exception as exc:  # noqa: BLE001
+        raise SkipTest(f"未安装 TensorFlow（{type(exc).__name__}）：跳过")
+
 
 
 def test_schema_headers():
@@ -219,6 +245,7 @@ def test_adversarial_augment_default_off_and_bounded():
     ② 开启后扰动必须同时满足 L∞ 预算与训练集物理可行域；③ 标签不能被拼错位
     ——把攻击样本配上正常标签，比不做对抗训练更糟。
     """
+    _require_tf()          # 要真的建一个小模型跑 FGSM，需要 TensorFlow
     from src.train import ADV_OBJECTIVES, adversarial_augment, fgsm_perturb
 
     model = _tiny_dict_model()
@@ -447,6 +474,7 @@ def _review_service(tmpdir):
     为什么必须重定向 `audit_path` / `feedback_path`：这两个文件在正式运行时写进 `results/`，
     测试若照写会把测试数据混进真实审计台账与回流文件里。
     """
+    _require_tf()          # 在线检测服务需要 TensorFlow；CI 的 core 作业没有它 → 跳过并计数
     from src.service import DetectionService
 
     svc = DetectionService()
@@ -961,15 +989,27 @@ def test_confirmation_semantics_agree_across_implementations():
 
 def _run_all() -> int:
     fns = [v for k, v in sorted(globals().items()) if k.startswith("test_") and callable(v)]
-    failed = 0
+    failed = skipped = 0
     for fn in fns:
         try:
             fn()
             print(f"  ✓ {fn.__name__}")
+        except SkipTest as exc:
+            # 跳过要**显式可见**：既不失败，也不混进"通过"里
+            skipped += 1
+            print(f"  ⊘ {fn.__name__}  （跳过：{exc}）")
         except Exception as exc:  # noqa: BLE001
             failed += 1
             print(f"  ✗ {fn.__name__}: {type(exc).__name__}: {exc}")
-    print(f"\n{len(fns) - failed}/{len(fns)} 个测试通过" + ("" if failed else " ✅"))
+    passed = len(fns) - failed - skipped
+    tail = f"通过 {passed}/{len(fns)}"
+    if skipped:
+        tail += f"，跳过 {skipped}"
+    if failed:
+        tail += f"，失败 {failed} ❌"
+    else:
+        tail += " ✅"
+    print("\n" + tail)
     return 1 if failed else 0
 
 
